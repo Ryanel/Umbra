@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cmake -DCMAKE_TOOLCHAIN_FILE=../config/$1.cmake -G Ninja ../
