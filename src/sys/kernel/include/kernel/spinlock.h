@@ -16,7 +16,7 @@ class spinlock {
         count = 0;
     }
     void acquire() {
-        //_k_spinlock_acquire(&count);
+        _k_spinlock_acquire(&count);
     }
 
    public:

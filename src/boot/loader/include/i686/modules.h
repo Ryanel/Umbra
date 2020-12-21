@@ -1,5 +1,7 @@
 #pragma once
 
+#include <i686/multiboot.h>
+
 typedef struct {
     int                 num;
     int                 has_initrd;

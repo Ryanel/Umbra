@@ -1,12 +1,12 @@
 #include <kernel/delay.h>
 #include <kernel/log.h>
 #include <kernel/version.h>
+#include <kernel/panic.h>
 #include <stdio.h>
-
 /// The main kernel function.
 void kernel_main() {
     auto& log = kernel::log::get();
-    kprintf("kernel: Entered kernel main\n");
+    kprintf("Entered kernel main\n");
     kernel_print_version();
 
     // TODO: Create a VMM and PMM
@@ -18,11 +18,11 @@ void kernel_main() {
     // TODO: Spawn /sbin/init and start processing messages!
 
     // We've exited init. Print a warning to the log and hang.
-    kprintf("kernel: No processes running. Entering infinite loop.\n");
+    kprintf("No processes running. Entering infinite loop.\n");
 
     // Ensure that the log is flushed before we hang! We could miss out on output if not done.
     log.flush();
 
     // Hang
-    while (true) {}
+    panic("No running processes");
 }
