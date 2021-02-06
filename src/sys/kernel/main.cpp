@@ -3,9 +3,11 @@
 #include <kernel/version.h>
 #include <kernel/panic.h>
 #include <stdio.h>
+
 /// The main kernel function.
 void kernel_main() {
     auto& log = kernel::log::get();
+
     kprintf("Entered kernel main\n");
     kernel_print_version();
 

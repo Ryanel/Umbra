@@ -1,30 +1,31 @@
-#include <console.h>
-#include <i686/modules.h>
-#include <i686/multiboot.h>
-#include <panic.h>
-#include <stdbool.h>
 #include <stdint.h>
+#include <console.h>
 #include <stdio.h>
+#include <panic.h>
+#include <system.h>
 
-void* kernel_discover_info(multiboot_module_t* kernel);
+#include <i686/multiboot.h>
+#include <i686/modules.h>
 
 void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
-    // Initialize the VGA console.
+    // Initialize the console.
     console_init();
 
-    printf("loader: Umbra %c-kernel loader for i686 initializing.\n", 230);
+    // Print the loading message.
+    printf("loader: Umbra %c-kernel loader for %s initializing.\n", 230, "i686 (x86)");
 
     // Ensure multiboot info is sane before we touch anything.
     if (multiboot_magic != 0x2BADB002) { panic("Multiboot magic is incorrect"); }
-
-    // Extract data from multiboot
-    multiboot_get_configuration();
+    
+    // Extract data from multiboot into system configuration
+    multiboot_get_configuration(multiboot_struct);
 
     // Locate the loaded modules.
-    multiboot_modules_t multiboot_modules = multiboot_init_modules(multiboot_struct);
+    //multiboot_modules_t multiboot_modules = multiboot_init_modules(multiboot_struct);
 
     // Parse the kernel. (It's an ELF 32 kernel)
-    kernel_discover_info(multiboot_modules.kernel);
+    //kernel_discover_info(multiboot_modules.kernel);
+    
     // kernel_info_t * kinfo = kernel_discover_info(multiboot_modules.kernel);
 
     // Allocate a region large enough to store the kernel image decompressed.
@@ -36,8 +37,8 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     // paging_init();
 
     // size, physstart, virtstart
+    
     // paging_map(0x1000000, 0x0, 0x0); // Memory Map the first megabyte.
-
     // paging_map(kinfo->mem_size, kernel_start_address, kinfo->virt_start); // Map kernel to proper virtual address at
     // 0xC00000000 paging_map(multiboot_modules.initrd->size, multiboot_modules.initrd->start, 0xD0000000); //Map initrd
     // to 0xD0000000 paging_map(0x1000000, 0x0, 0x0); //Map configuration page via identity map.
@@ -47,5 +48,5 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     // Create configuration structure and store it in the configuration page. Pass this as a register to the kernel.
 
     // Boot into kernel!
-    printf("loader: Starting kernel process...\n");
+    //printf("loader: Starting kernel process...\n");
 }

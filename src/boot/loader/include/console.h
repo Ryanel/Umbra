@@ -19,3 +19,6 @@ void console_clear();
 void console_set_color(unsigned char attr);
 
 int console_get_y();
+int console_get_x();
+
+void console_shim_write_char(unsigned int x, unsigned int y, char c, unsigned char attribute);

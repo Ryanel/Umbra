@@ -1,6 +1,7 @@
 # Start
 .section .text
 
+# External
 .extern _halt
 .extern stack_top
 .extern loader_main

@@ -13,6 +13,8 @@
 
 .global _start
 .global _start_aps
+.global _halt
+
 _start:
     // Identify BP and AP. BP is core 0.
     // This may or may not have cores 1-3 running, depending on the firmware version!

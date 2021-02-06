@@ -1,8 +1,8 @@
 # Set needed info about the system
 SET (BUILD_ARCH x86)
 SET (BUILD_ARCH_VER i686)
-SET (BUILD_BOARD board)
-SET (BUILD_HAS_BOARD false)
+SET (BUILD_BOARD i686)
+SET (BUILD_HAS_BOARD true)
 SET (BUILD_BITWIDTH 32)
 set(triple i686-elf-none)
 

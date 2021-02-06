@@ -1,4 +1,6 @@
 #include <console.h>
+#include <stddef.h>
+#include <stdint.h>
 
 struct ConsoleData {
     unsigned int  x, y;
@@ -16,8 +18,6 @@ void console_init() {
     console.height      = 25;
     console.color       = CONSOLE_DEFAULT_COLOR;
     console.buffer_addr = (uint8_t*)0xB8000;
-
-    console_clear();
 }
 
 void console_scroll() {
@@ -34,22 +34,8 @@ void console_scroll() {
         }
     }
     // Clear last line
-    for (unsigned int x = 0; x < console.width; x++) { console_write_char(x, console.height - 1, ' ', console.color); }
-}
-
-void console_write_char(unsigned int x, unsigned int y, char c, unsigned char attribute) {
-    unsigned int pos             = ((y * console.width) + x) * 2;
-    console.buffer_addr[pos]     = c;
-    console.buffer_addr[pos + 1] = attribute;
-}
-
-void console_write_serial(char c) {}
-
-void console_set_color(unsigned char attr) { console.color = attr; }
-
-void console_clear() {
-    for (unsigned int x = 0; x < console.width; x++) {
-        for (unsigned int y = 0; y < console.height; y++) { console_write_char(x, y, ' ', CONSOLE_DEFAULT_COLOR); }
+    for (unsigned int x = 0; x < console.width; x++) { 
+        console_shim_write_char(x, console.height - 1, ' ', console.color);
     }
 }
 
@@ -68,13 +54,13 @@ void console_print_char(char c) {
     if (c == '\n') {
         console_newline();
     } else {
-        console_write_char(console.x, console.y, c, console.color);
+        console_shim_write_char(console.x, console.y, c, console.color);
         console.x++;
         if (console.x >= console.width) { console_newline(); }
     }
 }
 
-void console_print_string(const char* s) {
+void console_print_string(const char * s) {
     int i = 0;
     while (s[i] != '\0') {
         console_print_char(s[i]);
@@ -82,4 +68,10 @@ void console_print_string(const char* s) {
     }
 }
 
-int console_get_y() { return console.y; }
+void console_clear() {
+    for (unsigned int x = 0; x < console.width; x++) {
+        for (unsigned int y = 0; y < console.height; y++) {
+            console_shim_write_char(x, y, ' ', CONSOLE_DEFAULT_COLOR);
+        }
+    }
+}

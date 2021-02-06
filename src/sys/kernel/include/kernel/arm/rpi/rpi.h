@@ -1,7 +1,7 @@
 #pragma once
 
 #include <kernel/config.h>
-#ifdef DEVICE_BUILD_BOARD_rpi
+#ifdef DEVICE_BUILD_BOARD_raspi
 
 #include <stdint.h>
 

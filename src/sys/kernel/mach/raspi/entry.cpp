@@ -6,9 +6,10 @@
 
 void            kernel_main();
 extern "C" void _start_aps();
+extern "C" void kernel_interrupt_enable();
+extern "C" void kernel_interrupt_init();
 
-int  numCoresOnline    = 1;
-bool ap_early_finished = false;
+volatile int numCoresOnline = 0;
 
 /// The entry point of the boot core
 extern "C" void _kernel_bp_start() {
@@ -16,32 +17,29 @@ extern "C" void _kernel_bp_start() {
     kernel::device::rpi_uart_text_console console;  // Initialize UART0
     kernel::log::get().init(&console);              // Set UAR0 as the log output device
 
-    printf("kernel: Waiting for cores to come online...\n");
-    printf("kernel: Core 0 online\n");
+    kprintf("Waiting for cores to come online...\n");
+    kprintf("Core 0 online\n");
 
-    // BUG: Does not progress past this point on RPi due to kprintf spinlock bug!
-
-    printf("kernel: Number of cores started on boot: %d\n", numCoresOnline);
-    if (numCoresOnline <= 1) {
-        printf("kernel: Bringing up additional cores...\n");
+    if (numCoresOnline <= 4) {
+        kprintf("Bringing up additional cores...\n");
         _start_aps();
     }
 
-    ap_early_finished = true;
-    delay_cycles(1000);
 
+    kprintf("Enabling interrupts\n");
+    kernel_interrupt_init();
+    kernel_interrupt_enable();
+    asm("svc 0"); 
     kernel_main();  // Enter the kernel..
 }
 
 extern "C" void _kernel_ap_start(uint64_t core) {
     numCoresOnline++;
-    // Sasss
-    while (!ap_early_finished) {}
+    kprintf("Core %d online\n", core);
 
-    kprintf("kernel: Core %d online\n", core);
-
-    while (true) { asm("wfi"); }
-    return;
+    while (true) { 
+        asm("wfi"); 
+    }
 }
 
 void kernel_print_version() {

@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern "C" void _k_spinlock_acquire(volatile uint32_t * var);
-
 namespace kernel {
 namespace utils {
 class spinlock {
@@ -13,14 +11,14 @@ class spinlock {
         count = 0;
     }
     void release() {
-        count = 0;
+        __atomic_clear(&count, __ATOMIC_RELEASE);
     }
     void acquire() {
-        _k_spinlock_acquire(&count);
+        __atomic_test_and_set(&count, __ATOMIC_ACQUIRE);
     }
 
    public:
-    __attribute__((aligned(128))) volatile uint32_t count = 0;
+    __attribute__((aligned(8))) volatile uint64_t count = 0;
 };
 }  // namespace utils
 }  // namespace kernel

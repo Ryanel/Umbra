@@ -1,7 +1,7 @@
 # Set needed info about the system
 SET (BUILD_ARCH arm)
 SET (BUILD_ARCH_VER v8)
-SET (BUILD_BOARD rpi)
+SET (BUILD_BOARD raspi)
 SET (BUILD_HAS_BOARD true)
 SET (BUILD_BITWIDTH 64)
 
