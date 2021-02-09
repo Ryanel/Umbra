@@ -1,7 +1,7 @@
 # We'll use defaults from the LLVM style, but with 4 columns indentation.
 BasedOnStyle: Google
 IndentWidth: 4
-ColumnLimit: 120
+ColumnLimit: 128
 
 Language: Cpp
 

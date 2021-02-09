@@ -6,19 +6,20 @@
 
 #include <i686/multiboot.h>
 #include <i686/modules.h>
+#include <alloc.h>
 
 void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
-    // Initialize the console.
-    console_init();
+    // Ensure multiboot info is sane before we touch anything.
+    if (multiboot_magic != 0x2BADB002) {
+        console_init();
+        panic("Multiboot magic is incorrect");
+    }
+    
+    // Extract data from multiboot into system configuration, initialse the console
+    multiboot_get_configuration(multiboot_struct);
 
     // Print the loading message.
-    printf("loader: Umbra %c-kernel loader for %s initializing.\n", 230, "i686 (x86)");
-
-    // Ensure multiboot info is sane before we touch anything.
-    if (multiboot_magic != 0x2BADB002) { panic("Multiboot magic is incorrect"); }
-    
-    // Extract data from multiboot into system configuration
-    multiboot_get_configuration(multiboot_struct);
+    printf("loader: Umbra %c-kernel loader for %s loading kernel\n", 230, "i686 (x86)");
 
     // Locate the loaded modules.
     //multiboot_modules_t multiboot_modules = multiboot_init_modules(multiboot_struct);
@@ -48,5 +49,5 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     // Create configuration structure and store it in the configuration page. Pass this as a register to the kernel.
 
     // Boot into kernel!
-    //printf("loader: Starting kernel process...\n");
+    printf("loader: Starting kernel process...\n");
 }
