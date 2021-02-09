@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <system.h>
 
 void multiboot_get_configuration(multiboot_info_t* mbs) {
@@ -47,13 +48,13 @@ void multiboot_get_configuration(multiboot_info_t* mbs) {
     // Now, scan for modules and create system_module_t entries for them.
     system_file_t* root_module = NULL;
     system_file_t* cur_module  = NULL;
-    sys_config.num_files       = NULL;
+    sys_config.boot_files      = NULL;
 
     for (size_t i = 0; i < mbs->mods_count; i++) {
         if (i == 0) {
-            cur_module           = (system_file_t*)malloc(sizeof(system_file_t));
-            root_module          = cur_module;
-            sys_config.num_files = root_module;
+            cur_module            = (system_file_t*)malloc(sizeof(system_file_t));
+            root_module           = cur_module;
+            sys_config.boot_files = root_module;
         } else {
             system_file_t* entry = (system_file_t*)malloc(sizeof(system_file_t));
             cur_module->next     = entry;
@@ -64,14 +65,19 @@ void multiboot_get_configuration(multiboot_info_t* mbs) {
         cur_module->next            = NULL;
         cur_module->start           = mul_mod->mod_start;
         cur_module->size            = mul_mod->mod_end - mul_mod->mod_start;
-/*
-        if (mul_mod->cmdline == "kernel") {
+
+        if (strcmp((const char*)mul_mod->cmdline, "kernel") == 0) {
             cur_module->type = SYSTEM_MODULE_TYPE_KERNEL;
-        } else if (mul_mod->cmdline == "initrd") {
+        } else if (strcmp((const char*)mul_mod->cmdline, "config") == 0) {
+            cur_module->type = SYSTEM_MODULE_TYPE_CONFIG;
+        } else if (strcmp((const char*)mul_mod->cmdline, "initrd") == 0) {
             cur_module->type = SYSTEM_MODULE_TYPE_INITRD;
+        } else {
+            cur_module->type = SYSTEM_MODULE_TYPE_UNKNOWN;
         }
-*/
-        printf("loader: Found module @ %08x -> %08x \"%s\"\n", mul_mod->mod_start, mul_mod->mod_end, (char*)mul_mod->cmdline);
+
+        printf("loader: Found module @ %08x -> %08x \"%s\" (%d)\n", cur_module->start, cur_module->start + cur_module->size,
+               (char*)mul_mod->cmdline, cur_module->type);
     }
 
     system_file_t* rm = root_module;
