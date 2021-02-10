@@ -79,7 +79,4 @@ void multiboot_get_configuration(multiboot_info_t* mbs) {
         printf("loader: Found module @ %08x -> %08x \"%s\" (%d)\n", cur_module->start, cur_module->start + cur_module->size,
                (char*)mul_mod->cmdline, cur_module->type);
     }
-
-    system_file_t* rm = root_module;
-    while (rm != NULL) { rm = rm->next; }
 }

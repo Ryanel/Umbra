@@ -3,9 +3,11 @@
 #include <stdio.h>
 #include <panic.h>
 #include <system.h>
+#include <stddef.h>
 
 #include <i686/multiboot.h>
 #include <i686/modules.h>
+#include <elf/elf64.h>
 #include <alloc.h>
 
 void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
@@ -19,20 +21,25 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     multiboot_get_configuration(multiboot_struct);
 
     // Print the loading message.
-    printf("loader: Umbra %c-kernel loader for %s loading kernel\n", 230, "i686 (x86)");
+    printf("loader: Umbra %c-kernel loader for %s\n", 230, "i686 (x86)");
 
-    // Locate the loaded modules.
-    //multiboot_modules_t multiboot_modules = multiboot_init_modules(multiboot_struct);
+    // Locate the kernel
+    system_file_t* mod_search = sys_config.boot_files;
+    system_file_t* k_file = NULL;
+    while (mod_search != NULL) {
+        if(mod_search->type == SYSTEM_MODULE_TYPE_KERNEL) {
+            k_file = mod_search;
+            break;
+        }
+        mod_search = mod_search->next;
+    }
 
-    // Parse the kernel. (It's an ELF 32 kernel)
-    //kernel_discover_info(multiboot_modules.kernel);
-    
-    // kernel_info_t * kinfo = kernel_discover_info(multiboot_modules.kernel);
+    if (k_file == NULL) {
+        panic("Kernel was not loaded.");
+    }
 
-    // Allocate a region large enough to store the kernel image decompressed.
-    // uintptr_t kernel_start_address = allocate_region(kinfo->mem_size, KERNEL_MEMORY_IMAGE, PAGE_ALIGNED);
-
-    // Load the kernel into memory.
+    // Load the kernel into memory
+    elf_memory_image_t * k_memimage = elf64_load_file(k_file);
 
     // Initialise paging
     // paging_init();
