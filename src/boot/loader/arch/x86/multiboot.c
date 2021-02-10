@@ -61,18 +61,23 @@ void multiboot_get_configuration(multiboot_info_t* mbs) {
             cur_module           = entry;
         }
 
+        // Load module info
         multiboot_module_t* mul_mod = (multiboot_module_t*)(mbs->mods_addr + (16 * i));
         cur_module->next            = NULL;
         cur_module->start           = mul_mod->mod_start;
         cur_module->size            = mul_mod->mod_end - mul_mod->mod_start;
 
+        // Determine the module
         if (strcmp((const char*)mul_mod->cmdline, "kernel") == 0) {
             cur_module->type = SYSTEM_MODULE_TYPE_KERNEL;
-        } else if (strcmp((const char*)mul_mod->cmdline, "config") == 0) {
+        }
+        else if (strcmp((const char*)mul_mod->cmdline, "config") == 0) {
             cur_module->type = SYSTEM_MODULE_TYPE_CONFIG;
-        } else if (strcmp((const char*)mul_mod->cmdline, "initrd") == 0) {
+        }
+        else if (strcmp((const char*)mul_mod->cmdline, "initrd") == 0) {
             cur_module->type = SYSTEM_MODULE_TYPE_INITRD;
-        } else {
+        }
+        else {
             cur_module->type = SYSTEM_MODULE_TYPE_UNKNOWN;
         }
 

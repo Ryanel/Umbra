@@ -1,7 +1,5 @@
-ninja install
+echo "Build: Adding LiveCD files to system root..."
+cp -r ./media/x86/i686/* build/sysroot/
 
-echo "Adding LiveCD files to system root..."
-cp -r ../media/x86/i686/* sysroot/
-
-echo "Generating LiveCD ISO..."
-grub-mkrescue -o livecd.iso sysroot >> /dev/null
+echo "Build: Generating LiveCD ISO..."
+grub-mkrescue -o build/livecd.iso build/sysroot --quiet >> /dev/null

@@ -3,7 +3,7 @@
 #include <system.h>
 #include <alloc.h>
 
-#define DEBUG_MALLOC
+//#define DEBUG_MALLOC
 
 #ifdef DEBUG_MALLOC
 #include <stdio.h>

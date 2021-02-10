@@ -26,6 +26,7 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     // Locate the kernel
     system_file_t* mod_search = sys_config.boot_files;
     system_file_t* k_file = NULL;
+
     while (mod_search != NULL) {
         if(mod_search->type == SYSTEM_MODULE_TYPE_KERNEL) {
             k_file = mod_search;
@@ -34,6 +35,7 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
         mod_search = mod_search->next;
     }
 
+    // Panic if there's no kernel file.
     if (k_file == NULL) {
         panic("Kernel was not loaded.");
     }

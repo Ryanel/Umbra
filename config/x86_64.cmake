@@ -1,12 +1,12 @@
 # Set needed info about the system
 SET (BUILD_ARCH x86)
-SET (BUILD_ARCH_VER i686)
-SET (BUILD_BOARD i686)
+SET (BUILD_ARCH_VER x86_64)
+SET (BUILD_BOARD x86_64)
 SET (BUILD_HAS_BOARD true)
-SET (BUILD_BITWIDTH 32)
-set(triple i686-elf-none)
+SET (BUILD_BITWIDTH 64)
+set(triple x86_64-elf-none)
 
-# Configure CMake
+# Configure Cake
 set(CMAKE_CROSSCOMPILING 1)
 
 set(CMAKE_SYSTEM_NAME Generic)
@@ -21,12 +21,12 @@ set(CMAKE_STAGING_PREFIX ../sysroot/)
 #set(CMAKE_CXX_COMPILER_TARGET ${triple})
 #SET(ASM_OPTIONS "-x assembler-with-cpp -target ${triple}")
 
-set(CMAKE_C_COMPILER i686-elf-gcc)
-set(CMAKE_CXX_COMPILER i686-elf-g++)
-set(CMAKE_AR i686-elf-ar)
+set(CMAKE_C_COMPILER x86_64-elf-gcc)
+set(CMAKE_CXX_COMPILER x86_64-elf-g++)
+set(CMAKE_AR x86_64-elf-ar)
 
 
-set(CMAKE_C_FLAGS "-march=i686 -mtune=generic")
+set(CMAKE_C_FLAGS "")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf")
 

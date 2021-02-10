@@ -1,2 +1,1 @@
-../scripts/x86-create-iso.sh
-qemu-system-i386 -cdrom livecd.iso
+qemu-system-i386 -cdrom build/livecd.iso
