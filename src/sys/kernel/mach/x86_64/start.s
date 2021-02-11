@@ -8,8 +8,8 @@
 .type _start, @function
 _start:
 	# Set stack top 
-	movl $stack_top, %esp
-	movl $stack_top, %esp
+	movabs $stack_top, %rsp
+	movabs $stack_top, %rbp
 
 	# Push GRUB multiboot paramaters
 	#pushl %ebx

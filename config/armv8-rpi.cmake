@@ -23,7 +23,7 @@ set(CMAKE_CXX_COMPILER aarch64-elf-g++)
 #set(CMAKE_C_COMPILER_TARGET ${triple})
 #set(CMAKE_CXX_COMPILER clang++)
 #set(CMAKE_CXX_COMPILER_TARGET ${triple})
-
+set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
 set(CMAKE_C_FLAGS_RELEASE "-O0")
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g -gdwarf-3 -gstrict-dwarf")
 #set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_DEBUG})

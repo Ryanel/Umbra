@@ -25,10 +25,12 @@ set(CMAKE_C_COMPILER i686-elf-gcc)
 set(CMAKE_CXX_COMPILER i686-elf-g++)
 set(CMAKE_AR i686-elf-ar)
 
+set(KERNEL_ADDITIONAL_LINK_FLAGS "")
 
 set(CMAKE_C_FLAGS "-march=i686 -mtune=generic")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_DEBUG "-Og -g -gdwarf-3 -gstrict-dwarf")
+set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
 
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY) # Tell CMake to not try and compile test executables.
 

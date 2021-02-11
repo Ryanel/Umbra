@@ -23,8 +23,6 @@ Requirements:
 
 To build the operating system:
 
-1. Create the ./build directory with `mkdir -p build`
-2. Invoke ../configure [name of configuration file], with the configuration file being a CMake toolchain file inside of the ./config folder, without the .cmake. This selects both the architecture and platform.
-3. Invoke `ninja` to build the operating system
-4. Invoke `ninja install` to populate the system root.
-5. To build a certain type of media, invoke the script in scripts. For x86, invoke x86-create-iso to make an iso. This also builds an up to date image beforehand.
+1. Invoke ./configure with the correct configuration (in config, strip .cmake)
+2. Invoke ./build.sh to compile the operating system
+3. Invoke ./run.sh to run the operating system

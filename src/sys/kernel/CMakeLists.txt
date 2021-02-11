@@ -21,9 +21,9 @@ include_directories("${PROJECT_BINARY_DIR}/include")
 # Linking ---------------------------------------------------------------------
 
 # Link the kernel with these options
-set (KERNEL_LINK_FLAGS -ffreestanding -fno-builtin -nostdlib -static)
+set (KERNEL_LINK_FLAGS "-ffreestanding -fno-builtin -nostdlib -static ${CMAKE_C_FLAGS} ${KERNEL_ADDITIONAL_LINK_FLAGS}")
 if (${BUILD_HAS_BOARD})
-    add_link_options(${KERNEL_LINK_FLAGS} -T${CMAKE_CURRENT_SOURCE_DIR}/mach/${BUILD_BOARD}/linker.ld)
+    add_link_options(SHELL:${KERNEL_LINK_FLAGS} -T${CMAKE_CURRENT_SOURCE_DIR}/mach/${BUILD_BOARD}/linker.ld)
 else()
     add_link_options(${KERNEL_LINK_FLAGS} -T${CMAKE_CURRENT_SOURCE_DIR}/arch/${BUILD_ARCH}/${BUILD_ARCH_VER}/linker.ld)
 endif()
