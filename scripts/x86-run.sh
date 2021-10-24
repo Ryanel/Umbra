@@ -1,1 +1,1 @@
-qemu-system-i386 -cdrom build/livecd.iso
+qemu-system-x86_64 -cdrom build/livecd.iso

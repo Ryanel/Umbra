@@ -31,3 +31,7 @@ echo "Build: Generate media"
 if [ -f "$BUILD_DIR/config/x86_64" ]; then
     ./scripts/x86-create-iso.sh
 fi
+
+if [ -f "$BUILD_DIR/config/i686" ]; then
+    ./scripts/x86-create-iso.sh
+fi

@@ -36,9 +36,7 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     }
 
     // Panic if there's no kernel file.
-    if (k_file == NULL) {
-        panic("Kernel was not loaded.");
-    }
+    if (k_file == NULL) { panic("Kernel was not loaded."); }
 
     // Load the kernel into memory
     elf_memory_image_t * k_memimage = elf64_load_file(k_file);
