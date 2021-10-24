@@ -5,6 +5,8 @@
 .extern stack_top
 .extern kernel_entry
 
+.extern setupGDT
+
 .type _start, @function
 _start:
 	# Set stack top 
@@ -15,6 +17,8 @@ _start:
 	pushl %ebx
 	pushl %eax
 
+
+	call setupGDT
 	# Call the kernel
 	call kernel_entry
 	

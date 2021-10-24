@@ -7,6 +7,10 @@ extern "C" void _halt();
 
 void kernel_main();
 
+void kernel_print_version() {
+    kprintf("kernel: Umbra v. %s on x86 (i686)\n", KERNEL_VERSION);
+}
+
 /// The responsibility of the kernel_entry function is to initialse the system into the minimuim startup state.
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
@@ -18,8 +22,7 @@ extern "C" void kernel_entry() {
     auto& log = kernel::log::get();
     log.init(&console);
     log.shouldBuffer = false;  // Disable buffering for now
-
-    log.write("kernel: Umbra x86 (i686)\n");
+    kernel_print_version();
 
     // Initialise hardware
 
@@ -37,6 +40,3 @@ extern "C" void kernel_entry() {
 }
 
 
-void kernel_print_version() {
-    kprintf("kernel: Umbra v. %s on x86 (i686)\n", KERNEL_VERSION);
-}

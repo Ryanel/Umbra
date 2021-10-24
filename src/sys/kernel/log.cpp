@@ -12,34 +12,13 @@ kernel::log& kernel::log::get() { return kernel_logger; }
 void kernel::log::init(device::text_console* device) {
     console = device;
     kprintf_spinlock.release();
-
-    if (device->supports_color() && device->supports_cursor_position()) {
-        device->clear();
-        for (int x = 0; x < device->width(); x++) {
-            device->write_color((char)205, 0x8B);  // ═
-        }
-
-        device->setX((device->width() / 2) - 2);
-        device->setY(0);
-
-        device->write_color('E', 0x8B);
-        device->write_color('x', 0x8B);
-        device->write_color('i', 0x8B);
-        device->write_color('o', 0x8B);
-        device->write_color('s', 0x8B);
-
-        device->setY(1);
-        device->setX(0);
-    }
 }
 
 void kernel::log::write(char c) {
-    // Print the given string.
+    // If we have buffering enabled, write to the buffer.
     if (shouldBuffer) {
-        // If we have buffering enabled, write to the buffer.
         write_buffer(c);
     } else {
-        // Do not buffer the output, emit calls directly to the driver
         console->write(c);
     }
 }
@@ -50,13 +29,7 @@ void kernel::log::write(const char* s) {
 
     // Print the given string.
     for (; (*s) != '\0'; s++) {
-        if (shouldBuffer) {
-            // If we have buffering enabled, write to the buffer.
-            write_buffer(*s);
-        } else {
-            // Do not buffer the output, emit calls directly to the driver
-            console->write(*s);
-        }
+        write(*s);
     }
 }
 
