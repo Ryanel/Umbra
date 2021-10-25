@@ -1,9 +1,12 @@
 #include <kernel/log.h>
 #include <kernel/x86/vga_text_console.h>
 #include <string.h>
+#include <kernel/x86/interrupts.h>
 #include <kernel/config.h>
 
 extern "C" void _halt();
+
+x86_idt g_idt;
 
 void kernel_main();
 
@@ -29,6 +32,8 @@ extern "C" void kernel_entry() {
     // Could be moved to loader...
     // TODO: Call global constructors
     // TODO: Initialise the IDT
+    g_idt.init();
+    g_idt.enable_interrupts();
     // TODO: Initialise TSS
     // TODO: Initialise paging (do this before kernel_entry!)
     // TODO: Initialise PIT
