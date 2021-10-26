@@ -57,6 +57,7 @@ void vga_text_console::write_color(char c, char color) {
             break;
     }
 }
+
 int  vga_text_console::width() { return 80; }
 int  vga_text_console::height() { return 25; }
 bool vga_text_console::supports_color() { return true; }

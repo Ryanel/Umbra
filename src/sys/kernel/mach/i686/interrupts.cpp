@@ -7,7 +7,7 @@
 
 extern "C" void k_exception_handler(register_frame_t* regs) {}
 extern "C" void k_irq_handler(register_frame_t* regs) {
-    kprintf("irq: %x\n", regs->int_no - 32);
+    klogf("irq", "Recieved %x\n", regs->int_no - 32);
 
     // Signal interrupt handled
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }

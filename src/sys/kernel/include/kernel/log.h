@@ -2,7 +2,7 @@
 
 #include <kernel/text_console.h>
 #define LOG_BUFFER_MAX 80
-
+#define LOG_DEVICE_MAX 5
 namespace kernel {
 
 /// The logging driver. The kernel calls into this class to get log output on the screen, and this redirects to the
@@ -18,10 +18,12 @@ class log {
     static log& get();                               ///< Gets the log
 
    private:
-    device::text_console* console;                 ///< The console used for logging.
-    char                  buffer[LOG_BUFFER_MAX];  ///< The buffer that holds unsent text
-    unsigned int          buffer_index;            ///< The current character of the buffer
-    void                  write_buffer(char c);    ///< Writes to the buffer
+    device::text_console* console[LOG_DEVICE_MAX];  ///< The console bavkends used for logging.
+    char                  buffer[LOG_BUFFER_MAX];   ///< The buffer that holds unsent text
+    unsigned int          buffer_index;             ///< The current character of the buffer
+    void                  write_buffer(char c);     ///< Writes to the buffer
+    void                  console_print(char c);
+    unsigned int          console_device_index = 0;
 };
 
 };  // namespace kernel
@@ -29,3 +31,4 @@ class log {
 /// Log to the kernel console.
 /// \warning Will lock for the entire message.
 int kprintf(const char* fmt, ...);
+int klogf(const char* category, const char* fmt, ...);

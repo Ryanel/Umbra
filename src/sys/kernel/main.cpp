@@ -7,7 +7,7 @@
 /// The main kernel function.
 void kernel_main() {
     auto& log = kernel::log::get();
-    kprintf("Entered kmain()\n");
+    klogf("kernel", "Entered kmain()\n");
 
     // TODO: Create a VMM and PMM
     // TODO: Setup an initial 'heap' area.
