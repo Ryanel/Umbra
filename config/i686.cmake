@@ -12,15 +12,6 @@ set(CMAKE_CROSSCOMPILING 1)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR ${BUILD_ARCH})
 
-set(CMAKE_SYSROOT ../sysroot/)
-set(CMAKE_STAGING_PREFIX ../sysroot/)
-
-#set(CMAKE_C_COMPILER clang)
-#set(CMAKE_CXX_COMPILER clang++)
-#set(CMAKE_C_COMPILER_TARGET ${triple})
-#set(CMAKE_CXX_COMPILER_TARGET ${triple})
-#SET(ASM_OPTIONS "-x assembler-with-cpp -target ${triple}")
-
 set(CMAKE_C_COMPILER i686-elf-gcc)
 set(CMAKE_CXX_COMPILER i686-elf-g++)
 set(CMAKE_AR i686-elf-ar)

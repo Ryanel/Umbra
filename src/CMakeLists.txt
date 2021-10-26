@@ -11,8 +11,8 @@ project(Umbra VERSION 1.0
                 LANGUAGES C CXX ASM)
 
 # Subdirectories to compile
-add_subdirectory(src/sys) # The kernel
-add_subdirectory(src/bin) # Binaries that end up on the filesystem and can be launched that are of system importance, such as init
-add_subdirectory(src/usr) # User level utilities
-add_subdirectory(src/lib) # Libraries that used by any applications, such as libc.
+add_subdirectory(sys) # The kernel
+add_subdirectory(bin) # Binaries that end up on the filesystem and can be launched that are of system importance, such as init
+add_subdirectory(usr) # User level utilities
+add_subdirectory(lib) # Libraries that used by any applications, such as libc.
 #add_subdirectory(src/boot) # Boot applications
