@@ -100,13 +100,13 @@ def config_save():
 
 def mod_configure():
     global config
-    toolchain_file = 'config/' + config['target'] + '.cmake'
+    toolchain_file = 'nyx/targets/' + config['target'] + '.cmake'
     toolchain_abs_path = os.path.abspath(toolchain_file)
     system_root = os.path.abspath(config['build_directory'] +  '/' + config['sysroot'])
     cmake_config = ['cmake', f'-DCMAKE_TOOLCHAIN_FILE={toolchain_abs_path}', f'-DCMAKE_SYSROOT={system_root}', f'-DCMAKE_STAGING_PREFIX={system_root}','-G', 'Ninja']
 
     print('[configure] Configuring the build directory for target "' + config['target'] + '"')
-    
+
     if config['build_loader']:
         helper_make_directory(config['build_directory'] + '/temp/boot/')
         subprocess.run(cmake_config + [  '-S', './src/boot/', '-B', f"{config['build_directory']}/temp/boot"], stdout=sys.stdout)
@@ -126,13 +126,12 @@ def mod_build():
     subprocess.run(['ninja', 'install'], stdout=sys.stdout, cwd=src_dir)
 
     if config['target'] == 'i686':
-        subprocess.run(['./scripts/x86-create-iso.sh'], shell=True, stdout=sys.stdout)
-
+        subprocess.run(['./nyx/scripts/x86-create-iso.sh'], shell=True, stdout=sys.stdout)
         if config['run_on_completion']:
             mod_run()
     
 def mod_run():
-    subprocess.run(['./scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
+    subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
 
 def mod_clean():
     global config
