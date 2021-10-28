@@ -10,9 +10,10 @@ import shutil
 config = {
     'build_directory': "build",
     'sysroot': "sysroot",
-    'target': 'none',
+    'target': 'i686',
     'build_loader': True,
-    'run_on_completion': True
+    'run_on_completion': True,
+    'cancel_on_fail': True
 }
 
 
@@ -122,7 +123,12 @@ def mod_build():
         subprocess.run(['ninja', 'install'], stdout=sys.stdout, cwd=boot_dir)
 
     src_dir = os.path.abspath(config['build_directory'] + '/temp/')
-    subprocess.run(['ninja'], stdout=sys.stdout, cwd=src_dir)
+    compile_results = subprocess.run(['ninja'], stdout=sys.stdout, cwd=src_dir)
+
+    if config['cancel_on_fail'] and compile_results.returncode > 0:
+        print("Build failed, cancelling future build steps.")
+        exit(1)
+
     subprocess.run(['ninja', 'install'], stdout=sys.stdout, cwd=src_dir)
 
     if config['target'] == 'i686':

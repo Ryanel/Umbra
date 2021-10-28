@@ -1,12 +1,13 @@
 # Start
 .section .text
-.global _start
+
 .extern _halt
 .extern stack_top
 .extern kernel_entry
-
 .extern setupGDT
+.extern _init
 
+.global _start
 .type _start, @function
 _start:
 	# Set stack top 
@@ -17,8 +18,11 @@ _start:
 	pushl %ebx
 	pushl %eax
 
-
 	call setupGDT
+
+	# Global constructors
+	call _init
+
 	# Call the kernel
 	call kernel_entry
 	
