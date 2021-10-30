@@ -26,7 +26,7 @@ class vga_text_console : public text_console {
     int getY();
 
    private:
-    const uintptr_t buffer_address = 0x000B8000;
+    const uintptr_t buffer_address = 0xC00B8000;
     
     int x = 0;
     int y = 0;

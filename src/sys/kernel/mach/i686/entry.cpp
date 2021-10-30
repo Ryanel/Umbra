@@ -5,6 +5,7 @@
 #include <kernel/log.h>
 #include <kernel/panic.h>
 #include <kernel/x86/interrupts.h>
+#include <kernel/x86/paging.h>
 #include <kernel/x86/serial_text_console.h>
 #include <kernel/x86/vga_text_console.h>
 #include <string.h>
@@ -15,6 +16,7 @@ x86_idt g_idt;
 
 kernel::device::vga_text_console    text_console;
 kernel::device::serial_text_console serial_console;
+extern "C" uint32_t*                boot_page_directory;
 
 void kernel_main();
 
@@ -25,12 +27,10 @@ void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KER
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t multiboot_magic, multiboot_info_t* multiboot_header) {
     // Initialise logging
-
     auto& log = kernel::log::get();
 
     serial_console.init();
     log.init(&serial_console);
-
     log.shouldBuffer = false;  // Disable buffering for now
 
     // Initialise hardware
@@ -61,17 +61,17 @@ extern "C" void kernel_entry(uint32_t multiboot_magic, multiboot_info_t* multibo
 
     // Initialise the IDT
     g_idt.init();
-    // g_idt.enable_interrupts();
+    g_idt.enable_interrupts();
 
     // TODO: Initialise TSS
-
     // TODO: Initialise the memory map (get it from GRUB)
-
     // TODO: Initialise paging (do this before kernel_entry!)
-
     // TODO: Initialise PIT
-
     // TODO: Initialsie VGA display output
+
+    page_dir_hnd p;
+    p.directory = (page_directory_t*)(boot_page_directory + 0xC0000000);
+    klogf("page dir", "0x%08x\n", p.get_phys_addr(0x00000000));
 
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();

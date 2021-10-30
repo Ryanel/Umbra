@@ -10,7 +10,7 @@
     push ebp
     push esi
     push edi
-    
+
     push ds
     push es
     push fs
@@ -22,7 +22,7 @@
     pop fs
     pop es
     pop ds
-    
+
     pop edi
     pop esi
     pop ebp

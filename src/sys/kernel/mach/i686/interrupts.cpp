@@ -1,11 +1,19 @@
 #define DEF_INT_HANDLERS
 
 #include <kernel/log.h>
+#include <kernel/panic.h>
 #include <kernel/x86/interrupts.h>
 #include <kernel/x86/ports.h>
 #include <string.h>
 
-extern "C" void k_exception_handler(register_frame_t* regs) {}
+extern "C" void k_exception_handler(register_frame_t* regs) {
+    klogf("error", "eip: %08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
+    klogf("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x ss:%02x\n", regs->cs, regs->ds, regs->es, regs->fs, regs->gs,
+          regs->ss);
+    klogf("error", "eax:%08x ebx:%08x ecx:%08x edx:%08x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    klogf("error", "ebp:%08x esp:%08x esi:%08x edi:%08x\n", regs->edi, regs->esi, regs->esp, regs->ebp);
+    panic("Unhandled exception");
+}
 extern "C" void k_irq_handler(register_frame_t* regs) {
     klogf("irq", "Recieved %x\n", regs->int_no - 32);
 
