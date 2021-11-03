@@ -14,47 +14,44 @@ extern "C" void _halt();
 
 x86_idt g_idt;
 
-kernel::device::vga_text_console    text_console;
-kernel::device::serial_text_console serial_console;
+kernel::device::vga_text_console    con_vga;
+kernel::device::serial_text_console con_serial;
+kernel::device::fb_text_console     con_fb;
+
 extern "C" uint32_t*                boot_page_directory;
 
 void kernel_main();
-
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
 
 /// The responsibility of the kernel_entry function is to initialse the system into the minimuim startup state.
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
-extern "C" void kernel_entry(uint32_t multiboot_magic, multiboot_info_t* multiboot_header) {
+extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     // Initialise logging
     auto& log = kernel::log::get();
-
-    serial_console.init();
-    log.init(&serial_console);
+    con_serial.init();
+    log.init(&con_serial);
     log.shouldBuffer = false;  // Disable buffering for now
 
     // Initialise hardware
     // Parse multiboot
-    if (multiboot_magic != 0x2BADB002) {
-        klogf("multiboot", "Multiboot magic was %p, halting!\n", multiboot_magic);
+    if (mb_magic != 0x2BADB002) {
+        klogf("multiboot", "Multiboot magic was 0x%08x, halting!\n", mb_magic);
         panic("Multiboot magic incorrect");
     }
 
-    if (multiboot_header->framebuffer_type == 2) {
+    if (mb_info->framebuffer_type == 2) {
         klogf("display", "Using VGA 80x25 textmode\n");
-        text_console.init();
-        log.init(&text_console);
+        con_vga.init();
+        log.init(&con_vga);
     } else {
-        klogf("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", multiboot_header->framebuffer_width,
-              multiboot_header->framebuffer_height, multiboot_header->framebuffer_bpp, multiboot_header->framebuffer_addr);
-        kernel::device::fb_text_console fb_console;
-        fb_console.framebuffer.width  = multiboot_header->framebuffer_width;
-        fb_console.framebuffer.height = multiboot_header->framebuffer_height;
-        fb_console.framebuffer.bpp    = multiboot_header->framebuffer_bpp;
-        fb_console.framebuffer.pitch  = multiboot_header->framebuffer_pitch;
-        fb_console.framebuffer.buffer = (uint8_t*)multiboot_header->framebuffer_addr;
-        log.init(&fb_console);
-        fb_console.init();
+        klogf("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
+              mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
+
+        con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width,
+                                            mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_pitch);
+        log.init(&con_fb);
+        con_fb.init();
     }
 
     kernel_print_version();
@@ -63,16 +60,13 @@ extern "C" void kernel_entry(uint32_t multiboot_magic, multiboot_info_t* multibo
     g_idt.init();
     g_idt.enable_interrupts();
 
+    // TODO: Initialise PIT
     // TODO: Initialise TSS
     // TODO: Initialise the memory map (get it from GRUB)
     // TODO: Initialise paging (do this before kernel_entry!)
-    // TODO: Initialise PIT
+    paging_node paging_directory((page_directory_t*)(&boot_page_directory));
+
     // TODO: Initialsie VGA display output
-
-    page_dir_hnd p;
-    p.directory = (page_directory_t*)(boot_page_directory + 0xC0000000);
-    klogf("page dir", "0x%08x\n", p.get_phys_addr(0x00000000));
-
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();
 }

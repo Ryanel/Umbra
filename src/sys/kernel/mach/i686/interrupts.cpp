@@ -7,7 +7,13 @@
 #include <string.h>
 
 extern "C" void k_exception_handler(register_frame_t* regs) {
-    klogf("error", "eip: %08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
+    if(regs->int_no == 14) {
+        volatile uint32_t faulting_address;
+        asm volatile("mov %%cr2, %0" : "=r" (faulting_address));
+        klogf("paging", "faulting addr: 0x%08x\n", faulting_address);
+    }
+
+    klogf("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
     klogf("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x ss:%02x\n", regs->cs, regs->ds, regs->es, regs->fs, regs->gs,
           regs->ss);
     klogf("error", "eax:%08x ebx:%08x ecx:%08x edx:%08x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);

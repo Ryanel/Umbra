@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
-#include <kernel/text_console.h>
 #include <kernel/hal/sw_framebuffer.h>
+#include <kernel/text_console.h>
+#include <stdint.h>
 
 namespace kernel {
 namespace device {
@@ -12,7 +12,7 @@ class fb_text_console : public text_console {
    public:
     void init();
     void clear();
-    
+
     void write(char c);
     void write_color(char c, char color);
 
@@ -23,19 +23,20 @@ class fb_text_console : public text_console {
     bool supports_cursor_position();
     void setX(int x);
     void setY(int y);
-    int getX();
-    int getY();
+    int  getX();
+    int  getY();
 
     sw_framebuffer framebuffer;
-    int font_width  = 8;
-    int font_height = 8;
-    
+    int            font_width  = 8;
+    int            font_height = 8;
+
     void draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back);
     void wrap();
+
    private:
     int x = 0;
     int y = 0;
 };
 
-}
-}
+}  // namespace device
+}  // namespace kernel
