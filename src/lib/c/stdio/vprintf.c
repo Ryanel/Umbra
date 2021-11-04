@@ -18,7 +18,6 @@ void vprintf_print_helper_string(char * s) {
     kernel_c_shim_print_string_to_log(s);
 }
 
-
 static void vprintf_print_padding_helper(int length, char* arg, bool fmt_length_zeropad) {
     if (length != 0) {
         int  charsToPrint = length - strlen(arg);
@@ -119,7 +118,31 @@ int vprintf(const char* fmt, va_list arg) {
                     vprintf_print_helper_string(arg_str);
                 }
                 break;
-                
+
+            case 'u':
+                arg_int = va_arg(arg, uint32_t);
+                arg_str = itoa(arg_int, 10);
+                if (fmt_left_justify) {
+                    vprintf_print_helper_string(arg_str);
+                    vprintf_print_padding_helper(fmt_length, arg_str, false);
+                } else {
+                    vprintf_print_padding_helper(fmt_length, arg_str, false);
+                    vprintf_print_helper_string(arg_str);
+                }
+                break;
+
+            case 'l': // TODO: Wildy incorect to standard
+                arg_int64 = va_arg(arg, uint64_t);
+                arg_str   = itoa(arg_int64, 10);
+                if (fmt_left_justify) {
+                    vprintf_print_helper_string(arg_str);
+                    vprintf_print_padding_helper(fmt_length, arg_str, false);
+                } else {
+                    vprintf_print_padding_helper(fmt_length, arg_str, false);
+                    vprintf_print_helper_string(arg_str);
+                }
+                break;
+
             case 'x':
                 arg_int = va_arg(arg, int);
                 arg_str = itoa(arg_int, 16);

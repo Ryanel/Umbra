@@ -1,14 +1,19 @@
 #pragma once
 
+#include <stdint.h>
+
 namespace kernel {
 namespace hal {
-namespace timer {
+
 /// Represents a timer
-class timer {
+class system_timer {
    public:
-    int resolutionMS();  //< Resolution of the timer in milliseconds
-    int resolutionUS();  //< Resolution of the in microseconds
+    virtual void     init()          = 0;  //< Initialise
+    virtual void     tick()          = 0;  //< Will tick and increment the timer
+    virtual uint64_t resolution_ns() = 0;  //< Resolution in Nanoseconds
+   public:
+    uint64_t ticks;
 };
-}  // namespace time
+
 }  // namespace hal
 }  // namespace kernel

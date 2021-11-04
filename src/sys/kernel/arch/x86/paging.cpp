@@ -39,5 +39,17 @@ void paging_node::current_map(uint32_t phys, uint32_t virt, uint32_t flags) {
 }
 
 void paging_node::current_unmap(uint32_t virt) {
+    unsigned long pdindex = (unsigned long)virt >> 22;
+    unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
 
+    unsigned long* pd = (unsigned long*)0xFFFFF000;
+    // Here you need to check whether the PD entry is present.
+    // When it is not present, you need to create a new empty PT and
+    // adjust the PDE accordingly.
+
+    unsigned long* pt = ((unsigned long*)0xFFC00000) + (0x400 * pdindex);
+    // Here you need to check whether the PT entry is present.
+    // When it is, then there is already a mapping present. What do you do now?
+
+    pt[ptindex] = 0x0;
 }

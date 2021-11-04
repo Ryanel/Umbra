@@ -2,14 +2,15 @@
 
 #include <kernel/log.h>
 #include <kernel/panic.h>
+#include <kernel/time.h>
 #include <kernel/x86/interrupts.h>
 #include <kernel/x86/ports.h>
 #include <string.h>
 
 extern "C" void k_exception_handler(register_frame_t* regs) {
-    if(regs->int_no == 14) {
+    if (regs->int_no == 14) {
         volatile uint32_t faulting_address;
-        asm volatile("mov %%cr2, %0" : "=r" (faulting_address));
+        asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
         klogf("paging", "faulting addr: 0x%08x\n", faulting_address);
     }
 
@@ -21,7 +22,11 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
     panic("Unhandled exception");
 }
 extern "C" void k_irq_handler(register_frame_t* regs) {
-    klogf("irq", "Recieved %x\n", regs->int_no - 32);
+    if (regs->int_no != 32) { klogf("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
+
+    if (regs->int_no == 32) {
+        if (kernel::time::system_timer != nullptr) { kernel::time::system_timer->tick(); }
+    }
 
     // Signal interrupt handled
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }

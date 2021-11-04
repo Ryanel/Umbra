@@ -4,21 +4,21 @@
 #include <kernel/hal/sw_framebuffer.h>
 #include <kernel/log.h>
 #include <kernel/panic.h>
+#include <kernel/time.h>
 #include <kernel/x86/interrupts.h>
 #include <kernel/x86/paging.h>
+#include <kernel/x86/pit.h>
 #include <kernel/x86/serial_text_console.h>
 #include <kernel/x86/vga_text_console.h>
 #include <string.h>
 
-extern "C" void _halt();
+extern "C" void      _halt();
+extern "C" uint32_t* boot_page_directory;
 
-x86_idt g_idt;
-
+x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
 kernel::device::fb_text_console     con_fb;
-
-extern "C" uint32_t*                boot_page_directory;
 
 void kernel_main();
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
@@ -27,6 +27,8 @@ void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KER
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
+    paging_node paging_directory((page_directory_t*)(&boot_page_directory));
+
     // Initialise logging
     auto& log = kernel::log::get();
     con_serial.init();
@@ -40,6 +42,7 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         panic("Multiboot magic incorrect");
     }
 
+    // Initialise the display
     if (mb_info->framebuffer_type == 2) {
         klogf("display", "Using VGA 80x25 textmode\n");
         con_vga.init();
@@ -60,13 +63,15 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     g_idt.init();
     g_idt.enable_interrupts();
 
-    // TODO: Initialise PIT
-    // TODO: Initialise TSS
-    // TODO: Initialise the memory map (get it from GRUB)
-    // TODO: Initialise paging (do this before kernel_entry!)
-    paging_node paging_directory((page_directory_t*)(&boot_page_directory));
+    // Initialise a timer
+    pit_timer timer_pit;  // TODO: Fix this Hack! Should be dynamically allocated OR statically in Binary
+    timer_pit.init();
+    kernel::time::system_timer = &timer_pit;
 
-    // TODO: Initialsie VGA display output
+    // Initialise the memory map (get it from GRUB)
+
+    // Initialise paging
+
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();
 }

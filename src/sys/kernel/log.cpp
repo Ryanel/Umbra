@@ -1,19 +1,19 @@
 #include <kernel/log.h>
+#include <kernel/panic.h>
 #include <kernel/spinlock.h>
+#include <kernel/time.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <kernel/panic.h>
 
 // This is THE kernel logger. Only one should be created.
-kernel::log             kernel_logger;
-kernel::utils::spinlock kprintf_spinlock;
-
+kernel::log  kernel_logger;
 kernel::log& kernel::log::get() { return kernel_logger; }
 
+extern "C" void kernel_c_shim_print_char_to_log(char c) { kernel_logger.write(c); }
+extern "C" void kernel_c_shim_print_string_to_log(char* s) { kernel_logger.write(s); }
+
 void kernel::log::init(device::text_console* device) {
-    if(console_device_index >= LOG_DEVICE_MAX) {
-        panic("Attempting to initalise too many log devices!");
-    }
+    if (console_device_index >= LOG_DEVICE_MAX) { panic("Attempting to initalise too many log devices!"); }
     console[console_device_index] = device;
     console_device_index++;
 }
@@ -32,9 +32,7 @@ void kernel::log::write(const char* s) {
     if (console == nullptr) { return; }
 
     // Print the given string.
-    for (; (*s) != '\0'; s++) {
-        write(*s);
-    }
+    for (; (*s) != '\0'; s++) { write(*s); }
 }
 
 void kernel::log::write_buffer(char c) {
@@ -44,11 +42,7 @@ void kernel::log::write_buffer(char c) {
 }
 
 void kernel::log::console_print(char c) {
-    for (size_t i = 0; i < console_device_index; i++)
-    {
-        console[i]->write(c);
-    }
-    
+    for (size_t i = 0; i < console_device_index; i++) { console[i]->write(c); }
 }
 
 void kernel::log::flush() {
@@ -66,32 +60,24 @@ void kernel::log::flush() {
     buffer_index = 0;
 }
 
-extern "C" void kernel_c_shim_print_char_to_log(char c) { kernel_logger.write(c); }
-extern "C" void kernel_c_shim_print_string_to_log(char* s) { kernel_logger.write(s); }
-
 int kprintf(const char* fmt, ...) {
-    // TODO: Bug in spinlock acquire where it spins to acquire lock?
-    kprintf_spinlock.acquire();
-
     va_list arg;
     va_start(arg, fmt);
     vprintf(fmt, arg);
     va_end(arg);
 
-    kprintf_spinlock.release();
     return 0;
 }
 
 int klogf(const char* category, const char* fmt, ...) {
-    // TODO: Bug in spinlock acquire where it spins to acquire lock?
-    kprintf("%8s: ", category);
-    kprintf_spinlock.acquire();
+    uint64_t boot_ms = kernel::time::boot_time_ns() / (uint64_t)1000000;
+
+    kprintf("%7l ms | %s: ", boot_ms, category);
 
     va_list arg;
     va_start(arg, fmt);
     vprintf(fmt, arg);
     va_end(arg);
 
-    kprintf_spinlock.release();
     return 0;
 }

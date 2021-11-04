@@ -1,5 +1,14 @@
 # Start
 
+.extern _halt
+.extern stack_top
+.extern k_bss_start
+.extern k_bss_end
+
+.extern _init
+.extern setupGDT
+.extern kernel_entry
+
 .section .bss, "aw", @nobits
 .align 4096
 .global boot_page_directory
@@ -9,15 +18,10 @@ boot_page_table1:
 	.skip 4096
 
 .section .multiboot.text, "a"
-.extern _halt
-.extern stack_top
-.extern kernel_entry
-.extern setupGDT
-.extern _init
-
 .global _start
 .type _start, @function
 _start:
+	cld												# Ensure direction flag is clear, SysV compat.
 	movl 	$(boot_page_table1 - 0xC0000000), %edi 	# We're going to set the kernel up in a higher half address (0xC0000000)
 	movl 	$0, %esi								# Map up to the first 1024 pages, up to the end of the kernel
 	movl 	$1023, %ecx
@@ -57,15 +61,20 @@ _start:
 
 .section .text
 kernel_early_boot:
+	# Un-identity map the boot page directory
 	movl $0, boot_page_directory + 0
 	movl %cr3, %ecx
 	movl %ecx, %cr3
 
-	movl 	$stack_top, %esp						# Set stack top 
-	movl 	$stack_top, %ebp						# Set stack base 
+	# Set the stack
+	movl 	$stack_top, %esp
+	xor 	%ebp, %ebp       						# EBP needs to be null for end-of-stack
+
 	addl 	$0xC0000000, %ebx						# Add virtual to multiboot magic
 	pushl 	%ebx									# GRUB Multiboot info
 	pushl 	%eax									# GRUB Multiboot magic
+
+	# System Setup, ready for C
 	call 	setupGDT								# Init the GDT
 	call 	_init									# Global constructors
 	call 	kernel_entry							# Call the kernel
