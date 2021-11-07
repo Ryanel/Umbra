@@ -3,8 +3,10 @@
 #include <kernel/hal/fb_text_console.h>
 #include <kernel/hal/sw_framebuffer.h>
 #include <kernel/log.h>
+#include <kernel/mm/pmm.h>
 #include <kernel/panic.h>
 #include <kernel/time.h>
+#include <kernel/types.h>
 #include <kernel/x86/interrupts.h>
 #include <kernel/x86/paging.h>
 #include <kernel/x86/pit.h>
@@ -14,6 +16,7 @@
 
 extern "C" void      _halt();
 extern "C" uint32_t* boot_page_directory;
+extern "C" uint32_t* boot_page_table1;
 
 x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
@@ -27,7 +30,9 @@ void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KER
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
-    paging_node paging_directory((page_directory_t*)(&boot_page_directory));
+    page_directory boot_directory((page_directory_raw_t*)(&boot_page_directory));
+    boot_directory.directory_addr = (uint32_t)(&boot_page_directory) - 0xC0000000;
+    boot_directory.pt_virt[768]   = (uint32_t)(&boot_page_table1);
 
     // Initialise logging
     auto& log = kernel::log::get();
@@ -70,7 +75,16 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
 
     // Initialise the memory map (get it from GRUB)
 
-    // Initialise paging
+    multiboot_memory_map_t* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
+
+    for (mb_mmap; (unsigned long)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
+         mb_mmap = (multiboot_memory_map_t*)((unsigned long)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
+
+        uint32_t addr = mb_mmap->addr;
+        uint32_t end_addr = mb_mmap->addr + mb_mmap->len - 1;
+        klogf("mmap", "%d | 0x%08x -> 0x%08x\n", mb_mmap->type, addr, end_addr);
+    }
+    kernel::g_pmm.describe();
 
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();

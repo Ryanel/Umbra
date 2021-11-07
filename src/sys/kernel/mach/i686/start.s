@@ -12,6 +12,7 @@
 .section .bss, "aw", @nobits
 .align 4096
 .global boot_page_directory
+.global boot_page_table1
 boot_page_directory:
 	.skip 4096
 boot_page_table1:
@@ -43,7 +44,7 @@ _start:
 	movl $(boot_page_table1 - 0xC0000000 + 0x003), boot_page_directory - 0xC0000000 + 768 * 4
 
 	# Map the page directory to itself @ 0xFFFFF000
-	movl $(boot_page_directory - 0xC0000000 + 0x003), boot_page_directory - 0xC0000000 + (4096 - 4)
+	# movl $(boot_page_directory - 0xC0000000 + 0x003), boot_page_directory - 0xC0000000 + (4096 - 4)
 
 	# Set the page directory
 	movl $(boot_page_directory - 0xC0000000), %ecx

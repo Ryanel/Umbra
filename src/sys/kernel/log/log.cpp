@@ -1,6 +1,5 @@
 #include <kernel/log.h>
 #include <kernel/panic.h>
-#include <kernel/spinlock.h>
 #include <kernel/time.h>
 #include <stdarg.h>
 #include <stdio.h>

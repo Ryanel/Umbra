@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel/log.h>
+#include <kernel/types.h>
 #include <stdint.h>
 
 typedef struct paging_page {
@@ -43,19 +44,22 @@ typedef struct page_table {
     page_t entries[1024];
 } page_table_t;
 
-typedef struct page_directory {
+typedef struct page_directory_raw {
     page_directory_entry_t entries[1024];
-} page_directory_t;
+} page_directory_raw_t;
 
-class paging_node {
+class page_directory {
    public:
-    page_directory_t* directory;
+    page_directory_raw_t* directory;
+    phys_addr_t           directory_addr;
+    virt_addr_t           pt_virt[1024];
+
+    inline void tlb_flush_single(unsigned long addr) { asm volatile("invlpg (%0)" ::"r"(addr) : "memory"); }
 
    public:
-    paging_node(page_directory_t* dir) { directory = dir; }
-    void describe(uint32_t virt);
-    static inline void flush_tlb_single(unsigned long addr) { asm volatile("invlpg (%0)" ::"r"(addr) : "memory"); }
-    static uint32_t current_get(uint32_t virt);
-    static void current_map(uint32_t phys, uint32_t virt, uint32_t flags);
-    static void current_unmap(uint32_t virt);
+    page_directory(page_directory_raw_t* dir) { directory = dir; }
+    page_directory(phys_addr_t dir) { directory = (page_directory_raw_t*)dir; }
+
+    bool map(phys_addr_t phys, virt_addr_t virt, uint32_t flags);
+    bool unmap(virt_addr_t addr);
 };

@@ -1,55 +1,35 @@
 #include <kernel/x86/paging.h>
 
-void paging_node::describe(uint32_t virt) {
-    
-}
-uint32_t paging_node::current_get(uint32_t virt) {
-    unsigned long pdindex = (unsigned long)virt >> 22;
-    unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
-
-    unsigned long* pd = (unsigned long*)0xFFFFF000;
-    // Here you need to check whether the PD entry is present.
-
-    unsigned long* pt = ((unsigned long*)0xFFC00000) + (0x400 * pdindex);
-    // Here you need to check whether the PT entry is present.
-
-    return (uint32_t)((pt[ptindex] & ~0xFFF) + ((unsigned long)virt & 0xFFF));
-}
-
-void paging_node::current_map(uint32_t phys, uint32_t virt, uint32_t flags) {
+bool page_directory::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
     // Make sure that both addresses are page-aligned.
-
     unsigned long pdindex = (unsigned long)virt >> 22;
     unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
 
-    unsigned long* pd = (unsigned long*)0xFFFFF000;
-    // Here you need to check whether the PD entry is present.
-    // When it is not present, you need to create a new empty PT and
-    // adjust the PDE accordingly.
+    page_directory_entry_t* pd_ent = &directory->entries[pdindex];
 
-    unsigned long* pt = ((unsigned long*)0xFFC00000) + (0x400 * pdindex);
-    // Here you need to check whether the PT entry is present.
-    // When it is, then there is already a mapping present. What do you do now?
+    // Check if the PD entry exists.
+    if (pd_ent->present != 1) {
+        klogf("map", "No page table...\n");
+        return false;
+    }
 
-    pt[ptindex] = ((unsigned long)phys) | (flags & 0xFFF) | 0x01;  // Present
+    page_table_t* pt         = (page_table_t*)pt_virt[pdindex];
+    pt->entries[ptindex].raw = ((unsigned long)phys) | (flags & 0xFFF) | 0x01;
 
-    // Now you need to flush the entry in the TLB
-    // or you might not notice the change.
-    flush_tlb_single(phys);
+    tlb_flush_single(phys);
+    return true;
 }
 
-void paging_node::current_unmap(uint32_t virt) {
-    unsigned long pdindex = (unsigned long)virt >> 22;
-    unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
+bool page_directory::unmap(virt_addr_t virt) {
+    unsigned long           pdindex = (unsigned long)virt >> 22;
+    unsigned long           ptindex = (unsigned long)virt >> 12 & 0x03FF;
+    page_directory_entry_t* pd_ent  = &directory->entries[pdindex];
 
-    unsigned long* pd = (unsigned long*)0xFFFFF000;
-    // Here you need to check whether the PD entry is present.
-    // When it is not present, you need to create a new empty PT and
-    // adjust the PDE accordingly.
+    // Check if the PD entry exists.
+    if (pd_ent->present != 1) { return false; }
 
-    unsigned long* pt = ((unsigned long*)0xFFC00000) + (0x400 * pdindex);
-    // Here you need to check whether the PT entry is present.
-    // When it is, then there is already a mapping present. What do you do now?
+    page_table_t* pt         = (page_table_t*)pt_virt[pdindex];
+    pt->entries[ptindex].raw = 0;
 
-    pt[ptindex] = 0x0;
+    tlb_flush_single(virt);
 }
