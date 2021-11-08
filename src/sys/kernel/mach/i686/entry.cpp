@@ -3,7 +3,9 @@
 #include <kernel/hal/fb_text_console.h>
 #include <kernel/hal/sw_framebuffer.h>
 #include <kernel/log.h>
+#include <kernel/mm/heap.h>
 #include <kernel/mm/pmm.h>
+#include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/time.h>
 #include <kernel/types.h>
@@ -17,11 +19,13 @@
 extern "C" void      _halt();
 extern "C" uint32_t* boot_page_directory;
 extern "C" uint32_t* boot_page_table1;
+extern "C" uint32_t* _kernel_end;
 
 x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
 kernel::device::fb_text_console     con_fb;
+page_directory                      boot_directory;
 
 void kernel_main();
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
@@ -30,7 +34,7 @@ void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KER
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
-    page_directory boot_directory((page_directory_raw_t*)(&boot_page_directory));
+    boot_directory                = page_directory((page_directory_raw_t*)(&boot_page_directory));
     boot_directory.directory_addr = (uint32_t)(&boot_page_directory) - 0xC0000000;
     boot_directory.pt_virt[768]   = (uint32_t)(&boot_page_table1);
 
@@ -69,22 +73,24 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     g_idt.enable_interrupts();
 
     // Initialise a timer
-    pit_timer timer_pit;  // TODO: Fix this Hack! Should be dynamically allocated OR statically in Binary
+    pit_timer timer_pit;
     timer_pit.init();
     kernel::time::system_timer = &timer_pit;
 
     // Initialise the memory map (get it from GRUB)
-
     multiboot_memory_map_t* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
-
     for (mb_mmap; (unsigned long)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
          mb_mmap = (multiboot_memory_map_t*)((unsigned long)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
-
-        uint32_t addr = mb_mmap->addr;
-        uint32_t end_addr = mb_mmap->addr + mb_mmap->len - 1;
-        klogf("mmap", "%d | 0x%08x -> 0x%08x\n", mb_mmap->type, addr, end_addr);
+        uint32_t                addr     = mb_mmap->addr;
+        uint32_t                end_addr = mb_mmap->addr + mb_mmap->len - 1;
+        kernel::pmm_region_type type     = kernel::pmm_region_type::unknown;
+        if (mb_mmap->type == MULTIBOOT_MEMORY_AVAILABLE) { type = kernel::pmm_region_type::ram; }
+        kernel::g_pmm.add_region(kernel::pmm_region(type, addr, end_addr));
     }
-    kernel::g_pmm.describe();
+
+    kernel::g_pmm.init();
+    kernel::g_vmm.dir_current = &boot_directory;
+    g_heap.init(false, (uint32_t)(&_kernel_end));
 
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();

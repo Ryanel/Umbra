@@ -2,6 +2,7 @@
 
 #include <kernel/config.h>
 #include <kernel/types.h>
+#include <kernel/util/bitmap.h>
 
 namespace kernel {
 
@@ -15,6 +16,12 @@ typedef struct pmm_region {
     pmm_region_type type;
     phys_addr_t     start;
     phys_addr_t     end;
+    pmm_region() {}
+    pmm_region(pmm_region_type type, phys_addr_t start, phys_addr_t end) {
+        this->type  = type;
+        this->start = start;
+        this->end   = end;
+    }
 } pmm_region_t;
 
 // The physical memory manager keeps track of usage for each region.
@@ -24,11 +31,16 @@ class phys_mm {
     pmm_region_t   regions[KERNEL_PMM_MAXREGIONS];
     unsigned short region_count;
     // Stack for free pages
-    // Backing bitmap
 
-    void        add_region(pmm_region_t region);
-    phys_addr_t get_free_page();
+    bitmap backing_store;  // Backing bitmap, 1 = available, 0 = occupied
+
     void        describe() const;
+    void        add_region(pmm_region_t region);
+    void        init();
+    phys_addr_t get_available_page();
+    void        mark_used(phys_addr_t addr);
+    void        mark_free(phys_addr_t addr);
+    bool        page_available(phys_addr_t addr);
 };
 
 extern phys_mm g_pmm;

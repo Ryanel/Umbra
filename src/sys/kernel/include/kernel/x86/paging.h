@@ -57,9 +57,13 @@ class page_directory {
     inline void tlb_flush_single(unsigned long addr) { asm volatile("invlpg (%0)" ::"r"(addr) : "memory"); }
 
    public:
+    page_directory() { directory = nullptr; }
     page_directory(page_directory_raw_t* dir) { directory = dir; }
     page_directory(phys_addr_t dir) { directory = (page_directory_raw_t*)dir; }
 
     bool map(phys_addr_t phys, virt_addr_t virt, uint32_t flags);
     bool unmap(virt_addr_t addr);
+
+   private:
+    void allocate_page_directory(virt_addr_t virt);
 };
