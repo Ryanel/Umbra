@@ -18,6 +18,13 @@ boot_page_directory:
 boot_page_table1:
 	.skip 4096
 
+.global stack_top
+.align 16
+stack_bottom:
+	.skip 16384 
+stack_top:
+
+
 .section .multiboot.text, "a"
 .global _start
 .type _start, @function
@@ -80,3 +87,36 @@ kernel_early_boot:
 	call 	_init									# Global constructors
 	call 	kernel_entry							# Call the kernel
 	jmp 	_halt									# If we somehow reach here, call _halt() to halt the current processor.
+
+.global _halt
+_halt:
+	cli
+1:	hlt
+	jmp 1b
+
+# GDT
+gdt:
+.quad 0x0000000000000000
+.quad 0x00CF9A000000FFFF
+.quad 0x00CF92000000FFFF
+.quad 0x00CFFA000000FFFF
+.quad 0x00CFF2000000FFFF
+
+gdtr: 
+    .word . - gdt - 1 # For limit storage
+    .long gdt # For base storage
+
+.global setupGDT
+
+setupGDT:
+	lgdt (gdtr)
+	jmp $0x08,$.reload_cs
+.reload_cs:
+	mov $0x10, %ax
+	mov %ax, %ds
+	mov %ax, %es
+	mov %ax, %fs
+	mov %ax, %gs
+	mov %ax, %ss
+	ret
+

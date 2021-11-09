@@ -27,8 +27,8 @@ class fb_text_console : public text_console {
     int  getY();
 
     sw_framebuffer framebuffer;
-    int            font_width  = 8;
-    int            font_height = 8;
+    unsigned int   font_width  = 8;
+    unsigned int   font_height = 8;
 
     void draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back);
     void wrap();

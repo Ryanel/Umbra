@@ -10,8 +10,7 @@ void kernel_main() {
     auto& log = kernel::log::get();
     klogf("kernel", "Entered kmain()\n");
 
-    // TODO: Create a VMM and PMM
-    // TODO: Setup an initial 'heap' area.
+    // TODO: Initialise the full heap
     // TODO: Setup a scheduler
     // TODO: Create an executable.
     // TODO: Create a virtual filesystem.
