@@ -11,9 +11,8 @@ class vga_text_console : public text_console {
    public:
     void init();
     void clear();
-    
     void write(char c);
-    void write_color(char c, char color); // 
+    void write_color(char c, char color);
 
     int width();
     int height();
@@ -27,7 +26,7 @@ class vga_text_console : public text_console {
 
    private:
     const uintptr_t buffer_address = 0xC00B8000;
-    
+
     int x = 0;
     int y = 0;
     char attribute = 0x0F;
@@ -36,6 +35,9 @@ class vga_text_console : public text_console {
     unsigned int index(int x, int y) {
         return ((width() * y) + x);
     }
+
+    void scroll_up();
+    void set_cursor();
 };
 
 }

@@ -24,7 +24,6 @@ extern "C" uint32_t* _kernel_end;
 x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
-kernel::device::fb_text_console     con_fb;
 page_directory                      boot_directory;
 
 void kernel_main();
@@ -34,10 +33,11 @@ void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KER
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
+    kernel::device::fb_text_console con_fb;
+
     boot_directory                = page_directory((page_directory_raw_t*)(&boot_page_directory));
     boot_directory.directory_addr = (uint32_t)(&boot_page_directory) - 0xC0000000;
     boot_directory.pt_virt[768]   = (uint32_t)(&boot_page_table1);
-
     // Initialise logging
     auto& log = kernel::log::get();
     con_serial.init();
@@ -51,32 +51,6 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         panic("Multiboot magic incorrect");
     }
 
-    // Initialise the display
-    if (mb_info->framebuffer_type == 2) {
-        klogf("display", "Using VGA 80x25 textmode\n");
-        con_vga.init();
-        log.init(&con_vga);
-    } else {
-        klogf("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
-              mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
-
-        con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width,
-                                            mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_pitch);
-        log.init(&con_fb);
-        con_fb.init();
-    }
-
-    kernel_print_version();
-
-    // Initialise the IDT
-    g_idt.init();
-    g_idt.enable_interrupts();
-
-    // Initialise a timer
-    pit_timer timer_pit;
-    timer_pit.init();
-    kernel::time::system_timer = &timer_pit;
-
     // Initialise the memory map (get it from GRUB)
     multiboot_memory_map_t* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
     for (; (unsigned long)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
@@ -87,10 +61,40 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         if (mb_mmap->type == MULTIBOOT_MEMORY_AVAILABLE) { type = kernel::pmm_region_type::ram; }
         kernel::g_pmm.add_region(kernel::pmm_region(type, addr, end_addr));
     }
-
-    kernel::g_pmm.init();
     kernel::g_vmm.dir_current = &boot_directory;
+    kernel::g_pmm.init();
     g_heap.init(false, (uint32_t)(&_kernel_end));
+
+    // Initialise the IDT
+    g_idt.init();
+    g_idt.enable_interrupts();
+
+    // Initialise the display
+    if (mb_info->framebuffer_type == 2) {
+        klogf("display", "Using VGA 80x25 textmode\n");
+        con_vga.init();
+        log.init(&con_vga);
+    } else {
+        klogf("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
+              mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
+
+        for (size_t i = 0; i < mb_info->framebuffer_height * mb_info->framebuffer_pitch; i += 0x1000) {
+            kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i,
+                                      0x03);
+        }
+
+        con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width,
+                                            mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_pitch);
+        log.init(&con_fb);
+        con_fb.init();
+    }
+
+    kernel_print_version();
+
+    // Initialise a timer
+    pit_timer timer_pit;
+    timer_pit.init();
+    kernel::time::system_timer = &timer_pit;
 
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();

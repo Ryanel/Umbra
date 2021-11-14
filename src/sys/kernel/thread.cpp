@@ -34,4 +34,6 @@ kernel::thread* kernel::threading::create(void* fn) {
     *--stack_ptr    = 0;                                 // EBP
 
     t->k_stack_current = (uint32_t)stack_ptr;
+
+    return t;
 }
