@@ -15,10 +15,11 @@ class scheduler {
        public:
         void enqueue(thread* t) {
             t->state = state;
+            t->next  = nullptr;
+
             if (head == nullptr && tail == nullptr) {
-                t->next = nullptr;
-                head    = t;
-                tail    = t;
+                head = t;
+                tail = t;
             } else {
                 tail->next = t;
                 tail       = t;
@@ -45,11 +46,11 @@ class scheduler {
     };
 
    public:
-    static void schedule();
-    static void init(phys_addr_t kernel_vas);
-    static void enqueue_new(thread* t);
-    static void enqueue(thread* t);
-    static void debug();
+    static void  schedule();
+    static void  init(phys_addr_t kernel_vas);
+    static void  enqueue_new(thread* t);
+    static void  enqueue(thread* t);
+    static void  debug();
     static task* kernel_task;
 
    private:

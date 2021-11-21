@@ -1,4 +1,5 @@
 #include <kernel/time.h>
+#include <kernel/scheduler.h>
 
 uint64_t                   kernel::time::real_time       = 0;
 uint64_t                   kernel::time::time_since_boot = 0;

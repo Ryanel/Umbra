@@ -1,11 +1,17 @@
 #define DEF_INT_HANDLERS
 
+#include <kernel/interrupts.h>
 #include <kernel/log.h>
 #include <kernel/panic.h>
+#include <kernel/scheduler.h>
 #include <kernel/time.h>
 #include <kernel/x86/interrupts.h>
 #include <kernel/x86/ports.h>
 #include <string.h>
+
+void interrupts_disable() { asm("cli"); }
+void interrupts_enable() { asm("sti"); }
+void interrupts_after_thread() { outb(0x20, 0x20); }
 
 extern "C" void k_exception_handler(register_frame_t* regs) {
     if (regs->int_no == 14) {
@@ -25,7 +31,10 @@ extern "C" void k_irq_handler(register_frame_t* regs) {
     if (regs->int_no != 32) { klogf("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
 
     if (regs->int_no == 32) {
-        if (kernel::time::system_timer != nullptr) { kernel::time::system_timer->tick(); }
+        if (kernel::time::system_timer != nullptr) {
+            kernel::time::system_timer->tick();
+            kernel::scheduler::schedule();
+        }
     }
 
     // Signal interrupt handled

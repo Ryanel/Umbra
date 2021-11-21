@@ -3,18 +3,17 @@
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/scheduler.h>
+#include <kernel/task.h>
 #include <kernel/thread.h>
 #include <kernel/time.h>
-#include <kernel/task.h>
-
 #include <kernel/version.h>
 #include <stdio.h>
 
 extern "C" uint32_t* stack_top;
 
 void test_thread() {
-    klogf("test thread", "test_thread() done executing, yielding\n");
-    while (true) { kernel::scheduler::schedule(); }
+    klogf("test thread", "test_thread()\n");
+    while (true) {}
 }
 
 /// The main kernel function.
@@ -26,12 +25,20 @@ void kernel_main() {
     // Setup the scheduler
     kernel::scheduler::init(kernel::g_vmm.dir_current->directory_addr);
 
-    auto* new_task = new kernel::task();
-    new_task->vas = kernel::g_vmm.dir_current->directory_addr;
+    auto* new_task      = new kernel::task();
+    new_task->vas       = kernel::g_vmm.dir_current->directory_addr;
     new_task->task_name = "test_task";
-    new_task->task_id = 1;
+    new_task->task_id   = 1;
 
-    kernel::scheduler::enqueue_new(kernel::threading::create(new_task,(void*)&test_thread));
+    kernel::scheduler::enqueue_new(kernel::threading::create(new_task, (void*)&test_thread));
+
+    auto* new_task2      = new kernel::task();
+    new_task2->vas       = kernel::g_vmm.dir_current->directory_addr;
+    new_task2->task_name = "test_task2";
+    new_task2->task_id   = 2;
+
+    kernel::scheduler::enqueue_new(kernel::threading::create(new_task2, (void*)&test_thread));
+
     // TODO: Create an executable.
     // TODO: Create a virtual filesystem.
     // TODO: Create filesystem drivers
@@ -43,5 +50,5 @@ void kernel_main() {
 
     log.flush();
 
-    while (true) { kernel::scheduler::schedule(); }
+    while (true) {}
 }

@@ -1,5 +1,6 @@
 #include <kernel/log.h>
 #include <kernel/scheduler.h>
+#include <kernel/interrupts.h>
 
 using namespace kernel;
 
@@ -26,7 +27,9 @@ void scheduler::init(phys_addr_t kernel_vas) {
     current_tcb->id          = 0;
     current_tcb->owner       = kernel_task;
 
+    interrupts_disable();
     thread_switch(&idle_thread);
+    interrupts_enable();
 }
 
 void scheduler::schedule() {
@@ -34,7 +37,10 @@ void scheduler::schedule() {
     if (!ready_queue.empty()) {
         auto* next = ready_queue.dequeue();
         ready_queue.enqueue(current_tcb);
+
+        interrupts_disable();
         thread_switch(next);
+        interrupts_enable();
     }
 }
 

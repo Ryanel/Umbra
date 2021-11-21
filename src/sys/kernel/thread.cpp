@@ -2,13 +2,15 @@
 #include <kernel/mm/heap.h>
 #include <kernel/panic.h>
 #include <kernel/thread.h>
+#include <kernel/interrupts.h>
 
 extern "C" uint32_t* stack_top;
 
 uint32_t next_thread_id = 0;
 
 void thread_setup_function(void (*fn)(void)) {
-    klogf("thread", "Created new thread!\n");
+    interrupts_enable();
+    interrupts_after_thread();
     (*fn)();
 
     // If a thread ever quits, destory it here automatically
