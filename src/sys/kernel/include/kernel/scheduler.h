@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel/panic.h>
+#include <kernel/task.h>
 #include <kernel/thread.h>
 
 namespace kernel {
@@ -15,7 +16,7 @@ class scheduler {
         void enqueue(thread* t) {
             t->state = state;
             if (head == nullptr && tail == nullptr) {
-                t->next = t;
+                t->next = nullptr;
                 head    = t;
                 tail    = t;
             } else {
@@ -32,11 +33,22 @@ class scheduler {
         }
 
         bool empty() { return head == nullptr; }
+
+        size_t size() {
+            size_t n = 0;
+            for (auto t = head; t != nullptr; t = t->next) { n++; }
+            return n;
+        }
     };
 
+   public:
+    static void schedule();
+    static void init(phys_addr_t kernel_vas);
+    static void enqueue_new(thread* t);
+    static void enqueue(thread* t);
+    static void debug();
+
+   private:
     static scheduler_queue ready_queue;
-    static void            schedule();
-    static void            init();
-    static void            enqueue_new(thread* t);
 };
 }  // namespace kernel

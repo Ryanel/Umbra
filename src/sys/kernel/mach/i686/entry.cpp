@@ -52,9 +52,9 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     }
 
     // Initialise the memory map (get it from GRUB)
-    multiboot_memory_map_t* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
-    for (; (unsigned long)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
-         mb_mmap = (multiboot_memory_map_t*)((unsigned long)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
+    auto* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
+    for (; (uint32_t)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
+         mb_mmap = (multiboot_memory_map_t*)((uint32_t)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
         uint32_t                addr     = mb_mmap->addr;
         uint32_t                end_addr = mb_mmap->addr + mb_mmap->len - 1;
         kernel::pmm_region_type type     = kernel::pmm_region_type::unknown;

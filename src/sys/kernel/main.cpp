@@ -1,5 +1,6 @@
 #include <kernel/delay.h>
 #include <kernel/log.h>
+#include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/scheduler.h>
 #include <kernel/thread.h>
@@ -12,9 +13,7 @@ extern "C" uint32_t* stack_top;
 void test_thread() {
     klogf("test thread", "test_thread() done executing, yielding\n");
 
-    while (true) {
-        kernel::scheduler::schedule();
-    }
+    while (true) { kernel::scheduler::schedule(); }
 }
 
 /// The main kernel function.
@@ -24,8 +23,9 @@ void kernel_main() {
 
     // TODO: Initialise the full heap
     // Setup the scheduler
-    kernel::scheduler::init();
+    kernel::scheduler::init(kernel::g_vmm.dir_current->directory_addr);
     kernel::scheduler::enqueue_new(kernel::threading::create((void*)&test_thread));
+    kernel::scheduler::debug();
 
     // TODO: Create an executable.
     // TODO: Create a virtual filesystem.
@@ -37,7 +37,5 @@ void kernel_main() {
           kernel::time::boot_time_ns() / (uint64_t)1000000);
     log.flush();
 
-    while (true) {
-        kernel::scheduler::schedule();
-    }
+    while (true) { kernel::scheduler::schedule(); }
 }
