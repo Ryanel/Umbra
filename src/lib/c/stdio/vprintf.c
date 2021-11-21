@@ -1,22 +1,18 @@
-#include <stdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef __is_libk
 
 extern void kernel_c_shim_print_char_to_log(char c);
-extern void kernel_c_shim_print_string_to_log(char * s);
+extern void kernel_c_shim_print_string_to_log(char* s);
 
-void vprintf_print_helper(char c) {
-    kernel_c_shim_print_char_to_log(c);
-}
+void vprintf_print_helper(char c) { kernel_c_shim_print_char_to_log(c); }
 
-void vprintf_print_helper_string(char * s) {
-    kernel_c_shim_print_string_to_log(s);
-}
+void vprintf_print_helper_string(char* s) { kernel_c_shim_print_string_to_log(s); }
 
 static void vprintf_print_padding_helper(int length, char* arg, bool fmt_length_zeropad) {
     if (length != 0) {
@@ -28,7 +24,6 @@ static void vprintf_print_padding_helper(int length, char* arg, bool fmt_length_
 }
 
 int vprintf(const char* fmt, va_list arg) {
-
     // Format variables
     const char* fmt_scan;
     char        fmt_specifier;
@@ -106,7 +101,7 @@ int vprintf(const char* fmt, va_list arg) {
                 vprintf_print_helper((char)arg_int);
                 break;
 
-            case 'i': // Improper
+            case 'i':  // Improper
             case 'd':
                 arg_int = va_arg(arg, int);
                 arg_str = itoa(arg_int, 10);
@@ -114,7 +109,7 @@ int vprintf(const char* fmt, va_list arg) {
                     vprintf_print_helper_string(arg_str);
                     vprintf_print_padding_helper(fmt_length, arg_str, false);
                 } else {
-                    vprintf_print_padding_helper(fmt_length, arg_str, false);
+                    vprintf_print_padding_helper(fmt_length, arg_str, fmt_length_zeropad);
                     vprintf_print_helper_string(arg_str);
                 }
                 break;
@@ -126,12 +121,12 @@ int vprintf(const char* fmt, va_list arg) {
                     vprintf_print_helper_string(arg_str);
                     vprintf_print_padding_helper(fmt_length, arg_str, false);
                 } else {
-                    vprintf_print_padding_helper(fmt_length, arg_str, false);
+                    vprintf_print_padding_helper(fmt_length, arg_str, fmt_length_zeropad);
                     vprintf_print_helper_string(arg_str);
                 }
                 break;
 
-            case 'l': // TODO: Wildy incorect to standard
+            case 'l':  // TODO: Wildy incorect to standard
                 arg_int64 = va_arg(arg, uint64_t);
                 arg_str   = itoa(arg_int64, 10);
                 if (fmt_left_justify) {
@@ -148,11 +143,9 @@ int vprintf(const char* fmt, va_list arg) {
                 arg_str = itoa(arg_int, 16);
                 if (fmt_left_justify) {
                     vprintf_print_helper_string(arg_str);
-                    vprintf_print_padding_helper(fmt_length, arg_str,
-                                          fmt_length_zeropad);
+                    vprintf_print_padding_helper(fmt_length, arg_str, fmt_length_zeropad);
                 } else {
-                    vprintf_print_padding_helper(fmt_length, arg_str,
-                                          fmt_length_zeropad);
+                    vprintf_print_padding_helper(fmt_length, arg_str, fmt_length_zeropad);
                     vprintf_print_helper_string(arg_str);
                 }
 
@@ -163,11 +156,9 @@ int vprintf(const char* fmt, va_list arg) {
                 arg_str   = itoa(arg_int64, 16);
                 if (fmt_left_justify) {
                     vprintf_print_helper_string(arg_str);
-                    vprintf_print_padding_helper(fmt_length, arg_str,
-                                          fmt_length_zeropad);
+                    vprintf_print_padding_helper(fmt_length, arg_str, fmt_length_zeropad);
                 } else {
-                    vprintf_print_padding_helper(fmt_length, arg_str,
-                                          fmt_length_zeropad);
+                    vprintf_print_padding_helper(fmt_length, arg_str, fmt_length_zeropad);
                     vprintf_print_helper_string(arg_str);
                 }
                 break;
@@ -182,8 +173,6 @@ int vprintf(const char* fmt, va_list arg) {
 
 #else
 
-int vprintf(const char* fmt, va_list arg) {
-    return 0;
-}
+int vprintf(const char* fmt, va_list arg) { return 0; }
 
 #endif

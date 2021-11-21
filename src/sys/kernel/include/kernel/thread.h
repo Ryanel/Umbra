@@ -20,7 +20,7 @@ struct thread {
 
 class threading {
    public:
-    static thread* create(void* starting_addr);
+    static thread* create(task* owner, void* bootstrap_fn);
 };
 
 }  // namespace kernel

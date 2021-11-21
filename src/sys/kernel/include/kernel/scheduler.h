@@ -29,6 +29,9 @@ class scheduler {
             if (head == nullptr) { panic("Attempted to dequeue a thread from an empty queue"); }
             thread* to_return = head;
             head              = head->next;
+
+            if (head == nullptr) { tail = nullptr; }
+
             return to_return;
         }
 
@@ -47,6 +50,7 @@ class scheduler {
     static void enqueue_new(thread* t);
     static void enqueue(thread* t);
     static void debug();
+    static task* kernel_task;
 
    private:
     static scheduler_queue ready_queue;
