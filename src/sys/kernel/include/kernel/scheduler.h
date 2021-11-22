@@ -8,11 +8,12 @@ namespace kernel {
 class scheduler {
    public:
     class scheduler_queue {
-        thread*      head;
-        thread*      tail;
-        thread_state state;
+        thread* head;
+        thread* tail;
 
        public:
+        thread_state state;
+
         void enqueue(thread* t) {
             t->state = state;
             t->next  = nullptr;
@@ -36,7 +37,8 @@ class scheduler {
             return to_return;
         }
 
-        bool empty() { return head == nullptr; }
+        thread* top() { return head; }
+        bool    empty() { return head == nullptr; }
 
         size_t size() {
             size_t n = 0;
@@ -46,14 +48,20 @@ class scheduler {
     };
 
    public:
-    static void  schedule();
-    static void  init(phys_addr_t kernel_vas);
-    static void  enqueue_new(thread* t);
-    static void  enqueue(thread* t);
-    static void  debug();
     static task* kernel_task;
+
+    static void schedule();
+    static void init(phys_addr_t kernel_vas);
+    static void enqueue_new(thread* t);
+    static void enqueue(thread* t);
+    static void terminate(thread* t);
+    static void debug();
+
+    static void lock();
+    static void unlock();
 
    private:
     static scheduler_queue ready_queue;
+    static int             scheduler_lock;
 };
 }  // namespace kernel

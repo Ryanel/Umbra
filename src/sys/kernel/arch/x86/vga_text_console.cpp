@@ -10,9 +10,9 @@ void vga_text_console::init() {
 
     // Set block cursor
     outb(0x3D4, 0x0A);
-	outb(0x3D5, (inb(0x3D5) & 0xC0) | 0);
-	outb(0x3D4, 0x0B);
-	outb(0x3D5, (inb(0x3D5) & 0xE0) | 15);
+    outb(0x3D5, (inb(0x3D5) & 0xC0) | 0);
+    outb(0x3D4, 0x0B);
+    outb(0x3D5, (inb(0x3D5) & 0xE0) | 15);
 }
 
 void vga_text_console::clear() {
@@ -74,7 +74,7 @@ void vga_text_console::scroll_up() {
     char*     buffer = (char*)(buffer_address);
     const int sz     = width() * 2;
     if (y >= height()) {
-        for (size_t i = 1; i < height(); i++) { memcpy(&buffer[sz * (i - 1)], &buffer[sz * i], sz); }
+        for (size_t i = 1; i < (size_t)height(); i++) { memcpy(&buffer[sz * (i - 1)], &buffer[sz * i], sz); }
         memset(&buffer[sz * (height() - 1)], 0, sz);
         y--;
     }

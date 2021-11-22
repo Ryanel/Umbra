@@ -1,8 +1,9 @@
+#include <kernel/interrupts.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/panic.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
-#include <kernel/interrupts.h>
 
 extern "C" uint32_t* stack_top;
 
@@ -12,10 +13,7 @@ void thread_setup_function(void (*fn)(void)) {
     interrupts_enable();
     interrupts_after_thread();
     (*fn)();
-
-    // If a thread ever quits, destory it here automatically
-    klogf("thread", "Destroying thread!\n");
-    while (true) {}
+    kernel::scheduler::terminate(nullptr);
 }
 
 kernel::thread* kernel::threading::create(task* owner, void* bootstrap_fn) {
