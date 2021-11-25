@@ -1,5 +1,6 @@
 #include <kernel/log.h>
 #include <kernel/panic.h>
+#include <kernel/scheduler.h>
 #include <kernel/time.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -15,6 +16,8 @@ void kernel::log::init(device::text_console* device) {
     if (console_device_index >= LOG_DEVICE_MAX) { panic("Attempting to initalise too many log devices!"); }
     console[console_device_index] = device;
     console_device_index++;
+
+    device->init();
 }
 
 void kernel::log::write(char c) {
@@ -69,9 +72,10 @@ int kprintf(const char* fmt, ...) {
 }
 
 int klogf(const char* category, const char* fmt, ...) {
+    kernel::scheduler::lock();
     uint64_t boot_ms = kernel::time::boot_time_ns() / (uint64_t)1000000;
 
-    uint32_t boot_secs = boot_ms / 1000;
+    uint32_t boot_secs      = boot_ms / 1000;
     uint32_t boot_hundreths = boot_ms % 1000;
 
     kprintf("%3d.%03d | %s: ", boot_secs, boot_hundreths, category);
@@ -81,5 +85,6 @@ int klogf(const char* category, const char* fmt, ...) {
     vprintf(fmt, arg);
     va_end(arg);
 
+    kernel::scheduler::unlock();
     return 0;
 }

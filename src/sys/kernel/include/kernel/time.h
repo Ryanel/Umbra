@@ -9,6 +9,8 @@ class time {
     static void     increment(uint64_t ns);
     static uint64_t boot_time_ns();
     static uint64_t time_ns();
+
+   public:
     static hal::system_timer* system_timer;
 
    private:

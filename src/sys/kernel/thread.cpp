@@ -24,6 +24,7 @@ kernel::thread* kernel::threading::create(task* owner, void* bootstrap_fn) {
     t->id              = ++next_thread_id;
     t->next            = nullptr;
     t->owner           = owner;
+    t->slice_ns        = 0;
 
     if (t->owner == nullptr) { panic("Thread has no owner!"); }
 

@@ -7,14 +7,15 @@ namespace device {
 /// The console will also be able to interpret control codes such as `\n` and `\b` correctly.
 class text_console {
    public:
+    virtual void init() = 0;
     /// Clear the console
     virtual void clear() = 0;
     /// Write a character to the console
     virtual void write(char c) = 0;
-    
+
     /// Return the width in characters of the device
     virtual int width() = 0;
-    /// Returns the height in characters of the device 
+    /// Returns the height in characters of the device
     virtual int height() = 0;
 
     /// Returns true if color is supported in this terminal.
@@ -34,5 +35,5 @@ class text_console {
     virtual int getY() = 0;
 };
 
-}
-}
+}  // namespace device
+}  // namespace kernel

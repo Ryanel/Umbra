@@ -27,6 +27,7 @@ kernel::device::serial_text_console con_serial;
 page_directory                      boot_directory;
 
 void kernel_main();
+void init_gdt();
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
 
 /// The responsibility of the kernel_entry function is to initialse the system into the minimuim startup state.
@@ -38,9 +39,9 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     boot_directory                = page_directory((page_directory_raw_t*)(&boot_page_directory));
     boot_directory.directory_addr = (uint32_t)(&boot_page_directory) - 0xC0000000;
     boot_directory.pt_virt[768]   = (uint32_t)(&boot_page_table1);
+
     // Initialise logging
     auto& log = kernel::log::get();
-    con_serial.init();
     log.init(&con_serial);
     log.shouldBuffer = false;  // Disable buffering for now
 
@@ -65,6 +66,9 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     kernel::g_pmm.init();
     g_heap.init(false, (uint32_t)(&_kernel_end));
 
+    // Initialise the GDT
+    init_gdt();
+
     // Initialise the IDT
     g_idt.init();
     g_idt.enable_interrupts();
@@ -72,7 +76,6 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     // Initialise the display
     if (mb_info->framebuffer_type == 2) {
         klogf("display", "Using VGA 80x25 textmode\n");
-        con_vga.init();
         log.init(&con_vga);
     } else {
         klogf("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
@@ -86,7 +89,6 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width,
                                             mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_pitch);
         log.init(&con_fb);
-        con_fb.init();
     }
 
     kernel_print_version();

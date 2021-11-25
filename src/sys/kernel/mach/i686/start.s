@@ -83,7 +83,7 @@ kernel_early_boot:
 	pushl 	%eax									# GRUB Multiboot magic
 
 	# System Setup, ready for C
-	call 	setupGDT								# Init the GDT
+	#call 	setupGDT								# Init the GDT
 	call 	_init									# Global constructors
 	call 	kernel_entry							# Call the kernel
 	jmp 	_halt									# If we somehow reach here, call _halt() to halt the current processor.
@@ -94,22 +94,9 @@ _halt:
 1:	hlt
 	jmp 1b
 
-# GDT
-gdt:
-.quad 0x0000000000000000
-.quad 0x00CF9A000000FFFF
-.quad 0x00CF92000000FFFF
-.quad 0x00CFFA000000FFFF
-.quad 0x00CFF2000000FFFF
-
-gdtr: 
-    .word . - gdt - 1 # For limit storage
-    .long gdt # For base storage
-
 .global setupGDT
-
 setupGDT:
-	lgdt (gdtr)
+	lgdt (%eax)
 	jmp $0x08,$.reload_cs
 .reload_cs:
 	mov $0x10, %ax
@@ -119,4 +106,3 @@ setupGDT:
 	mov %ax, %gs
 	mov %ax, %ss
 	ret
-

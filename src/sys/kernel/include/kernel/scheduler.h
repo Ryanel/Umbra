@@ -62,6 +62,7 @@ class scheduler {
 
    private:
     static scheduler_queue ready_queue;
+    static uint64_t        last_schedule_ns;
     static int             scheduler_lock;
 };
 }  // namespace kernel

@@ -1,40 +1,47 @@
-#include <kernel/hal/fb_text_console.h>
-#include <string.h>
-#include <kernel/log.h>
 #include <kernel/data/font-unscii.h>
+#include <kernel/hal/fb_text_console.h>
+#include <kernel/log.h>
+#include <string.h>
+#include <kernel/scheduler.h>
 
 using namespace kernel::device;
 
 void fb_text_console::init() {
     clear();
     klogf("console", "Framebuffer text console is: %dx%d\n", width(), height());
-        
 }
 
 void fb_text_console::clear() {
     x = 0;
     y = 0;
-
-    //framebuffer.clear();
+    framebuffer.clear();
 }
-
 
 void fb_text_console::wrap() {
     if (x >= width()) {
         x = 0;
         y += 1;
     }
+
+    if (y >= (height())) {
+        int y_i   = 1;
+        int y_max = y;
+
+        for (; y_i < y_max; y_i++) {
+            for (size_t line = 0; line < font_height; line++) {
+                unsigned int y_line = y_i * 8 + line;
+                framebuffer.linemove(y_line, y_line - 8);
+            }
+        }
+
+        y -= 1;
+    }
 }
 
 void fb_text_console::write(char c) {
-    if(c == '\n') {
+    if (c == '\n') {
         y++;
         x = 0;
-        return;
-    }
-
-    if(c == ' ') {
-        x++;
         wrap();
         return;
     }
@@ -44,16 +51,12 @@ void fb_text_console::write(char c) {
     wrap();
 }
 
-void fb_text_console::write_color(char c, char color) {
-    framebuffer.putpixel(x,y, 0xFF, 0xFF, 0xFF);
-}
+void fb_text_console::write_color(char c, char color) {}
 
 void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back) {
     unsigned int glyph_index = c - 32;
 
-    if (c < 32) {
-        glyph_index = 0;
-    }
+    if (c < 32) { return; }
 
     unsigned int glyph_x, glyph_y;
     unsigned int screen_x = xpos * font_width;
@@ -80,7 +83,7 @@ void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, 
 
 int  fb_text_console::width() { return framebuffer.width / font_width; }
 int  fb_text_console::height() { return framebuffer.height / font_height; }
-bool fb_text_console::supports_color() { return true; }
+bool fb_text_console::supports_color() { return false; }
 bool fb_text_console::supports_cursor_position() { return true; }
 void fb_text_console::setX(int x) { this->x = x; }
 void fb_text_console::setY(int y) { this->y = y; }

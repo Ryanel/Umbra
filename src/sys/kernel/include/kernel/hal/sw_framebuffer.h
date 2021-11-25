@@ -1,5 +1,7 @@
 #pragma once
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 class sw_framebuffer {
    public:
@@ -25,4 +27,14 @@ class sw_framebuffer {
         pixaddr[1]       = g;
         pixaddr[2]       = b;
     }
+
+    void clear() { memset(buffer, 0, height * pitch); }
+    void lineclear(int y) { memset(buffer + (y * pitch), 0, pitch); }
+
+    void linemove(int src, int dest) {
+        uint8_t* ybuff_src  = buffer + (src * pitch);
+        uint8_t* ybuff_dest = buffer + (dest * pitch);
+        memmove(ybuff_dest, ybuff_src, pitch);
+    }
+
 };
