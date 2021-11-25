@@ -12,9 +12,18 @@
 
 extern "C" uint32_t* stack_top;
 
-void test_thread() {
-    klogf("test thread", "test_thread()\n");
+void test_thread() { 
+    klogf("test thread", "sleeping for 1000ms\n");
+    kernel::scheduler::sleep(nullptr, 1000000000);
+    klogf("test thread", "slept for 1000ms\n");
 }
+
+void test_thread2() { 
+    klogf("test thread", "sleeping for 2000ms\n");
+    kernel::scheduler::sleep(nullptr, 2000000000);
+    klogf("test thread", "slept for 2000ms\n");
+}
+
 
 /// The main kernel function.
 void kernel_main() {
@@ -24,13 +33,13 @@ void kernel_main() {
 
     // Setup the scheduler
     kernel::scheduler::init(kernel::g_vmm.dir_current->directory_addr);
-    kernel::scheduler::lock();
 
     auto* new_task      = new kernel::task();
     new_task->vas       = kernel::g_vmm.dir_current->directory_addr;
     new_task->task_name = "test_task";
     new_task->task_id   = 1;
-    kernel::scheduler::enqueue_new(kernel::threading::create(new_task, (void*)&test_thread));
+    kernel::scheduler::enqueue(kernel::threading::create(new_task, (void*)&test_thread));
+    kernel::scheduler::enqueue(kernel::threading::create(new_task, (void*)&test_thread2));
 
     // TODO: Create an executable.
     // TODO: Create a virtual filesystem.
@@ -42,7 +51,7 @@ void kernel_main() {
           kernel::time::boot_time_ns() / (uint64_t)1000000);
 
     kernel::log::get().flush();
-    kernel::scheduler::unlock();
+    kernel::scheduler::unlock();  // Unlock the scheduler for the first time.
 
     while (true) {}
 }

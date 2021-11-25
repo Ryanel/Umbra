@@ -13,10 +13,10 @@ struct thread {
     virt_addr_t  k_stack_top;      // Stack top
     thread*      next;             // Next thread in whatever queue
     task*        owner;            // Owning task
-    uint64_t     time_elapsed;     // Time in NS this thread has been running
-    int64_t      slice_ns;         // Time in NS for this threads slice
-    uint32_t     id;               // The Thread ID of this thread
     thread_state state;            // Current state of this thread
+    uint64_t     time_elapsed;     // Time in NS this thread has been running
+    uint64_t     slice_ns;         // Time in NS for this threads slice
+    uint32_t     id;               // The Thread ID of this thread
 };
 
 class threading {

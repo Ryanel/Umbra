@@ -1,8 +1,8 @@
 #include <kernel/data/font-unscii.h>
 #include <kernel/hal/fb_text_console.h>
 #include <kernel/log.h>
-#include <string.h>
 #include <kernel/scheduler.h>
+#include <string.h>
 
 using namespace kernel::device;
 
@@ -34,6 +34,10 @@ void fb_text_console::wrap() {
             }
         }
 
+        for (size_t line = 0; line < font_height; line++) {
+            unsigned int y_line = (height() - 1) * 8 + line;
+            framebuffer.lineclear(y_line);
+        }
         y -= 1;
     }
 }
