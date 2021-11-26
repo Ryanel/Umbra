@@ -10,6 +10,7 @@
 #include <kernel/time.h>
 #include <kernel/types.h>
 #include <kernel/x86/interrupts.h>
+#include <kernel/x86/descriptor_table.h>
 #include <kernel/x86/paging.h>
 #include <kernel/x86/pit.h>
 #include <kernel/x86/serial_text_console.h>
@@ -27,7 +28,6 @@ kernel::device::serial_text_console con_serial;
 page_directory                      boot_directory;
 
 void kernel_main();
-void init_gdt();
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
 
 /// The responsibility of the kernel_entry function is to initialse the system into the minimuim startup state.
@@ -67,7 +67,7 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     g_heap.init(false, (uint32_t)(&_kernel_end));
 
     // Initialise the GDT
-    init_gdt();
+    kernel::x86::g_gdt.init();
 
     // Initialise the IDT
     g_idt.init();

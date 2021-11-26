@@ -1,23 +1,20 @@
 #pragma once
+
 #include <stdint.h>
 
-struct gdt_entry_struct {
+typedef struct gdt_entry_struct {
     uint16_t limit_low;    // The lower 16 bits of the limit.
     uint16_t base_low;     // The lower 16 bits of the base.
     uint8_t  base_middle;  // The next 8 bits of the base.
     uint8_t  access;       // Access flags, determine what ring this segment can be used in.
-    uint8_t  granularity;
-    uint8_t  base_high;  // The last 8 bits of the base.
-} __attribute__((packed));
-typedef struct gdt_entry_struct gdt_entry_t;
+    uint8_t  granularity;  //
+    uint8_t  base_high;    // The last 8 bits of the base.
+} __attribute__((packed)) gdt_entry_t;
 
-struct gdt_ptr_struct {
+typedef struct gdt_ptr_struct {
     uint16_t limit;  // The upper 16 bits of all selector limits.
     uint32_t base;   // The address of the first gdt_entry_t struct.
-} __attribute__((packed));
-typedef struct gdt_ptr_struct gdt_ptr_t;
-
-void init_gdt();
+} __attribute__((packed)) gdt_ptr_t;
 
 typedef volatile struct strtss {
     unsigned short link;
@@ -58,6 +55,22 @@ typedef volatile struct strtss {
     unsigned short ldt_h;
     unsigned short trap;
     unsigned short iomap;
-} __attribute__((packed)) tss_struct;
+} __attribute__((packed)) tss_struct_t;
 
-extern tss_struct sys_tss;  // Define the TSS as a global structure
+namespace kernel {
+namespace x86 {
+
+class gdt {
+    gdt_ptr_t   gdt_ptr;
+    gdt_entry_t gdt_entries[6];
+
+   public:
+    tss_struct_t tss;
+    void         init();
+    void         gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
+};
+
+extern gdt g_gdt;
+
+}  // namespace x86
+}  // namespace kernel
