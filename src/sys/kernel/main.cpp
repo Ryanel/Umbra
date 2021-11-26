@@ -1,5 +1,4 @@
 #include <kernel/critical.h>
-#include <kernel/delay.h>
 #include <kernel/log.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
@@ -12,18 +11,17 @@
 
 extern "C" uint32_t* stack_top;
 
-void test_thread() { 
+void test_thread() {
     klogf("test thread", "sleeping for 1000ms\n");
     kernel::scheduler::sleep(nullptr, 1000000000);
     klogf("test thread", "slept for 1000ms\n");
 }
 
-void test_thread2() { 
+void test_thread2() {
     klogf("test thread", "sleeping for 2000ms\n");
     kernel::scheduler::sleep(nullptr, 2000000000);
     klogf("test thread", "slept for 2000ms\n");
 }
-
 
 /// The main kernel function.
 void kernel_main() {
