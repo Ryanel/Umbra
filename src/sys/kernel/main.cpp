@@ -36,8 +36,8 @@ void kernel_main() {
     new_task->vas       = kernel::g_vmm.dir_current->directory_addr;
     new_task->task_name = "test_task";
     new_task->task_id   = 1;
-    kernel::scheduler::enqueue(kernel::threading::create(new_task, (void*)&test_thread));
-    kernel::scheduler::enqueue(kernel::threading::create(new_task, (void*)&test_thread2));
+    kernel::scheduler::enqueue(new kernel::thread(new_task, (void*)&test_thread));
+    kernel::scheduler::enqueue(new kernel::thread(new_task, (void*)&test_thread2));
 
     // TODO: Create an executable.
     // TODO: Create a virtual filesystem.

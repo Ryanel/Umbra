@@ -24,7 +24,10 @@ class scheduler {
     static void lock();
     static void unlock();
 
+
    private:
+    static uint64_t determine_timeslice(thread * t);
+    
     static util::linked_list<thread> list_ready;
     static util::linked_list<thread> list_sleeping;
     

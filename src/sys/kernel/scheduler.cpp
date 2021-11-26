@@ -33,6 +33,7 @@ void scheduler::init(phys_addr_t kernel_vas) {
     current_tcb->state       = thread_state::running;
     current_tcb->id          = 0;
     current_tcb->owner       = kernel_task;
+    current_tcb->priority    = 0;  // Lowest priority
 
     last_schedule_ns = 0;
 
@@ -66,7 +67,7 @@ void scheduler::schedule() {
             list_sleeping.remove(t);
 
             t->state    = thread_state::ready_to_run;
-            t->slice_ns = 50000000;
+            t->slice_ns = determine_timeslice(t);
             list_ready.push_back(t);
 
             // TODO: Fix skip on scheduling.
@@ -91,13 +92,16 @@ void scheduler::schedule() {
         }
 
         if (!list_ready.empty()) {
-            auto* next = list_ready.pop_front();
-
-            next->slice_ns = 50000000;  // timeslice = 50ms
-
+            auto* next     = list_ready.pop_front();
+            next->slice_ns = determine_timeslice(next);
             thread_switch(next);
         }
     }
+}
+
+uint64_t kernel::scheduler::determine_timeslice(thread* t) {
+    // TODO: Improve, this is a terrible calculation
+    return 10000000 * (t->priority + 1);
 }
 
 const char* thread_state_to_name(thread_state state) {
@@ -124,12 +128,17 @@ void scheduler::debug() {
     uint32_t secs      = ms / 1000;
     uint32_t hundreths = ms % 1000;
 
-    printf("Scheduler status @ %d.%03ds after boot: \n", secs, hundreths);
+    printf("+-----------------------------------------------------------+\n");
+    printf("| Scheduler status @ %04d.%03ds after boot                   |\n", secs, hundreths);
+
+    printf("|%22s | %4s | %8s | %5s | %8s|\n", "ID / Name", "TID", "CPU Time", "State", "Deadline");
+    printf("+-----------------------+------+----------+-------+---------+\n");
     debug_print_thread(current_tcb);
+
     for (thread* t = list_ready.front(); t != nullptr; t = t->next) { debug_print_thread(t); }
     for (thread* t = list_sleeping.front(); t != nullptr; t = t->next) { debug_print_thread(t); }
 
-    printf("\n");
+    printf("+-----------------------------------------------------------+\n");
     unlock();
 }
 
@@ -137,14 +146,13 @@ void scheduler::debug_print_thread(thread* t) {
     uint64_t ms        = t->time_elapsed / (uint64_t)1000000;
     uint32_t secs      = ms / 1000;
     uint32_t hundreths = ms % 1000;
-    printf("%10s/%-d: thread %d, time:%d.%03d, status: %s", t->owner->task_name, t->owner->task_id, t->id, secs, hundreths,
-           thread_state_to_name(t->state));
 
-    if (t->state == thread_state::sleeping) {
-        printf(", deadline: %l\n", t->slice_ns);
-    } else {
-        printf("\n");
-    }
+    uint64_t deadline_ms        = t->slice_ns / (uint64_t)1000000;
+    uint32_t deadline_secs      = deadline_ms / 1000;
+    uint32_t deadline_hundreths = deadline_ms % 1000;
+
+    printf("|%2d/%-19s | %4d | %4d.%03d | %5s | %4d.%03d|\n", t->owner->task_id, t->owner->task_name, t->id, secs, hundreths,
+           thread_state_to_name(t->state), deadline_secs, deadline_hundreths);
 }
 
 void scheduler::enqueue(thread* t) {

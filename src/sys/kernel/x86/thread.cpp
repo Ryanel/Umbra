@@ -16,19 +16,14 @@ void thread_setup_function(void (*fn)(void)) {
     kernel::scheduler::terminate(nullptr);
 }
 
-kernel::thread* kernel::threading::create(task* owner, void* bootstrap_fn) {
-    auto* t            = new thread();
-    t->k_stack_top     = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
-    t->k_stack_current = t->k_stack_top;
-    t->state           = thread_state::ready_to_run;
-    t->id              = ++next_thread_id;
-    t->next            = nullptr;
-    t->owner           = owner;
-    t->slice_ns        = 0;
+void kernel::thread::setup(void* bootstrap_fn) {
+    k_stack_top     = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
+    k_stack_current = k_stack_top;
+    id              = ++next_thread_id;
 
-    if (t->owner == nullptr) { panic("Thread has no owner!"); }
+    if (owner == nullptr) { panic("Thread has no owner!"); }
 
-    auto* stack_ptr    = (uint32_t*)t->k_stack_current;
+    auto* stack_ptr    = (uint32_t*)k_stack_current;
     *--stack_ptr       = 0;                                 // EAX
     *--stack_ptr       = 0;                                 // ECX
     *--stack_ptr       = (uint32_t)bootstrap_fn;            // Return address as paramater
@@ -38,6 +33,5 @@ kernel::thread* kernel::threading::create(task* owner, void* bootstrap_fn) {
     *--stack_ptr       = 0;                                 // ESI
     *--stack_ptr       = 0;                                 // EDI
     *--stack_ptr       = 0;                                 // EBP
-    t->k_stack_current = (uint32_t)stack_ptr;
-    return t;
+    k_stack_current = (uint32_t)stack_ptr;
 }
