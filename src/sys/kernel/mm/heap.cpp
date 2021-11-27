@@ -8,6 +8,7 @@ kheap g_heap;
 
 virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
     if (full) {
+        return (virt_addr_t)slab_alloc.alloc(sz);
     } else {
         // Align if requested
         if ((flags & KHEAP_PAGEALIGN) != 0 && (early_placement & 0xFFFFF000)) {
@@ -39,7 +40,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
 
 void kheap::free(virt_addr_t addr) {
     if (full) {
-        // TODO
+        slab_alloc.free((void*)addr);
     } else {
         // We can't free things from the early allocator!
     }
@@ -48,8 +49,20 @@ void kheap::free(virt_addr_t addr) {
 void kheap::init(bool full, uintptr_t placement_addr) {
     this->full = full;
     if (full) {
+        early_placement &= 0xFFFFF000;
+        early_placement += 0x1000;
+        slab_alloc.init(early_placement, 0x100000);  // TODO: Define a max heap size
     } else {
         this->early_placement = placement_addr;
+    }
+}
+
+void kheap::debug() {
+    if (full) {
+        klogf("heap", "Heap is in full mode\n");
+        slab_alloc.debug();
+    } else {
+        klogf("heap", "Heap is in early mode\n");
     }
 }
 

@@ -14,18 +14,19 @@ config = {
     'build_loader': False,
     'run_on_completion': True,
     'cancel_on_fail': True,
-    'buildtool': 'make'
+    'buildtool': 'make',
+    'debugger': 'ddd'
 }
-
 
 def main() -> int:
     global build_directory
-    
+
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("module", help="The module to execute")
     parser.add_argument("-v","--verbose", help="Increase output verbosity", action="store_true")
     parser.add_argument("--build-directory", help="Sets the build directory for this invocation")
+    parser.add_argument("-d","--debug", help="Turn on debugging mode", action="store_true")
     parser.add_argument("--sysroot", help="Sets the sysroot directory")
     parser.add_argument("--target", help="Sets the target processor to build for")
     args = parser.parse_args()
@@ -33,6 +34,7 @@ def main() -> int:
     # Create the build environment
     if args.build_directory:
         config['build_directory'] = args.build_directory
+
     create_build_directory()
 
     # Load the saved build enviroment, if we already have one
@@ -40,12 +42,17 @@ def main() -> int:
     config_modify(args)
     config_save()
 
+    # This is not preserved on load
+    config['debugging'] = args.debug or False
+
     if args.module == 'config':
         mod_configure()
     elif args.module == 'build':
         mod_build()
     elif args.module == 'run':
         mod_run()
+    elif args.module == 'debug':
+        mod_debug()
     elif args.module == 'clean':
         mod_clean()
     elif args.module == 'distclean':
@@ -138,7 +145,16 @@ def mod_build():
             mod_run()
     
 def mod_run():
-    subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
+    if config['debugging']:
+        mod_debug()
+    else:
+        subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
+
+def mod_debug():
+    global config
+    subprocess.Popen([config['debugger']])
+    subprocess.run(['./nyx/scripts/x86-run-debug.sh'], shell=True, stdout=sys.stdout)
+
 
 def mod_clean():
     global config

@@ -82,8 +82,6 @@ void scheduler::schedule() {
 
     // Swap processes.
     if (state_should_swap && allow_swap_process && !list_ready.empty()) {
-        debug();
-
         // Only enqueue processes that are running.
         if (current_tcb->state == thread_state::running || current_tcb->state == thread_state::ready_to_run) {
             current_tcb->state = thread_state::ready_to_run;

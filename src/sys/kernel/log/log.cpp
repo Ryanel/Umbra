@@ -78,7 +78,7 @@ int klogf(const char* category, const char* fmt, ...) {
     uint32_t boot_secs      = boot_ms / 1000;
     uint32_t boot_hundreths = boot_ms % 1000;
 
-    kprintf("%3d.%03d | %s: ", boot_secs, boot_hundreths, category);
+    kprintf("%3d.%03d | %7s: ", boot_secs, boot_hundreths, category);
 
     va_list arg;
     va_start(arg, fmt);

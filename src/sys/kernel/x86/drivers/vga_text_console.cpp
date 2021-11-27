@@ -45,6 +45,12 @@ void vga_text_console::write(char c) {
             x++;
             break;
     }
+
+    if (x >= width()) {
+        x = 0;
+        y++;
+        scroll_up();
+    }
     set_cursor();
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <kernel/mm/slab.h>
 #include <kernel/types.h>
 
 #define KHEAP_PAGEALIGN 0x01
@@ -10,10 +11,12 @@ class kheap {
     virt_addr_t alloc(size_t sz, int flags, phys_addr_t* paddr = nullptr);
     void        free(virt_addr_t addr);
     void        init(bool full, uintptr_t placement_addr = 0);
+    void        debug();
 
    private:
-    bool        full            = false;
-    virt_addr_t early_placement = 0xC1000000;
+    bool           full = false;
+    slab_allocator slab_alloc;
+    virt_addr_t    early_placement = 0xC1000000;
 };
 
 extern kheap g_heap;
