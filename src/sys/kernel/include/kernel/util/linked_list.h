@@ -1,10 +1,12 @@
 #pragma once
 
+#include <stddef.h>
+
 namespace kernel {
 namespace util {
 
 template <typename Node>
-class linked_list {
+class linked_list_inline {
    public:
     void push_back(Node* val) {
         val->next = nullptr;

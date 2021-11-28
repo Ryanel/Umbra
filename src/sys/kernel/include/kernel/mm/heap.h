@@ -12,6 +12,8 @@ class kheap {
     void        free(virt_addr_t addr);
     void        init(bool full, uintptr_t placement_addr = 0);
     void        debug();
+    void        set_placmement(uintptr_t placement_addr = 0) { early_placement = placement_addr; }
+    virt_addr_t get_placement() { return early_placement; }
 
    private:
     bool           full = false;

@@ -1,3 +1,4 @@
+#include <kernel/boot/boot_file.h>
 #include <kernel/boot/multiboot.h>
 #include <kernel/config.h>
 #include <kernel/hal/fb_text_console.h>
@@ -9,8 +10,8 @@
 #include <kernel/panic.h>
 #include <kernel/time.h>
 #include <kernel/types.h>
-#include <kernel/x86/interrupts.h>
 #include <kernel/x86/descriptor_table.h>
+#include <kernel/x86/interrupts.h>
 #include <kernel/x86/paging.h>
 #include <kernel/x86/pit.h>
 #include <kernel/x86/serial_text_console.h>
@@ -26,33 +27,23 @@ x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
 page_directory                      boot_directory;
+kernel::boot_file_container         g_bootfiles;
 
 void kernel_main();
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
 
-/// The responsibility of the kernel_entry function is to initialse the system into the minimuim startup state.
-/// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
-/// to kernel_main
-extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
-    kernel::device::fb_text_console con_fb;
+void boot_init_log() {
+    auto& log = kernel::log::get();
+    log.init(&con_serial);
+    log.shouldBuffer = false;  // Disable buffering for now
+}
 
+void boot_init_memory(multiboot_info_t* mb_info) {
     boot_directory                = page_directory((page_directory_raw_t*)(&boot_page_directory));
     boot_directory.directory_addr = (uint32_t)(&boot_page_directory) - 0xC0000000;
     boot_directory.pt_virt[768]   = (uint32_t)(&boot_page_table1);
 
-    // Initialise logging
-    auto& log = kernel::log::get();
-    log.init(&con_serial);
-    log.shouldBuffer = false;  // Disable buffering for now
-
-    // Initialise hardware
-    // Parse multiboot
-    if (mb_magic != 0x2BADB002) {
-        klogf("multiboot", "Multiboot magic was 0x%08x, halting!\n", mb_magic);
-        panic("Multiboot magic incorrect");
-    }
-
-    // Initialise the memory map (get it from GRUB)
+    // Parse the multiboot memory map for available regions
     auto* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
     for (; (uint32_t)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
          mb_mmap = (multiboot_memory_map_t*)((uint32_t)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
@@ -65,13 +56,61 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     kernel::g_vmm.dir_current = &boot_directory;
     kernel::g_pmm.init();
     g_heap.init(false, (uint32_t)(&_kernel_end));
+}
 
-    // Initialise the GDT
-    kernel::x86::g_gdt.init();
+void boot_init_modules(multiboot_info_t* mb_info) {
+    // Now we need to find the initial ramdisk...
+    phys_addr_t mod_phys = mb_info->mods_addr;
+    virt_addr_t mod_virt = 0;
 
-    // Initialise the IDT
-    g_idt.init();
-    g_idt.enable_interrupts();
+    for (size_t i = 0; i < mb_info->mods_count; i++) {
+        if (mod_phys < 0x100000) {
+            // Loaded in lower half -> must be in virtual memory already
+            mod_virt = mod_phys + 0xC0000000;
+        }
+
+        // Map this into the heap area
+        auto mod = (multiboot_module_t*)mod_virt;
+
+        auto bfile  = kernel::boot_file();
+        bfile.name  = (char const*)mod->cmdline + 0xC0000000;
+        bfile.paddr = mod->mod_start;
+        bfile.size  = mod->mod_end - mod->mod_start;
+
+        virt_addr_t placement_addr = g_heap.get_placement();
+        placement_addr &= 0xFFFFF000;
+        bfile.vaddr = placement_addr + 0x1000;
+
+        for (uintptr_t p = mod->mod_start; p <= mod->mod_end; p += 0x1000) {
+            placement_addr += 0x1000;
+            kernel::g_vmm.mmap_direct(placement_addr, p, 0x03);
+        }
+        g_heap.set_placmement(placement_addr);
+        klogf("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
+        g_bootfiles.add(bfile);
+        mod_phys += sizeof(multiboot_module_t);
+    }
+}
+
+/// The responsibility of the kernel_entry function is to initialse the system into the minimuim startup state.
+/// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
+/// to kernel_main
+extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
+    kernel::device::fb_text_console con_fb;
+    auto&                           log = kernel::log::get();
+    boot_init_log();  // Setup the log
+
+    // Check that we can actually trust the boot enviroment
+    if (mb_magic != 0x2BADB002) {
+        klogf("multiboot", "Multiboot magic was 0x%08x, halting!\n", mb_magic);
+        panic("Multiboot magic incorrect");
+    }
+
+    boot_init_memory(mb_info);   // Initialise the memory map (get it from GRUB)
+    kernel::x86::g_gdt.init();   // Initialise the GDT
+    g_idt.init();                // Initialise the IDT
+    g_idt.enable_interrupts();   // Start tracking interrupts (scheduling is diabled)
+    boot_init_modules(mb_info);  // Locate and load in the modules
 
     // Initialise the display
     if (mb_info->framebuffer_type == 2) {
@@ -91,7 +130,7 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         log.init(&con_fb);
     }
 
-    kernel_print_version();
+    kernel_print_version();  // Print the version of the kernel
 
     // Initialise a timer
     pit_timer timer_pit;

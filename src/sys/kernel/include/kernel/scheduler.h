@@ -28,8 +28,8 @@ class scheduler {
    private:
     static uint64_t determine_timeslice(thread * t);
     
-    static util::linked_list<thread> list_ready;
-    static util::linked_list<thread> list_sleeping;
+    static util::linked_list_inline<thread> list_ready;
+    static util::linked_list_inline<thread> list_sleeping;
     
     static uint64_t        last_schedule_ns;
     static int             scheduler_lock;

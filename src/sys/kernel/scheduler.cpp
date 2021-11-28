@@ -14,11 +14,11 @@ extern "C" uint32_t* stack_top;
 thread idle_thread;
 task   _kernel_task;
 
-task*                     scheduler::kernel_task;
-int                       scheduler::scheduler_lock   = 1;
-uint64_t                  scheduler::last_schedule_ns = 0;
-util::linked_list<thread> scheduler::list_ready;
-util::linked_list<thread> scheduler::list_sleeping;
+task*                            scheduler::kernel_task;
+int                              scheduler::scheduler_lock   = 1;
+uint64_t                         scheduler::last_schedule_ns = 0;
+util::linked_list_inline<thread> scheduler::list_ready;
+util::linked_list_inline<thread> scheduler::list_sleeping;
 
 void scheduler::init(phys_addr_t kernel_vas) {
     _kernel_task.task_id   = 0;
