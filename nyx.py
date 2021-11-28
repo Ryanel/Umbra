@@ -12,7 +12,6 @@ config = {
     'sysroot': "sysroot",
     'target': 'i686',
     'build_loader': False,
-    'run_on_completion': True,
     'cancel_on_fail': True,
     'buildtool': 'make',
     'debugger': 'ddd'
@@ -27,6 +26,7 @@ def main() -> int:
     parser.add_argument("-v","--verbose", help="Increase output verbosity", action="store_true")
     parser.add_argument("--build-directory", help="Sets the build directory for this invocation")
     parser.add_argument("-d","--debug", help="Turn on debugging mode", action="store_true")
+    parser.add_argument("-r","--run", help="Run an image, if possible", action="store_true")
     parser.add_argument("--sysroot", help="Sets the sysroot directory")
     parser.add_argument("--target", help="Sets the target processor to build for")
     args = parser.parse_args()
@@ -44,6 +44,7 @@ def main() -> int:
 
     # This is not preserved on load
     config['debugging'] = args.debug or False
+    config['run_on_completion'] = args.run or False
 
     if args.module == 'config':
         mod_configure()
