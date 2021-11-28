@@ -8,6 +8,7 @@
 #include <kernel/thread.h>
 #include <kernel/time.h>
 #include <kernel/version.h>
+#include <kernel/vfs/initrd.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
 
@@ -23,8 +24,6 @@ void test_thread() {
 void kernel_main() {
     klogf("kernel", "Entered kmain()\n");
 
-    kernel::vfs::virtual_filesystem vfs;
-
     // Initialise the full heap
     g_heap.init(true);
 
@@ -37,9 +36,14 @@ void kernel_main() {
     new_task->task_id   = 1;
     kernel::scheduler::enqueue(new kernel::thread(new_task, (void*)&test_thread));
 
-    // TODO: Create an executable.
-    // TODO: Create a virtual filesystem.
-    vfs.init();
+    // Create a virtual filesystem.
+    kernel::vfs::g_vfs.init();
+
+    kernel::vfs::initrd_provider* initrd = new kernel::vfs::initrd_provider();
+    initrd->init();
+
+    kernel::vfs::g_vfs.debug();
+
     // TODO: Create filesystem drivers
     // TODO: Spawn /sbin/init and start processing messages!
 

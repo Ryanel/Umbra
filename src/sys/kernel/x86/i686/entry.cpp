@@ -27,7 +27,7 @@ x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
 page_directory                      boot_directory;
-kernel::boot_file_container         g_bootfiles;
+kernel::boot_file_container         kernel::g_bootfiles;
 
 void kernel_main();
 void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
@@ -87,7 +87,7 @@ void boot_init_modules(multiboot_info_t* mb_info) {
         }
         g_heap.set_placmement(placement_addr);
         klogf("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
-        g_bootfiles.add(bfile);
+        kernel::g_bootfiles.add(bfile);
         mod_phys += sizeof(multiboot_module_t);
     }
 }

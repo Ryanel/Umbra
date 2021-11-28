@@ -69,4 +69,5 @@ void kheap::debug() {
 void* operator new(size_t size) { return (void*)g_heap.alloc(size, 0x0); }
 void* operator new[](size_t size) { return (void*)g_heap.alloc(size, 0x0); }
 void  operator delete(void* p) { g_heap.free((virt_addr_t)p); }
+void  operator delete(void* p, size_t size) { g_heap.free((virt_addr_t)p); }
 void  operator delete[](void* p) { g_heap.free((virt_addr_t)p); }

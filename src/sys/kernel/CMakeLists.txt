@@ -1,7 +1,7 @@
 # Kernel ----------------------------------------------------------------------
 
 # Source files
-file(GLOB KERNEL_SOURCES_ROOT CONFIGURE_DEPENDS *.c *.cpp *.s mm/*.c mm/*.cpp log/*.c log/*.cpp include/kernel/*.h)
+file(GLOB KERNEL_SOURCES_ROOT CONFIGURE_DEPENDS *.cpp *.s mm/*.cpp log/*.cpp vfs/*.cpp include/kernel/*.h)
 file(GLOB KERNEL_SOURCES_ARCH CONFIGURE_DEPENDS ${BUILD_ARCH}/*.c ${BUILD_ARCH}/*.cpp ${BUILD_ARCH}/*.s includes/kernel/${BUILD_ARCH}/*.h)
 file(GLOB_RECURSE KERNEL_SOURCES_MACH CONFIGURE_DEPENDS ${BUILD_ARCH}/${BUILD_BOARD}/*.c ${BUILD_ARCH}/${BUILD_BOARD}/*.cpp ${BUILD_ARCH}/${BUILD_BOARD}/*.s includes/kernel/${BUILD_ARCH}/${BUILD_ARCH_VER}/${BUILD_BOARD}/*.h)
 file(GLOB_RECURSE KERNEL_SOURCES_DRIVERS CONFIGURE_DEPENDS ${BUILD_ARCH}/drivers/*.cpp ${BUILD_ARCH}/drivers/*.s includes/kernel/${BUILD_ARCH}/drivers/*.h)

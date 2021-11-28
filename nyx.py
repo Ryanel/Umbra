@@ -156,7 +156,6 @@ def mod_debug():
     subprocess.Popen([config['debugger']])
     subprocess.run(['./nyx/scripts/x86-run-debug.sh'], shell=True, stdout=sys.stdout)
 
-
 def mod_clean():
     global config
     if config['build_loader']:

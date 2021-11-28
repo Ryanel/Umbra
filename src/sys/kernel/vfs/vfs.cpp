@@ -5,6 +5,8 @@
 namespace kernel {
 namespace vfs {
 
+virtual_filesystem g_vfs;
+
 /// The null delegate implements no file operations.
 class null_delegate : public vfs_delegate {
    public:
@@ -44,35 +46,6 @@ void virtual_filesystem::init() {
     vfs_root->parent         = nullptr;
     vfs_root->size           = 0;
     m_root                   = vfs_root;
-
-    auto* vfs_test_file           = new vfs_node();
-    vfs_test_file->name_buffer[0] = 't';
-    vfs_test_file->name_buffer[1] = 'e';
-    vfs_test_file->name_buffer[2] = 's';
-    vfs_test_file->name_buffer[3] = 't';
-    vfs_test_file->name_buffer[4] = '_';
-    vfs_test_file->name_buffer[5] = 'f';
-    vfs_test_file->name_buffer[6] = 'i';
-    vfs_test_file->name_buffer[7] = 'l';
-    vfs_test_file->name_buffer[8] = 'e';
-
-    vfs_test_file->type     = vfs_type::file;
-    vfs_test_file->delegate = new test_delegate();
-    vfs_test_file->parent   = nullptr;
-    vfs_test_file->size     = 40;
-
-    m_root->add_child(vfs_test_file);
-
-    // Testing code
-    printf("\n");
-
-    print_tree(m_root);
-
-    char buffer[255];
-    int ret = vfs_test_file->delegate->read(vfs_test_file, 0, vfs_test_file->size, (uint8_t*)&buffer[0]);
-    printf("Test read of test_file %d: %s\n",ret, (const char*)buffer);
-
-    printf("\n");
 }
 
 void virtual_filesystem::print_tree(vfs_node* n, int depth) {
@@ -92,9 +65,15 @@ void virtual_filesystem::print_tree(vfs_node* n, int depth) {
             break;
     }
 
-    printf("%s (%d bytes) type: %s, delegate: %s\n", n->name(), n->size, ftype_string, n->delegate->delegate_name());
+    printf("%-20s (%3d bytes) type: %5s, delegate: %s\n", n->name(), n->size, ftype_string, n->delegate->delegate_name());
 
     for (vfs_node_child* c = n->children.front(); c != nullptr; c = c->next) { print_tree(c->node, depth + 1); }
+}
+
+void virtual_filesystem::debug() {
+    printf("\n");
+    print_tree(m_root);
+    printf("\n");
 }
 
 }  // namespace vfs
