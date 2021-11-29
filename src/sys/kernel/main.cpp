@@ -7,7 +7,6 @@
 #include <kernel/task.h>
 #include <kernel/thread.h>
 #include <kernel/time.h>
-#include <kernel/version.h>
 #include <kernel/vfs/initrd.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
@@ -30,16 +29,15 @@ void kernel_main() {
     // Setup the scheduler
     kernel::scheduler::init(kernel::g_vmm.dir_current->directory_addr);
 
-    auto* new_task      = new kernel::task();
-    new_task->vas       = kernel::g_vmm.dir_current->directory_addr;
-    new_task->task_name = "test_task";
-    new_task->task_id   = 1;
+    // Create a sample task
+    auto* new_task = new kernel::task(kernel::g_vmm.dir_current->directory_addr, 1, "test_task");
     kernel::scheduler::enqueue(new kernel::thread(new_task, (void*)&test_thread));
 
     // Create a virtual filesystem.
     kernel::vfs::g_vfs.init();
 
-    kernel::vfs::initrd_provider* initrd = new kernel::vfs::initrd_provider();
+    // Load initial ramdisk
+    auto* initrd = new kernel::vfs::initrd_provider();
     initrd->init();
 
     kernel::vfs::g_vfs.debug();

@@ -1,6 +1,6 @@
+#include <kernel/interrupts.h>
 #include <kernel/log.h>
 #include <kernel/panic.h>
-#include <kernel/interrupts.h>
 
 void panic(const char* s) {
     interrupts_disable();

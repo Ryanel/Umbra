@@ -23,9 +23,9 @@ class test_delegate : public vfs_delegate {
         if (node == nullptr) { return 1; }
         if (node->type != vfs_type::file) { return 2; }
 
-        const char*  file_data   = "This is the contents of the test file!";
-        size_t file_size   = node->size;
-        size_t end_of_read = offset + size;
+        const char* file_data   = "This is the contents of the test file!";
+        size_t      file_size   = node->size;
+        size_t      end_of_read = offset + size;
 
         if (end_of_read > file_size) { return 3; }
 

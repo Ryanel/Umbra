@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define SLAB_MIN_ENTRIES 4
-#define PAGE_SIZE 0x1000
+#define PAGE_SIZE        0x1000
 
 uintptr_t power_ceil(uintptr_t x);
 
@@ -26,7 +26,7 @@ struct slab {
 
     static uint16_t get_pages(uintptr_t sz) {
         uint16_t pg = (sz * (SLAB_MIN_ENTRIES + 1)) / 0x1000;
-        pg = power_ceil(pg);
+        pg          = power_ceil(pg);
         return pg;
     }
 
@@ -58,5 +58,5 @@ class slab_allocator {
     uintptr_t m_heap_max;
 
     uintptr_t allocate_heap(uint32_t size);
-    slab* slab_alloc_meta();
+    slab*     slab_alloc_meta();
 };

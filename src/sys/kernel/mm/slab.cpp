@@ -115,7 +115,7 @@ void slab::init(uintptr_t start, uint32_t sz) {
     kernel::g_vmm.mmap(start, 0x1000 * m_pages, 0x3);  // TODO: Allow other types of protection
 
     // Determine how many entires we can have
-    //klogf("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries, m_pages);
+    // klogf("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries, m_pages);
 
     // Populate the slabs free list
     m_free_list       = (slab_entry*)m_start;

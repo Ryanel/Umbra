@@ -1,0 +1,49 @@
+#pragma once
+
+#include <kernel/panic.h>
+
+namespace kernel {
+
+template <typename T>
+class optional;
+
+struct nullopt_t {
+    explicit constexpr nullopt_t(int) {}
+    template <typename T>
+    operator optional<T>() const {
+        return optional<T>();
+    }
+};
+
+inline constexpr nullopt_t nullopt{0xBADC0DE};
+
+template <typename T>
+/// A stripped down optional implementation for the kernel.
+/// Attempting to access a value that does not exist results in a panic.
+class optional {
+   public:
+    optional() : m_hasValue(false) {}
+    optional(T val) : m_value(val), m_hasValue(true) {}
+    bool has_value() const { return m_hasValue; }
+
+    T& value() {
+        if (has_value()) {
+            return m_value;
+        } else {
+            // Invalid access. Panic.
+            panic("optional: Attempted to access a value that did not exist");
+            return m_value;
+        }
+    }
+
+    T  value_or(T default_val) { return has_value() ? m_value : default_val; }
+    T& value_or(T& default_val) { return has_value() ? m_value : default_val; }
+
+    // Conversions
+    operator bool() const { return has_value(); }
+
+   private:
+    T    m_value;
+    bool m_hasValue;
+};
+};  // namespace kernel

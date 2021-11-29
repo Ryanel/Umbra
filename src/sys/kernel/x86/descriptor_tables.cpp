@@ -38,6 +38,4 @@ void kernel::x86::gdt::init() {
     setupGDT((uint32_t)&gdt_ptr);
 }
 
-extern "C" void set_kernel_stack(uint32_t stk) {
-    kernel::x86::g_gdt.set_kernel_stack(stk);
-}
+extern "C" void set_kernel_stack(uint32_t stk) { kernel::x86::g_gdt.set_kernel_stack(stk); }

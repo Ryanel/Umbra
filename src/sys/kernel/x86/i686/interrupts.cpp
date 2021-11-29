@@ -19,13 +19,13 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
         asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
         klogf("paging", "faulting addr: 0x%08x\n", faulting_address);
 
-        bool user  =  ((regs->err_code & 0b100) != 0);
-        bool write =  ((regs->err_code & 0b10) != 0);
+        bool user    = ((regs->err_code & 0b100) != 0);
+        bool write   = ((regs->err_code & 0b10) != 0);
         bool present = ((regs->err_code & 0b1) != 0);
 
         const char* privilage_s = user ? "User" : "Kernel";
-        const char* write_s = write ? "write to " : "read";
-        const char* present_s = present ? "present" : "non-present";
+        const char* write_s     = write ? "write to " : "read";
+        const char* present_s   = present ? "present" : "non-present";
 
         klogf("paging", "%s process tried to %s a %s page\n", privilage_s, write_s, present_s);
     }
@@ -41,8 +41,8 @@ extern "C" void k_irq_handler(register_frame_t* regs) {
     if (regs->int_no != 32) { klogf("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
 
     if (regs->int_no == 33) {
-         unsigned char scan_code = inb(0x60);
-         //Reset keyboard
+        unsigned char scan_code = inb(0x60);
+        // Reset keyboard
     }
 
     if (regs->int_no == 32) {
@@ -52,9 +52,7 @@ extern "C" void k_irq_handler(register_frame_t* regs) {
         }
     }
 
-    if (regs->int_no == 0x80) {
-         klogf("syscall", "Syscall %d!\n", regs->eax); 
-    }
+    if (regs->int_no == 0x80) { klogf("syscall", "Syscall %d!\n", regs->eax); }
 
     // Signal interrupt handled
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }

@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define IDT_ENTRY_ATTR_PRESENT   0x80
-#define IDT_ENTRY_ATTR_DPL0      0x00 // Unsure if this is valid...
+#define IDT_ENTRY_ATTR_DPL0      0x00  // Unsure if this is valid...
 #define IDT_ENTRY_ATTR_DPL3      0x60
 #define IDT_ENTRY_ATTR_INTERRUPT 0x05
 
@@ -29,24 +29,24 @@ class x86_idt {
     void set_gate(unsigned char num, unsigned long base, unsigned short sel, unsigned char flags);
     void enable_interrupts();
     void disable_interrupts();
+
    private:
-   __attribute__((aligned(0x10))) 
-    idt_entry_t idt[256];
-    idt_ptr_t   idtptr;
+    __attribute__((aligned(0x10))) idt_entry_t idt[256];
+    idt_ptr_t                                  idtptr;
 };
 
 extern "C" void x86_set_idt(uint32_t idtr);
 
-#define IRQ0 32
-#define IRQ1 33
-#define IRQ2 34
-#define IRQ3 35
-#define IRQ4 36
-#define IRQ5 37
-#define IRQ6 38
-#define IRQ7 39
-#define IRQ8 40
-#define IRQ9 41
+#define IRQ0  32
+#define IRQ1  33
+#define IRQ2  34
+#define IRQ3  35
+#define IRQ4  36
+#define IRQ5  37
+#define IRQ6  38
+#define IRQ7  39
+#define IRQ8  40
+#define IRQ9  41
 #define IRQ10 42
 #define IRQ11 43
 #define IRQ12 44

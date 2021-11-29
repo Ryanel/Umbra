@@ -36,5 +36,4 @@ class sw_framebuffer {
         uint8_t* ybuff_dest = buffer + (dest * pitch);
         memmove(ybuff_dest, ybuff_src, pitch);
     }
-
 };

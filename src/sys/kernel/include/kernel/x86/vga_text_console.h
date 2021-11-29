@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <kernel/text_console.h>
+#include <stdint.h>
 
 namespace kernel {
 namespace device {
@@ -21,24 +21,22 @@ class vga_text_console : public text_console {
     bool supports_cursor_position();
     void setX(int x);
     void setY(int y);
-    int getX();
-    int getY();
+    int  getX();
+    int  getY();
 
    private:
     const uintptr_t buffer_address = 0xC00B8000;
 
-    int x = 0;
-    int y = 0;
+    int  x         = 0;
+    int  y         = 0;
     char attribute = 0x0F;
 
     // Helpers
-    unsigned int index(int x, int y) {
-        return ((width() * y) + x);
-    }
+    unsigned int index(int x, int y) { return ((width() * y) + x); }
 
     void scroll_up();
     void set_cursor();
 };
 
-}
-}
+}  // namespace device
+}  // namespace kernel

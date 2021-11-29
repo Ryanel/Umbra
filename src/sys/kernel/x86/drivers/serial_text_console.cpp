@@ -31,11 +31,11 @@ void serial_text_console::write(char c) {
 }
 void serial_text_console::write_color(char c, char color) {
     // First, write the ANSI control code
-    //write('\u0001');
-    //write('[');
-    //write('3');
-    //write('1');
-    //write('m');
+    // write('\u0001');
+    // write('[');
+    // write('3');
+    // write('1');
+    // write('m');
     // Now, write the character
     write(c);
 }
