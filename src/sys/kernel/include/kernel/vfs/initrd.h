@@ -20,8 +20,7 @@ class initrd_provider : public vfs_delegate {
 
    private:
     struct fdata {
-        unsigned int offset;
-        unsigned int size;
+        unsigned int location;
     };
 };
 

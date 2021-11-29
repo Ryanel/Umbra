@@ -18,6 +18,16 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
         volatile uint32_t faulting_address;
         asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
         klogf("paging", "faulting addr: 0x%08x\n", faulting_address);
+
+        bool user  =  ((regs->err_code & 0b100) != 0);
+        bool write =  ((regs->err_code & 0b10) != 0);
+        bool present = ((regs->err_code & 0b1) != 0);
+
+        const char* privilage_s = user ? "User" : "Kernel";
+        const char* write_s = write ? "write to " : "read";
+        const char* present_s = present ? "present" : "non-present";
+
+        klogf("paging", "%s process tried to %s a %s page\n", privilage_s, write_s, present_s);
     }
 
     klogf("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
@@ -30,11 +40,20 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
 extern "C" void k_irq_handler(register_frame_t* regs) {
     if (regs->int_no != 32) { klogf("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
 
+    if (regs->int_no == 33) {
+         unsigned char scan_code = inb(0x60);
+         //Reset keyboard
+    }
+
     if (regs->int_no == 32) {
         if (kernel::time::system_timer != nullptr) {
             kernel::time::system_timer->tick();
             kernel::scheduler::schedule();
         }
+    }
+
+    if (regs->int_no == 0x80) {
+         klogf("syscall", "Syscall %d!\n", regs->eax); 
     }
 
     // Signal interrupt handled
@@ -114,6 +133,8 @@ void x86_idt::init() {
     set_gate(46, (unsigned)interrupt_irq14, 0x08, 0x8E);
     set_gate(47, (unsigned)interrupt_irq15, 0x08, 0x8E);
 
+    set_gate(0x80, (unsigned)interrupt_syscall, 0x08, 0x8E);
+
     x86_set_idt((uint32_t)&idtptr);
 }
 
@@ -123,7 +144,7 @@ void x86_idt::set_gate(unsigned char num, unsigned long base, unsigned short sel
 
     idt[num].kernel_cs = sel;
     idt[num].always0   = 0;
-    idt[num].flags     = flags;
+    idt[num].flags     = flags | 0x60;
 }
 
 void x86_idt::enable_interrupts() { asm volatile("sti"); }

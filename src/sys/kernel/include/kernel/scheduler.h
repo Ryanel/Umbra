@@ -5,6 +5,8 @@
 #include <kernel/thread.h>
 #include <kernel/util/linked_list.h>
 
+extern "C" void set_kernel_stack(uint32_t addr);
+
 namespace kernel {
 class scheduler {
    public:

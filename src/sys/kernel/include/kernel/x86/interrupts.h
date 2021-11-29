@@ -105,4 +105,6 @@ extern "C" void interrupt_irq13();
 extern "C" void interrupt_irq14();
 extern "C" void interrupt_irq15();
 
+extern "C" void interrupt_syscall();
+
 #endif

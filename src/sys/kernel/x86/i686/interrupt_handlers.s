@@ -133,3 +133,5 @@ irq_handler         interrupt_irq12, 44
 irq_handler         interrupt_irq13, 45
 irq_handler         interrupt_irq14, 46
 irq_handler         interrupt_irq15, 47
+
+irq_handler         interrupt_syscall, 0x80

@@ -36,20 +36,24 @@ namespace vfs {
 void initrd_provider::init() {
     // First, get the initrd
     initrd_data = &kernel::g_bootfiles.files[1];  // TODO: A proper search
+    auto* root  = kernel::vfs::g_vfs.get_root();  // The initial ramdisk directly overlays ontop of the root.
 
-    // The initial ramdisk directly overlays ontop of the root.
-    auto* root = kernel::vfs::g_vfs.get_root();
-
+    // Now, comb throug the USTAR formatted initrd.
     virt_addr_t ptr = initrd_data->vaddr;
     while (true) {
         auto* header = (ustar_header*)(ptr);
         if (strcmp("ustar", (char const*)&header->ustar)) { break; }
 
-        vfs_node* parent = root;
         // Create the node
-        auto* node     = new vfs_node();
-        node->delegate = this;
-        node->size     = oct2bin((unsigned char*)header->size_octal, 11);
+        auto* node             = new vfs_node();
+        auto* dat              = new fdata();
+        node->parent           = root;
+        node->delegate         = this;
+        node->size             = oct2bin((unsigned char*)header->size_octal, 11);
+        dat->location          = ((virt_addr_t)header + 512);
+        node->delegate_storage = (void*)dat;
+
+        // Set the type
         switch (header->type) {
             case '\0':
             case '0':
@@ -60,7 +64,7 @@ void initrd_provider::init() {
                 break;
         }
 
-        // Determine the parent
+        // Determine the parent and file name
         kernel::string filename = kernel::string((char*)&header->name);
         while (filename.find('/') != kernel::string::npos) {
             size_t delim_pos = filename.find('/');
@@ -74,9 +78,9 @@ void initrd_provider::init() {
             }
 
             // Nope, find the parent.
-            for (vfs_node_child* c = parent->children.front(); c != nullptr; c = c->next) {
+            for (vfs_node_child* c = node->parent->children.front(); c != nullptr; c = c->next) {
                 if (strcmp(c->node->name(), before_delim.data()) == 0) {
-                    parent = c->node;
+                    node->parent = c->node;
                     break;
                 }
             }
@@ -85,20 +89,19 @@ void initrd_provider::init() {
         }
 
         memcpy(&node->name_buffer, filename.data(), 100);  // Copy the name
-
-        parent->add_child(node);                        // Add this node to the VFS
-        ptr += (((node->size + 511) / 512) + 1) * 512;  // Skip to the next file
+        node->parent->add_child(node);                     // Add this node to the VFS properly
+        ptr += (((node->size + 511) / 512) + 1) * 512;     // Skip to the next file metadata block
     }
 }
 
 int initrd_provider::read(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
     if (node == nullptr) { return 1; }
     if (node->type != vfs_type::file) { return 2; }
-
-    uint8_t* file_data = (uint8_t*)(initrd_data->vaddr);
     if ((offset + size) > node->size) { return 3; }
 
-    // Horrid, replace
+    fdata*   dat       = (fdata*)node->delegate_storage;
+    uint8_t* file_data = (uint8_t*)(dat->location);
+
     for (size_t i = 0; i < size; i++) { buffer[i] = file_data[offset + i]; }
     return 0;
 }

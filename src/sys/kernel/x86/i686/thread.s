@@ -3,6 +3,7 @@
 .global thread_switch
 .extern current_tcb
 .extern current_task
+.extern set_kernel_stack
 
 thread_switch:
     push    ebx
@@ -33,7 +34,11 @@ thread_switch:
     mov     cr3, eax                # Set the active page table to the VAS!
     mov     [current_task], edi     # Set the new active task in the scheduler
 
+
 .switch_vas_done:
+    # Tell the TSS that we switched stacks
+    mov     eax, esp
+    call    set_kernel_stack
     # Restore runtime state (registers)
     pop     ebp
     pop     edi

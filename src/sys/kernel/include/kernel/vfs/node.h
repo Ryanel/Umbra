@@ -23,6 +23,7 @@ struct vfs_node {
     char                                     name_buffer[VFS_MAX_FILENAME];
     vfs_delegate*                            delegate;
     vfs_node*                                parent;
+    void*                                    delegate_storage;
     util::linked_list_inline<vfs_node_child> children;
     size_t                                   size;
     vfs_type                                 type;
