@@ -83,8 +83,6 @@ kernel_early_boot:
 	pushl 	%eax									# GRUB Multiboot magic
 
 	# System Setup, ready for C
-	#call 	setupGDT								# Init the GDT
-	call 	_init									# Global constructors
 	call 	kernel_entry							# Call the kernel
 	jmp 	_halt									# If we somehow reach here, call _halt() to halt the current processor.
 

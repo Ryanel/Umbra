@@ -17,13 +17,27 @@ class log {
     void        flush();                             ///< Flushes the buffer (if enabled) to the output console
     static log& get();                               ///< Gets the log
 
+    static void   trace(const char* category, const char* fmt, ...);    
+    static void   debug(const char* category, const char* fmt, ...);
+    static void   info(const char* category, const char* fmt, ...);
+    static void   warn(const char* category, const char* fmt, ...);
+    static void   error(const char* category, const char* fmt, ...);
+    static void   critical(const char* category, const char* fmt, ...);
+   
+    unsigned char colorFore = 0xF;
+    unsigned char colorBack = 0x00;
+    unsigned int log_priority = 0;  
+
    private:
-    device::text_console* console[LOG_DEVICE_MAX];  ///< The console bavkends used for logging.
+    device::text_console* console[LOG_DEVICE_MAX];  ///< The console backends used for logging.
     char                  buffer[LOG_BUFFER_MAX];   ///< The buffer that holds unsent text
     unsigned int          buffer_index;             ///< The current character of the buffer
     void                  write_buffer(char c);     ///< Writes to the buffer
     void                  console_print(char c);
     unsigned int          console_device_index = 0;
+
+   private:
+    static unsigned char log_print_common(const char* category, unsigned char color);
 };
 
 };  // namespace kernel
@@ -31,4 +45,4 @@ class log {
 /// Log to the kernel console.
 /// \warning Will lock for the entire message.
 int kprintf(const char* fmt, ...);
-int klogf(const char* category, const char* fmt, ...);
+//int klogf(const char* category, const char* fmt, ...);

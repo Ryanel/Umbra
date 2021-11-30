@@ -16,7 +16,7 @@ bool page_directory::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
         auto new_pt_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &new_page_table_phys);
         memset((void*)new_pt_virt, 0, 0x1000);
 
-        klogf("map", "No page table, allocated a new one at %x\n", new_pt_virt);
+        kernel::log::debug("map", "No page table, allocated a new one at %x\n", new_pt_virt);
         // if (new_pt_virt == -1) { return false; }
 
         this->pt_virt[pdindex]          = new_pt_virt;

@@ -21,27 +21,18 @@ void serial_text_console::init() {
     outb(com1 + 4, 0x0F);
 }
 
-void serial_text_console::clear() {}
-void serial_text_console::write(char c) {
-    if (c == '\n') { write('\r'); }
+void serial_text_console::clear(unsigned char bg) {}
+void serial_text_console::write(char c, unsigned char fore, unsigned char back) {
+    if (c == '\n') { write('\r', fore, back); }
 
     while (is_transmit_empty() == 0) {}
 
     outb(com1, c);
 }
-void serial_text_console::write_color(char c, char color) {
-    // First, write the ANSI control code
-    // write('\u0001');
-    // write('[');
-    // write('3');
-    // write('1');
-    // write('m');
-    // Now, write the character
-    write(c);
-}
+
 int  serial_text_console::width() { return 80; }
 int  serial_text_console::height() { return 25; }
-bool serial_text_console::supports_color() { return false; }
+
 bool serial_text_console::supports_cursor_position() { return false; }
 void serial_text_console::setX(int x) { this->x = x; }
 void serial_text_console::setY(int y) { this->y = y; }

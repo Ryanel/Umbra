@@ -30,7 +30,8 @@ page_directory                      boot_directory;
 kernel::boot_file_container         kernel::g_bootfiles;
 
 void kernel_main();
-void kernel_print_version() { klogf("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
+void init_global_constructors();
+void kernel_print_version() { kernel::log::info("kernel", "Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }
 
 void boot_init_log() {
     auto& log = kernel::log::get();
@@ -86,7 +87,7 @@ void boot_init_modules(multiboot_info_t* mb_info) {
             kernel::g_vmm.mmap_direct(placement_addr, p, 0x03);
         }
         g_heap.set_placmement(placement_addr);
-        klogf("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
+        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
         kernel::g_bootfiles.add(bfile);
         mod_phys += sizeof(multiboot_module_t);
     }
@@ -96,13 +97,14 @@ void boot_init_modules(multiboot_info_t* mb_info) {
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
+    init_global_constructors();
     kernel::device::fb_text_console con_fb;
     auto&                           log = kernel::log::get();
     boot_init_log();  // Setup the log
 
     // Check that we can actually trust the boot enviroment
     if (mb_magic != 0x2BADB002) {
-        klogf("multiboot", "Multiboot magic was 0x%08x, halting!\n", mb_magic);
+        kernel::log::critical("multiboot", "Multiboot magic was 0x%08x, halting!\n", mb_magic);
         panic("Multiboot magic incorrect");
     }
 
@@ -114,19 +116,27 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
 
     // Initialise the display
     if (mb_info->framebuffer_type == 2) {
-        klogf("display", "Using VGA 80x25 textmode\n");
+        kernel::log::debug("display", "Using VGA 80x25 textmode\n");
         log.init(&con_vga);
     } else {
-        klogf("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
+        kernel::log::debug("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
               mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
+
+        fb_format display_format = fb_format::rgb;
+
+        if (mb_info->framebuffer_red_field_position == 16) {
+            // TODO: Fix naieve implementation
+            display_format = fb_format::bgr;
+        }
 
         for (size_t i = 0; i < mb_info->framebuffer_height * mb_info->framebuffer_pitch; i += 0x1000) {
             kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i,
                                       0x03);
         }
 
-        con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width,
-                                            mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_pitch);
+        con_fb.framebuffer =
+            sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width, mb_info->framebuffer_height,
+                           mb_info->framebuffer_bpp, mb_info->framebuffer_pitch, display_format);
         log.init(&con_fb);
     }
 

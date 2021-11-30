@@ -14,14 +14,14 @@
 extern "C" uint32_t* stack_top;
 
 void test_thread() {
-    klogf("test thread", "sleeping for 1000ms\n");
+    kernel::log::info("test thread", "sleeping for 1000ms\n");
     kernel::scheduler::sleep(nullptr, 1000000000);
-    klogf("test thread", "slept for 1000ms\n");
+    kernel::log::error("test thread", "slept for 1000ms\n");
 }
 
 /// The main kernel function.
 void kernel_main() {
-    klogf("kernel", "Entered kmain()\n");
+    kernel::log::info("kernel", "Entered kmain()\n");
 
     // Initialise the full heap
     g_heap.init(true);
@@ -37,17 +37,20 @@ void kernel_main() {
     kernel::vfs::g_vfs.init();
 
     // Load initial ramdisk
+    kernel::log::info("kernel","Loading inital ramdisk from memory\n");
     auto* initrd = new kernel::vfs::initrd_provider();
     initrd->init();
-
-    kernel::vfs::g_vfs.debug();
 
     // TODO: Create filesystem drivers
     // TODO: Spawn /sbin/init and start processing messages!
 
     // We've exited init. Print a warning to the log and hang.
-    klogf("kernel", "Kernel took %l ns to boot (%l ms)\n", kernel::time::boot_time_ns(),
-          kernel::time::boot_time_ns() / (uint64_t)1000000);
+    kernel::log::info("kernel", "Kernel took %l ns to boot (%l ms)\n", kernel::time::boot_time_ns(),
+                      kernel::time::boot_time_ns() / (uint64_t)1000000);
+
+    kernel::vfs::g_vfs.debug();
+    g_heap.debug();
+    kernel::scheduler::debug();
 
     kernel::log::get().flush();
     kernel::scheduler::unlock();  // Unlock the scheduler for the first time.

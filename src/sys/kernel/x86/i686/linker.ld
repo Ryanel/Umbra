@@ -28,9 +28,17 @@ SECTIONS
 		*(.text)
 	}
 
+
 	.rodata BLOCK(4K) :  AT (ADDR (.rodata) - 0xC0000000)
 	{
 		*(.rodata)
+	}
+
+	.init_array :
+	{
+	    __init_array_start = .;
+	    KEEP (*(.init_array*))
+	    __init_array_end = .;
 	}
 
 	.data BLOCK(4K) : AT (ADDR (.data) - 0xC0000000)

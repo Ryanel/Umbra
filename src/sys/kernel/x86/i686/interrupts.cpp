@@ -17,7 +17,7 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
     if (regs->int_no == 14) {
         volatile uint32_t faulting_address;
         asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
-        klogf("paging", "faulting addr: 0x%08x\n", faulting_address);
+        kernel::log::error("paging", "faulting addr: 0x%08x\n", faulting_address);
 
         bool user    = ((regs->err_code & 0b100) != 0);
         bool write   = ((regs->err_code & 0b10) != 0);
@@ -27,18 +27,18 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
         const char* write_s     = write ? "write to " : "read";
         const char* present_s   = present ? "present" : "non-present";
 
-        klogf("paging", "%s process tried to %s a %s page\n", privilage_s, write_s, present_s);
+        kernel::log::error("paging", "%s process tried to %s a %s page\n", privilage_s, write_s, present_s);
     }
 
-    klogf("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
-    klogf("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x ss:%02x\n", regs->cs, regs->ds, regs->es, regs->fs, regs->gs,
+    kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
+    kernel::log::error("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x ss:%02x\n", regs->cs, regs->ds, regs->es, regs->fs, regs->gs,
           regs->ss);
-    klogf("error", "eax:%08x ebx:%08x ecx:%08x edx:%08x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
-    klogf("error", "ebp:%08x esp:%08x esi:%08x edi:%08x\n", regs->edi, regs->esi, regs->esp, regs->ebp);
+    kernel::log::error("error", "eax:%08x ebx:%08x ecx:%08x edx:%08x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
+    kernel::log::error("error", "ebp:%08x esp:%08x esi:%08x edi:%08x\n", regs->edi, regs->esi, regs->esp, regs->ebp);
     panic("Unhandled exception");
 }
 extern "C" void k_irq_handler(register_frame_t* regs) {
-    if (regs->int_no != 32) { klogf("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
+    if (regs->int_no != 32) { kernel::log::warn("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
 
     if (regs->int_no == 33) {
         unsigned char scan_code = inb(0x60);
@@ -52,7 +52,7 @@ extern "C" void k_irq_handler(register_frame_t* regs) {
         }
     }
 
-    if (regs->int_no == 0x80) { klogf("syscall", "Syscall %d!\n", regs->eax); }
+    if (regs->int_no == 0x80) { kernel::log::info("syscall", "Syscall %d!\n", regs->eax); }
 
     // Signal interrupt handled
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }

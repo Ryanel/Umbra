@@ -25,12 +25,12 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
         if (kernel::g_pmm.page_available(phys)) {
             // It's not, map it...
             for (size_t i = 0; i < sz; i += 0x1000) {
-                klogf("kheap", "grew a page @ 0x%08x\n", phys + i);
+                kernel::log::trace("kheap", "grew a page @ 0x%08x\n", phys + i);
                 kernel::g_vmm.mmap_direct(early_placement + i, phys + i, 0x03);
             }
         }
 
-        klogf("kheap", "alloc %d bytes @ 0x%08x flags %x\n", sz, newAddr, flags);
+        kernel::log::trace("kheap", "alloc %d bytes @ 0x%08x flags %x\n", sz, newAddr, flags);
         early_placement += sz;
         return newAddr;
     }
@@ -59,10 +59,10 @@ void kheap::init(bool full, uintptr_t placement_addr) {
 
 void kheap::debug() {
     if (full) {
-        klogf("heap", "Heap is in full mode\n");
+        kernel::log::debug("heap", "Heap is in full mode\n");
         slab_alloc.debug();
     } else {
-        klogf("heap", "Heap is in early mode\n");
+        kernel::log::debug("heap", "Heap is in early mode\n");
     }
 }
 

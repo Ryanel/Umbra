@@ -6,7 +6,7 @@
 void pit_timer::init() {
     set_phase(1000);
 
-    klogf("timer", "x86 PIT initialised at %dhz (%d ns resolution)\n", resolution_hz, resolution_ns());
+    kernel::log::debug("timer", "x86 PIT initialised at %d ns resolution\n", resolution_ns());
 }
 
 void pit_timer::tick() {

@@ -7,14 +7,21 @@
 using namespace kernel::device;
 
 void fb_text_console::init() {
-    clear();
-    klogf("console", "Framebuffer text console is: %dx%d\n", width(), height());
+    kernel::log::debug("console", "Framebuffer text console is: %dx%d\n", width(), height());
+    clear(0x0);
 }
 
-void fb_text_console::clear() {
+void fb_text_console::clear(unsigned char bg) {
     x = 0;
     y = 0;
-    framebuffer.clear();
+
+    fb_color bgcolor = color_table[bg];
+
+    for (unsigned int yi = 0; yi < framebuffer.height; yi++) {
+        for (unsigned int xi = 0; xi < framebuffer.width; xi++) {
+            framebuffer.putpixel(xi, yi, bgcolor.r, bgcolor.g, bgcolor.b);
+        }
+    }
 }
 
 void fb_text_console::wrap() {
@@ -35,14 +42,17 @@ void fb_text_console::wrap() {
         }
 
         for (size_t line = 0; line < font_height; line++) {
-            unsigned int y_line = (height() - 1) * 8 + line;
-            framebuffer.lineclear(y_line);
+            unsigned int y_line  = (height() - 1) * 8 + line;
+            fb_color     bgcolor = color_table[last_bg];
+            for (unsigned int xi = 0; xi < framebuffer.width; xi++) {
+                framebuffer.putpixel(xi, y_line, bgcolor.r, bgcolor.g, bgcolor.b);
+            }
         }
         y -= 1;
     }
 }
 
-void fb_text_console::write(char c) {
+void fb_text_console::write(char c, unsigned char fore, unsigned char back) {
     if (c == '\n') {
         y++;
         x = 0;
@@ -50,12 +60,12 @@ void fb_text_console::write(char c) {
         return;
     }
 
-    draw_char(x, y, c, 0xF, 0x0);
+    last_bg = back;
+
+    draw_char(x, y, c, fore, back);
     x++;
     wrap();
 }
-
-void fb_text_console::write_color(char c, char color) {}
 
 void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back) {
     unsigned int glyph_index = c - 32;
@@ -65,6 +75,9 @@ void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, 
     unsigned int glyph_x, glyph_y;
     unsigned int screen_x = xpos * font_width;
     unsigned int screen_y = ypos * font_height;
+
+    fb_color& forecolor = color_table[fore];
+    fb_color& backcolor = color_table[back];
 
     for (glyph_y = 0; glyph_y < font_height; glyph_y++) {
         for (glyph_x = 0; glyph_x < font_width; glyph_x++) {
@@ -77,9 +90,9 @@ void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, 
 #endif
 
             if (glyph_hit) {
-                framebuffer.putpixel(screen_x + glyph_x, screen_y + glyph_y, 0xFF, 0xFF, 0xFF);
+                framebuffer.putpixel(screen_x + glyph_x, screen_y + glyph_y, forecolor.r, forecolor.g, forecolor.b);
             } else {
-                framebuffer.putpixel(screen_x + glyph_x, screen_y + glyph_y, 0x0, 0x0, 0x0);
+                framebuffer.putpixel(screen_x + glyph_x, screen_y + glyph_y, backcolor.r, backcolor.g, backcolor.b);
             }
         }
     }
@@ -87,7 +100,6 @@ void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, 
 
 int  fb_text_console::width() { return framebuffer.width / font_width; }
 int  fb_text_console::height() { return framebuffer.height / font_height; }
-bool fb_text_console::supports_color() { return false; }
 bool fb_text_console::supports_cursor_position() { return true; }
 void fb_text_console::setX(int x) { this->x = x; }
 void fb_text_console::setY(int y) { this->y = y; }

@@ -9,20 +9,13 @@ class text_console {
    public:
     virtual void init() = 0;
     /// Clear the console
-    virtual void clear() = 0;
-    /// Write a character to the console
-    virtual void write(char c) = 0;
-
+    virtual void clear(unsigned char bg) = 0;
     /// Return the width in characters of the device
     virtual int width() = 0;
     /// Returns the height in characters of the device
     virtual int height() = 0;
-
-    /// Returns true if color is supported in this terminal.
-    virtual bool supports_color() = 0;
-    /// Write a character to the console in color, if supported
-    virtual void write_color(char c, char color) = 0;
-
+    /// Write a character to the console
+    virtual void write(char c, unsigned char foreground, unsigned char back) = 0;
     /// Returns true if a 'cursor' is supported in this terminal.
     virtual bool supports_cursor_position() = 0;
     /// Sets the X cursor position

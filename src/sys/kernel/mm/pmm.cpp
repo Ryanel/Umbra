@@ -27,7 +27,7 @@ void kernel::phys_mm::init() {
 bool kernel::phys_mm::page_available(phys_addr_t addr) { return backing_store.test((addr & 0xFFFFF000) / 0x1000); }
 
 void kernel::phys_mm::describe() const {
-    klogf("pmm", "regions: %d\n", region_count);
+    kernel::log::debug("pmm", "regions: %d\n", region_count);
     const char* type_unknown = "unknown";
     const char* type_ram     = "ram";
     for (short i = 0; i < region_count; i++) {
@@ -35,7 +35,7 @@ void kernel::phys_mm::describe() const {
         const char* type = type_unknown;
 
         if (reg.type == pmm_region_type::ram) { type = type_ram; }
-        klogf("pmm", "%d | %10s | 0x%08x -> 0x%08x\n", i, type, reg.start, reg.end);
+        kernel::log::debug("pmm", "%d | %10s | 0x%08x -> 0x%08x\n", i, type, reg.start, reg.end);
     }
 }
 

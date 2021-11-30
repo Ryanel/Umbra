@@ -6,20 +6,25 @@
 
 namespace kernel {
 namespace device {
+struct fb_color {
+    unsigned char r;
+    unsigned char g;
+    unsigned char b;
+
+    fb_color(unsigned char r, unsigned char g, unsigned char b) : r(r), g(g), b(b) {}
+};
 
 /// A console that represents a textmode console drawn grapically.
 class fb_text_console : public text_console {
    public:
     void init();
-    void clear();
+    void clear(unsigned char bg);
 
-    void write(char c);
-    void write_color(char c, char color);
+    void write(char c, unsigned char fore, unsigned char back);
 
     int width();
     int height();
 
-    bool supports_color();
     bool supports_cursor_position();
     void setX(int x);
     void setY(int y);
@@ -33,9 +38,29 @@ class fb_text_console : public text_console {
     void draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back);
     void wrap();
 
+    fb_color color_table[16] = {
+        {0x28, 0x2A, 0x2E},  // 0
+        {0x5F, 0x81, 0x9D},  // dblue
+        {0x8C, 0x94, 0x40},  // dgreen
+        {0x5E, 0x8D, 0x87},  // dcyan
+        {0xA5, 0x42, 0x42},  // dred
+        {0x85, 0x67, 0x8F},  // dpurple
+        {0xDE, 0x93, 0x5F},  // dyellow
+        {0x70, 0x78, 0x80},  // lgray
+        {0x37, 0x3B, 0x41},  // dgray
+        {0x81, 0xA2, 0xBE},  // lblue
+        {0xb5, 0xBD, 0x68},  // lgreen
+        {0x8a, 0xBE, 0xB7},  // lcyan
+        {0xcc, 0x66, 0x66},  // lred
+        {0xb2, 0x94, 0xBB},  // lpurple
+        {0xf0, 0xC6, 0x74},  // lyellow
+        {0xc5, 0xc8, 0xc6},  // white
+    };
+
    private:
     int x = 0;
     int y = 0;
+    unsigned char last_bg;
 };
 
 }  // namespace device
