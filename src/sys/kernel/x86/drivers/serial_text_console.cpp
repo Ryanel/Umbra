@@ -23,15 +23,34 @@ void serial_text_console::init() {
 
 void serial_text_console::clear(unsigned char bg) {}
 void serial_text_console::write(char c, unsigned char fore, unsigned char back) {
-    if (c == '\n') { write('\r', fore, back); }
+    if (fore != last_fore) {
+        write_char(0x1B);
+        write_char('[');
+        write_char('3');
+        write_char('0' + (fore % 8));
 
+        if (fore > 0x7) {
+            write_char(';');
+            write_char('1');
+        }
+        write_char('m');
+
+        last_fore = fore;
+    }
+
+    if (c == '\n') { write_char('\r'); }
+
+    write_char(c);
+}
+
+void serial_text_console::write_char(char c) {
     while (is_transmit_empty() == 0) {}
 
     outb(com1, c);
 }
 
-int  serial_text_console::width() { return 80; }
-int  serial_text_console::height() { return 25; }
+int serial_text_console::width() { return 80; }
+int serial_text_console::height() { return 25; }
 
 bool serial_text_console::supports_cursor_position() { return false; }
 void serial_text_console::setX(int x) { this->x = x; }

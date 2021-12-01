@@ -39,7 +39,7 @@ target_link_libraries(kernel PUBLIC c_kernel gcc)
 # Compilation -----------------------------------------------------------------
 
 # Do not allow builtin functions, libraries, or standard include. We're also freestanding.
-target_compile_options(kernel PRIVATE -Wall -fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib) 
+target_compile_options(kernel PRIVATE -Wall -fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib -fstack-protector-strong) 
 
 # Installation ----------------------------------------------------------------
 set_target_properties(

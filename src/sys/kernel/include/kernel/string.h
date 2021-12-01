@@ -7,7 +7,7 @@ namespace kernel {
 
 class string {
    public:
-    string(char* str) {
+    string(const char* str) {
         m_size   = strlen(str);
         size_t buff_size = (m_size + 1) > min_size ? (m_size + 1) : min_size;
         m_buffer = new char[buff_size];
@@ -80,7 +80,7 @@ class string {
     size_t m_size;
 
     void clean() {
-        if (m_buffer = nullptr) { delete[] m_buffer; }
+        if (m_buffer == nullptr) { delete[] m_buffer; }
         m_size = 0;
     }
 };

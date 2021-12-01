@@ -30,6 +30,9 @@ class serial_text_console : public text_console {
    private:
     int x = 0;
     int y = 0;
+    unsigned char last_fore = 0;
+
+    void write_char(char c);
 };
 
 }  // namespace device

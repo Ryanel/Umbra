@@ -1,3 +1,4 @@
+#include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
@@ -68,6 +69,49 @@ void virtual_filesystem::print_tree(vfs_node* n, int depth) {
     printf("%-20s (%3d bytes) type: %5s, delegate: %s\n", n->name(), n->size, ftype_string, n->delegate->delegate_name());
 
     for (vfs_node_child* c = n->children.front(); c != nullptr; c = c->next) { print_tree(c->node, depth + 1); }
+}
+
+vfs_node* virtual_filesystem::find(kernel::string path) {
+    auto* directory = m_root;
+
+    if (path.find('/') == 0) { path = path.substr(1); }
+
+    kernel::log::debug("vfs", "Find %s\n", path.data());
+
+    while (path.find('/') != kernel::string::npos) {
+        size_t delim_pos    = path.find('/');
+        auto   before_delim = path.substr(0, delim_pos);
+
+        // This means we have hit the last in a directory entry. Cut the last / off and return
+        if (delim_pos == (path.size() - 1)) {
+            kernel::log::trace("vfs", "Returning directory\n");
+            return directory;
+        }
+
+        // Nope, find the parent.
+        for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->next) {
+            kernel::log::trace("vfs", "Compare %s to %s (path: %s)\n", c->node->name(), before_delim.data(), path.data());
+            if (strcmp(c->node->name(), before_delim.data()) == 0) {
+                kernel::log::trace("vfs", "Found %s\n", c->node->name());
+                directory = c->node;
+                break;
+            }
+        }
+
+        path = path.substr(delim_pos + 1);
+        kernel::log::trace("vfs", "Find %s\n", path.data());
+    }
+
+    // Search all the children of directory
+    for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->next) {
+        kernel::log::trace("vfs", "Compare %s to %s (path: %s)\n", c->node->name(), path.data(), path.data());
+        if (strcmp(c->node->name(), path.data()) == 0) {
+            kernel::log::trace("vfs", "Returning %s\n", c->node->name());
+            return c->node;
+        }
+    }
+
+    return nullptr;
 }
 
 void virtual_filesystem::debug() {
