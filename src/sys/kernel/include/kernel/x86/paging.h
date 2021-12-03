@@ -64,6 +64,8 @@ class page_directory {
     bool map(phys_addr_t phys, virt_addr_t virt, uint32_t flags);
     bool unmap(virt_addr_t addr);
 
+    page_directory* clone();
+
    private:
     void allocate_page_directory(virt_addr_t virt);
 };

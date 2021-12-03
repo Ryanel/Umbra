@@ -50,12 +50,13 @@ class slab_allocator {
     void  free(void* ptr);
     void  debug();
 
-   private:
-    slab*     slab_meta_head;
-    slab*     slab_last_allocated;
     uintptr_t m_heap_start;
     uintptr_t m_heap;
     uintptr_t m_heap_max;
+
+   private:
+    slab* slab_meta_head;
+    slab* slab_last_allocated;
 
     uintptr_t allocate_heap(uint32_t size);
     slab*     slab_alloc_meta();

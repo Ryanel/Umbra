@@ -1,3 +1,4 @@
+#include <kernel/critical.h>
 #include <kernel/log.h>
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vmm.h>
@@ -48,6 +49,8 @@ uintptr_t slab_allocator::allocate_heap(uint32_t size) {
 }
 
 void* slab_allocator::alloc(uint32_t size) {
+    critical_section cs;
+
     uintptr_t out_addr;
 
     // Search for a free size-appropreate slab.
@@ -79,6 +82,8 @@ void* slab_allocator::alloc(uint32_t size) {
     return (void*)out_addr;
 }
 void slab_allocator::free(void* ptr) {
+    critical_section cs;
+
     if (ptr == nullptr) {
         panic("Attempted to free a null pointer");
         return;
@@ -92,7 +97,8 @@ void slab_allocator::free(void* ptr) {
 }
 
 void slab_allocator::debug() {
-    kernel::log::debug("slab", "slab allocator: start @ %08x, current is %08x, max is %08x\n", m_heap_start, m_heap, m_heap_max);
+    kernel::log::debug("slab", "slab allocator: start @ %08x, current is %08x, max is %08x\n", m_heap_start, m_heap,
+                       m_heap_max);
     for (slab* s = slab_last_allocated; s; s = s->m_next) { s->debug(); }
 }
 
@@ -115,7 +121,8 @@ void slab::init(uintptr_t start, uint32_t sz) {
     kernel::g_vmm.mmap(start, 0x1000 * m_pages, 0x3);  // TODO: Allow other types of protection
 
     // Determine how many entires we can have
-    kernel::log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries, m_pages);
+    kernel::log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries,
+                       m_pages);
 
     // Populate the slabs free list
     m_free_list       = (slab_entry*)m_start;
@@ -129,6 +136,7 @@ void slab::init(uintptr_t start, uint32_t sz) {
 
 bool slab::alloc(uintptr_t sz, uintptr_t& out_address) {
     if (sz != m_size || m_free_list == nullptr) { return false; }
+    if (m_entries >= m_maxEntries) { return false; }
     out_address = (uintptr_t)m_free_list;
     m_free_list = m_free_list->m_next;
     m_entries++;
@@ -150,5 +158,6 @@ bool slab::free(uintptr_t address) {
 }
 
 void slab::debug() {
-    kernel::log::debug("slab", "%08x: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries, m_pages);
+    kernel::log::debug("slab", "%08x: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries,
+                       m_pages);
 }

@@ -8,6 +8,26 @@ kheap g_heap;
 
 virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
     if (full) {
+        // TODO: Fix this is very broken!
+        if ((flags & KHEAP_PAGEALIGN) != 0) {
+            // Revert to early
+            early_placement = slab_alloc.m_heap;
+
+            if ((early_placement & 0xFFFFF000)) {
+                early_placement &= 0xFFFFF000;
+                early_placement += 0x1000;
+            }
+
+            phys_addr_t phys = kernel::g_pmm.get_available_page();
+            kernel::g_vmm.mmap_direct(early_placement, phys, 0x03);
+
+            if ((flags & KHEAP_PHYSADDR) != 0 && paddr != nullptr) { *paddr = phys; }
+    
+            kernel::log::error("heap", "Returning 0x%08x @ 0x%08x\n", early_placement, phys);
+            slab_alloc.m_heap = (early_placement + sz);
+            return early_placement;
+        }
+
         return (virt_addr_t)slab_alloc.alloc(sz);
     } else {
         // Align if requested

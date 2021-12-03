@@ -30,31 +30,44 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
         kernel::log::error("paging", "%s process tried to %s a %s page\n", privilage_s, write_s, present_s);
     }
 
-    kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
-    kernel::log::error("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x ss:%02x\n", regs->cs, regs->ds, regs->es, regs->fs, regs->gs,
-          regs->ss);
+    kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code,
+                       regs->eflags);
+    kernel::log::error("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x ss:%02x\n", regs->cs, regs->ds, regs->es, regs->fs,
+                       regs->gs, regs->ss);
     kernel::log::error("error", "eax:%08x ebx:%08x ecx:%08x edx:%08x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
     kernel::log::error("error", "ebp:%08x esp:%08x esi:%08x edi:%08x\n", regs->edi, regs->esi, regs->esp, regs->ebp);
     panic("Unhandled exception");
 }
 extern "C" void k_irq_handler(register_frame_t* regs) {
-    if (regs->int_no != 32) { kernel::log::warn("irq", "Unhandled IRQ%x\n", regs->int_no - 32); }
+    // Signal interrupt handled
 
     if (regs->int_no == 33) {
         unsigned char scan_code = inb(0x60);
-        // Reset keyboard
-    }
+        kernel::log::warn("irq", "Keyboard IRQ: %d\n", scan_code);
 
-    if (regs->int_no == 32) {
+            kernel::scheduler::disable();
+            kernel::scheduler::debug();
+            kernel::scheduler::enable();
+
+        // Reset keyboard
+    } else if (regs->int_no == 32) {
         if (kernel::time::system_timer != nullptr) {
             kernel::time::system_timer->tick();
+
+            kernel::scheduler::disable();
             kernel::scheduler::schedule();
+            kernel::scheduler::enable();
         }
+    } else if (regs->int_no == 0x80) {
+        kernel::log::info("syscall", "Syscall %d!\n", regs->eax);
+        if (regs->eax == 0x0) {
+            kernel::log::info("syscall", "Syscall exit!\n");
+            kernel::scheduler::terminate(nullptr);
+        }
+    } else {
+        kernel::log::warn("irq", "Unhandled IRQ%x\n", regs->int_no - 32);
     }
 
-    if (regs->int_no == 0x80) { kernel::log::info("syscall", "Syscall %d!\n", regs->eax); }
-
-    // Signal interrupt handled
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }
     outb(0x20, 0x20);
 }

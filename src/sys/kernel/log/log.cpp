@@ -20,6 +20,8 @@ void kernel::log::init(device::text_console* device) {
     colorBack = 0;
     colorFore = 15;
     log_priority = 0;
+    shouldBuffer = false;
+    flush_on_newlines = true;
     device->init();
     device->clear(colorBack);
 }
@@ -44,7 +46,7 @@ void kernel::log::write(const char* s) {
 void kernel::log::write_buffer(char c) {
     buffer[buffer_index++] = c;
 
-    if (buffer_index >= (LOG_BUFFER_MAX - 1) || c == '\n') { flush(); }
+    if (buffer_index >= (LOG_BUFFER_MAX - 1) || (c == '\n' && flush_on_newlines)) { flush(); }
 }
 
 void kernel::log::console_print(char c) {
@@ -69,23 +71,21 @@ void kernel::log::flush() {
 }
 
 #define LOG_BODY(LNAME, LCOLOR, LPRIO) void kernel::log::LNAME(const char* category, const char* fmt, ...) { \
-    kernel::scheduler::lock(); \
-    if (LPRIO < kernel_logger.log_priority) {return;}\
+    if (LPRIO <= kernel_logger.log_priority) {return;}\
     unsigned char oldFore = log_print_common(category, LCOLOR); \
     va_list arg; \
     va_start(arg, fmt); \
     vprintf(fmt, arg); \
     va_end(arg); \
     kernel_logger.colorFore = oldFore; \
-    kernel::scheduler::unlock(); \
 }
 
-LOG_BODY(trace, 0x8, 0);
-LOG_BODY(debug, 0x7, 1);
-LOG_BODY(info, 0x9, 2);
-LOG_BODY(warn, 0xE, 3);
-LOG_BODY(error, 0xC, 4);
-LOG_BODY(critical, 0xC, 5);
+LOG_BODY(trace, 0x8, 1);
+LOG_BODY(debug, 0x7, 2);
+LOG_BODY(info, 0x9, 3);
+LOG_BODY(warn, 0xE, 4);
+LOG_BODY(error, 0xC, 5);
+LOG_BODY(critical, 0xC, 6);
 
 #undef LOG_BODY
 

@@ -1,10 +1,12 @@
 #include <kernel/interrupts.h>
 #include <kernel/log.h>
 #include <kernel/panic.h>
+#include <kernel/scheduler.h>
 
 void panic(const char* s) {
+    kernel::scheduler::disable();
     interrupts_disable();
-    // We use the kernel log directly instead of printf to reduce the dependancies needed.
+
     kernel::log& log = kernel::log::get();
     kernel::log::critical("panic", "%s\n", s);
     log.flush();

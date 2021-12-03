@@ -13,3 +13,5 @@ AlignOperands: true
 AlignTrailingComments: true
 AllowShortBlocksOnASingleLine: Empty
 AlignConsecutiveMacros: true
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true

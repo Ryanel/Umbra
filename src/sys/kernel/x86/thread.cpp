@@ -17,7 +17,7 @@ void thread_setup_function(void (*fn)(void)) {
 }
 
 void kernel::thread::setup(void* bootstrap_fn) {
-    k_stack_top     = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
+    k_stack_top     = g_heap.alloc(0x1000, 0);
     k_stack_current = k_stack_top;
     id              = ++next_thread_id;
 
