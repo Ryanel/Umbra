@@ -25,16 +25,16 @@ struct slab {
     bool alloc(uintptr_t sz, uintptr_t& out_address);
 
     static uint16_t get_pages(uintptr_t sz) {
-        uint16_t pg = (sz * (SLAB_MIN_ENTRIES + 1)) / 0x1000;
-        pg          = power_ceil(pg);
-        return pg;
+        uintptr_t pg = (sz * (SLAB_MIN_ENTRIES + 1)) / 0x1000;
+        pg           = power_ceil(pg);
+        return (uint16_t)pg;
     }
 
     template <typename T>
     bool alloc(uintptr_t sz, T& obj_addr) {
-        uintptr_t addr;
-        bool      res = alloc(sz, addr);
-        obj_addr      = (T)addr;
+        uintptr_t addr = 0;
+        bool      res  = alloc(sz, addr);
+        obj_addr       = (T)addr;
         return res;
     }
 

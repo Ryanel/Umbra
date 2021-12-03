@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-char* itoa(unsigned long n, int base) {
+char* itoa(unsigned long long n, unsigned int base) {
     const char  lut[] = "0123456789ABCDEF";
     static char buffer[sizeof(unsigned long) * 8 + 1];
 

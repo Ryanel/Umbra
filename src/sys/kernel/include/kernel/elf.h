@@ -68,22 +68,14 @@ typedef struct {
 
     const char* type_name() const {
         switch (sh_type) {
-            case SHT_NULL:
-                return "Null";
-            case SHT_PROGBITS:
-                return "Program";
-            case SHT_SYMTAB:
-                return "Symbol Table";
-            case SHT_STRTAB:
-                return "String Table";
-            case SHT_RELA:
-                return "Relocation (Addend)";
-            case SHT_NOBITS:
-                return "Not Present";
-            case SHT_REL:
-                return "Relocation (No addend)";
-            default:
-                return "Unknown";
+            case SHT_NULL: return "Null";
+            case SHT_PROGBITS: return "Program";
+            case SHT_SYMTAB: return "Symbol Table";
+            case SHT_STRTAB: return "String Table";
+            case SHT_RELA: return "Relocation (Addend)";
+            case SHT_NOBITS: return "Not Present";
+            case SHT_REL: return "Relocation (No addend)";
+            default: return "Unknown";
         }
     }
 } elf32_section_t;
@@ -100,10 +92,8 @@ typedef struct {
 
     const char* type_name() const {
         switch (p_type) {
-            case 0x1:
-                return "LOAD";
-            default:
-                return "Unknown";
+            case 0x1: return "LOAD";
+            default: return "Unknown";
         }
     }
 } elf32_prog_t;
@@ -132,6 +122,7 @@ class elf_file {
     }
 
     elf32_header* m_header;
+
    private:
 };
 }  // namespace kernel

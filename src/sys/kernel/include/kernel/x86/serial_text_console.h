@@ -12,7 +12,7 @@ class serial_text_console : public text_console {
     void init();
     void clear(unsigned char bg);
 
-    void write(char c, unsigned char fore, unsigned char back); 
+    void write(char c, unsigned char fore, unsigned char back);
 
     int width();
     int height();
@@ -23,13 +23,13 @@ class serial_text_console : public text_console {
     int  getX();
     int  getY();
 
-    const int com1 = 0x3F8;
+    const uint16_t com1 = 0x3F8;
 
     int is_transmit_empty();
 
    private:
-    int x = 0;
-    int y = 0;
+    int           m_x       = 0;
+    int           m_y       = 0;
     unsigned char last_fore = 0;
 
     void write_char(char c);

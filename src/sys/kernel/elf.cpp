@@ -28,7 +28,7 @@ bool kernel::elf_file::executable() const {
 void kernel::elf_file::debug_print() {
     kernel::log::debug("elf", "is: %s, %s, %s\n", valid() ? "valid" : "invalid", executable() ? "executable" : "not executable",
                        loadable() ? "loadable" : "not loadable");
-                       kernel::log::debug("elf", "entry: 0x%08x\n", m_header->e_entry);
+    kernel::log::debug("elf", "entry: 0x%08x\n", m_header->e_entry);
     kernel::log::debug("elf", "%d sections\n", section_num());
     for (unsigned int i = 0; i < section_num(); i++) {
         auto* sec = section_header(i);
@@ -37,6 +37,7 @@ void kernel::elf_file::debug_print() {
 
     for (unsigned int i = 0; i < prog_num(); i++) {
         auto* sec = prog_header(i);
-        kernel::log::debug("elf", "ph %d: %s vaddr: 0x%08x, filesz: 0x%08x, memsz: 0x%08x\n", i, sec->type_name(), sec->p_vaddr, sec->p_filesz, sec->p_memsz);
+        kernel::log::debug("elf", "ph %d: %s vaddr: 0x%08x, filesz: 0x%08x, memsz: 0x%08x\n", i, sec->type_name(), sec->p_vaddr,
+                           sec->p_filesz, sec->p_memsz);
     }
 }

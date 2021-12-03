@@ -14,10 +14,10 @@ void vprintf_print_helper(char c) { kernel_c_shim_print_char_to_log(c); }
 
 void vprintf_print_helper_string(char* s) { kernel_c_shim_print_string_to_log(s); }
 
-static void vprintf_print_padding_helper(int length, char* arg, bool fmt_length_zeropad) {
+static void vprintf_print_padding_helper(unsigned int length, char* arg, bool fmt_length_zeropad) {
     if (length != 0) {
-        int  charsToPrint = length - strlen(arg);
-        char charToPrint  = ' ';
+        size_t charsToPrint = length - strlen(arg);
+        char   charToPrint  = ' ';
         if (fmt_length_zeropad) { charToPrint = '0'; }
         for (; charsToPrint > 0; charsToPrint--) { vprintf_print_helper(charToPrint); }
     }
@@ -25,17 +25,17 @@ static void vprintf_print_padding_helper(int length, char* arg, bool fmt_length_
 
 int vprintf(const char* fmt, va_list arg) {
     // Format variables
-    const char* fmt_scan;
-    char        fmt_specifier;
-    int         fmt_length;
-    bool        fmt_length_zeropad = false;
-    bool        fmt_left_justify   = false;
+    const char*  fmt_scan;
+    char         fmt_specifier;
+    unsigned int fmt_length;
+    bool         fmt_length_zeropad = false;
+    bool         fmt_left_justify   = false;
 
     // Argument variables
 
-    unsigned int arg_int;
-    uint64_t     arg_int64;
-    char*        arg_str;
+    uint32_t arg_int;
+    uint64_t arg_int64;
+    char*    arg_str;
 
     // Scan along the format string
     for (fmt_scan = fmt; *fmt_scan != '\0'; fmt_scan++) {
@@ -69,7 +69,8 @@ int vprintf(const char* fmt, va_list arg) {
                 fmt_scan++;
             }
 
-            fmt_length = atoi((const char*)buffer);
+            int ln     = atoi((const char*)buffer);
+            fmt_length = ln >= 0 ? (unsigned int)ln : 0;
         } else {
             fmt_length = 0;
         }
@@ -81,9 +82,7 @@ int vprintf(const char* fmt, va_list arg) {
         fmt_specifier = *fmt_scan;
 
         switch (fmt_specifier) {
-            case '%':
-                vprintf_print_helper('%');
-                break;
+            case '%': vprintf_print_helper('%'); break;
 
             case 's':
                 arg_str = va_arg(arg, char*);
@@ -97,13 +96,13 @@ int vprintf(const char* fmt, va_list arg) {
                 break;
 
             case 'c':
-                arg_int = va_arg(arg, int);
+                arg_int = va_arg(arg, unsigned int);
                 vprintf_print_helper((char)arg_int);
                 break;
 
             case 'i':  // Improper
             case 'd':
-                arg_int = va_arg(arg, int);
+                arg_int = va_arg(arg, unsigned int);
                 arg_str = itoa(arg_int, 10);
                 if (fmt_left_justify) {
                     vprintf_print_helper_string(arg_str);
@@ -139,7 +138,7 @@ int vprintf(const char* fmt, va_list arg) {
                 break;
 
             case 'x':
-                arg_int = va_arg(arg, int);
+                arg_int = va_arg(arg, uint32_t);
                 arg_str = itoa(arg_int, 16);
                 if (fmt_left_justify) {
                     vprintf_print_helper_string(arg_str);
@@ -163,9 +162,7 @@ int vprintf(const char* fmt, va_list arg) {
                 }
                 break;
 
-            default:
-                vprintf_print_helper(*fmt_scan);
-                break;
+            default: vprintf_print_helper(*fmt_scan); break;
         }
     }
     return 0;

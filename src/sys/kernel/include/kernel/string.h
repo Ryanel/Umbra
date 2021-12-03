@@ -8,17 +8,17 @@ namespace kernel {
 class string {
    public:
     string(const char* str) {
-        m_size   = strlen(str);
+        m_size           = strlen(str);
         size_t buff_size = (m_size + 1) > min_size ? (m_size + 1) : min_size;
-        m_buffer = new char[buff_size];
+        m_buffer         = new char[buff_size];
         strncpy(m_buffer, str, m_size + 1);
     }
 
     // Copy constructor
     string(const string& s) {
-        m_size   = s.m_size;
+        m_size           = s.m_size;
         size_t buff_size = (m_size + 1) > min_size ? (m_size + 1) : min_size;
-        m_buffer = new char[buff_size];  // + 1 for the keeping the null character
+        m_buffer         = new char[buff_size];  // + 1 for the keeping the null character
         strncpy(m_buffer, s.m_buffer, m_size + 1);
     }
 
@@ -42,9 +42,9 @@ class string {
     // Copy assignment
     string& operator=(const string& s) {
         clean();
-        m_size   = s.m_size;
+        m_size           = s.m_size;
         size_t buff_size = (m_size + 1) > min_size ? (m_size + 1) : min_size;
-        m_buffer = new char[buff_size];
+        m_buffer         = new char[buff_size];
         strncpy(m_buffer, s.m_buffer, s.size() + 1);
         return *this;
     }
@@ -73,8 +73,9 @@ class string {
     char const* data() { return m_buffer; }
 
     // Constants
-    static const size_t npos = -1;
+    static const size_t npos     = -1;
     static const size_t min_size = 32;
+
    private:
     char*  m_buffer;
     size_t m_size;

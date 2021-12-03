@@ -16,7 +16,7 @@ enum class vfs_type : uint8_t { file = 1, directory = 2 };
 
 struct vfs_node_child {
     vfs_node*       node;
-    vfs_node_child* next;
+    vfs_node_child* m_next;
 };
 
 struct vfs_node {

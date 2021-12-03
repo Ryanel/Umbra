@@ -72,21 +72,13 @@ void kernel_main() {
     auto* initrd = new kernel::vfs::initrd_provider();
     initrd->init();
 
-    // TODO: Create filesystem drivers
-    // TODO: Spawn /sbin/init and start processing messages!
-
-    // We've exited init. Print a warning to the log and hang.
-    kernel::log::info("kernel", "Kernel took %l ns to boot (%l ms)\n", kernel::time::boot_time_ns(),
-                      kernel::time::boot_time_ns() / (uint64_t)1000000);
-
-    auto* cloned       = kernel::g_vmm.dir_current->clone();
-    auto* newtask      = new kernel::task(cloned->directory_addr, 1, "test_program");
-    newtask->directory = cloned;
-
+    // Start some tasks
+    auto* cloned         = kernel::g_vmm.dir_current->clone();
+    auto* newtask        = new kernel::task(cloned->directory_addr, 1, "test_program");
+    newtask->m_directory = cloned;
     kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread));
 
-    g_heap.debug();
-    for (size_t i = 0; i < 20; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
+    for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
 
     kernel::log::get().flush();
     kernel::scheduler::enable();  // Start scheduling processes

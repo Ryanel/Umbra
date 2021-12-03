@@ -17,10 +17,10 @@ void kernel::log::init(device::text_console* device) {
     console[console_device_index] = device;
     console_device_index++;
 
-    colorBack = 0;
-    colorFore = 15;
-    log_priority = 0;
-    shouldBuffer = false;
+    colorBack         = 0;
+    colorFore         = 15;
+    log_priority      = 0;
+    shouldBuffer      = false;
     flush_on_newlines = true;
     device->init();
     device->clear(colorBack);
@@ -50,9 +50,7 @@ void kernel::log::write_buffer(char c) {
 }
 
 void kernel::log::console_print(char c) {
-    for (size_t i = 0; i < console_device_index; i++) {
-        console[i]->write(c, colorFore, colorBack);
-    }
+    for (size_t i = 0; i < console_device_index; i++) { console[i]->write(c, colorFore, colorBack); }
 }
 
 void kernel::log::flush() {
@@ -70,15 +68,16 @@ void kernel::log::flush() {
     buffer_index = 0;
 }
 
-#define LOG_BODY(LNAME, LCOLOR, LPRIO) void kernel::log::LNAME(const char* category, const char* fmt, ...) { \
-    if (LPRIO <= kernel_logger.log_priority) {return;}\
-    unsigned char oldFore = log_print_common(category, LCOLOR); \
-    va_list arg; \
-    va_start(arg, fmt); \
-    vprintf(fmt, arg); \
-    va_end(arg); \
-    kernel_logger.colorFore = oldFore; \
-}
+#define LOG_BODY(LNAME, LCOLOR, LPRIO)                                    \
+    void kernel::log::LNAME(const char* category, const char* fmt, ...) { \
+        if (LPRIO <= kernel_logger.log_priority) { return; }              \
+        unsigned char oldFore = log_print_common(category, LCOLOR);       \
+        va_list       arg;                                                \
+        va_start(arg, fmt);                                               \
+        vprintf(fmt, arg);                                                \
+        va_end(arg);                                                      \
+        kernel_logger.colorFore = oldFore;                                \
+    }
 
 LOG_BODY(trace, 0x8, 1);
 LOG_BODY(debug, 0x7, 2);
@@ -90,12 +89,12 @@ LOG_BODY(critical, 0xC, 6);
 #undef LOG_BODY
 
 unsigned char kernel::log::log_print_common(const char* category, unsigned char color) {
-    unsigned char oldFore = kernel_logger.colorFore;
+    unsigned char oldFore   = kernel_logger.colorFore;
     kernel_logger.colorFore = color;
-    uint64_t boot_ms = kernel::time::boot_time_ns() / (uint64_t)1000000;
 
-    uint32_t boot_secs      = boot_ms / 1000;
-    uint32_t boot_hundreths = boot_ms % 1000;
+    uint64_t boot_ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
+    uint32_t boot_secs      = (uint32_t)(boot_ms / 1000);
+    uint32_t boot_hundreths = (uint32_t)(boot_ms % 1000);
 
     kprintf("%4d.%03d | %s: ", boot_secs, boot_hundreths, category);
 

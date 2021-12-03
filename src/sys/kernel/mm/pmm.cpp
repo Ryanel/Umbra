@@ -15,11 +15,11 @@ void kernel::phys_mm::init() {
 
     for (short i = 0; i < region_count; i++) {
         auto&     reg        = regions[i];
-        uintptr_t start_page = (reg.start & 0xFFFFF000) / 0x1000;
-        uintptr_t end_page   = (reg.end & 0xFFFFF000) / 0x1000;
+        uintptr_t start_page = (reg.m_start & 0xFFFFF000) / 0x1000;
+        uintptr_t end_page   = (reg.m_end & 0xFFFFF000) / 0x1000;
 
-        for (uintptr_t i = start_page; i < end_page; i++) {
-            if (reg.type == pmm_region_type::ram) { backing_store.set(i); }
+        for (uintptr_t j = start_page; j < end_page; j++) {
+            if (reg.m_type == pmm_region_type::ram) { backing_store.set(j); }
         }
     }
 }
@@ -34,8 +34,8 @@ void kernel::phys_mm::describe() const {
         auto&       reg  = regions[i];
         const char* type = type_unknown;
 
-        if (reg.type == pmm_region_type::ram) { type = type_ram; }
-        kernel::log::debug("pmm", "%d | %10s | 0x%08x -> 0x%08x\n", i, type, reg.start, reg.end);
+        if (reg.m_type == pmm_region_type::ram) { type = type_ram; }
+        kernel::log::debug("pmm", "%d | %10s | 0x%08x -> 0x%08x\n", i, type, reg.m_start, reg.m_end);
     }
 }
 

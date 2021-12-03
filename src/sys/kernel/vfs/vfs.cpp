@@ -55,20 +55,14 @@ void virtual_filesystem::print_tree(vfs_node* n, int depth) {
 
     char const* ftype_string;
     switch (n->type) {
-        case vfs_type::file:
-            ftype_string = "file";
-            break;
-        case vfs_type::directory:
-            ftype_string = "dir";
-            break;
-        default:
-            ftype_string = "???";
-            break;
+        case vfs_type::file: ftype_string = "file"; break;
+        case vfs_type::directory: ftype_string = "dir"; break;
+        default: ftype_string = "???"; break;
     }
 
     printf("%-20s (%3d bytes) type: %5s, delegate: %s\n", n->name(), n->size, ftype_string, n->delegate->delegate_name());
 
-    for (vfs_node_child* c = n->children.front(); c != nullptr; c = c->next) { print_tree(c->node, depth + 1); }
+    for (vfs_node_child* c = n->children.front(); c != nullptr; c = c->m_next) { print_tree(c->node, depth + 1); }
 }
 
 vfs_node* virtual_filesystem::find(kernel::string path) {
@@ -89,7 +83,7 @@ vfs_node* virtual_filesystem::find(kernel::string path) {
         }
 
         // Nope, find the parent.
-        for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->next) {
+        for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->m_next) {
             kernel::log::trace("vfs", "Compare %s to %s (path: %s)\n", c->node->name(), before_delim.data(), path.data());
             if (strcmp(c->node->name(), before_delim.data()) == 0) {
                 kernel::log::trace("vfs", "Found %s\n", c->node->name());
@@ -103,7 +97,7 @@ vfs_node* virtual_filesystem::find(kernel::string path) {
     }
 
     // Search all the children of directory
-    for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->next) {
+    for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->m_next) {
         kernel::log::trace("vfs", "Compare %s to %s (path: %s)\n", c->node->name(), path.data(), path.data());
         if (strcmp(c->node->name(), path.data()) == 0) {
             kernel::log::trace("vfs", "Returning %s\n", c->node->name());

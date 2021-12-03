@@ -48,8 +48,8 @@ void boot_init_memory(multiboot_info_t* mb_info) {
     auto* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
     for (; (uint32_t)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
          mb_mmap = (multiboot_memory_map_t*)((uint32_t)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
-        uint32_t                addr     = mb_mmap->addr;
-        uint32_t                end_addr = mb_mmap->addr + mb_mmap->len - 1;
+        uint32_t                addr     = (uint32_t)mb_mmap->addr;
+        uint32_t                end_addr = (uint32_t)(mb_mmap->addr + mb_mmap->len - 1);
         kernel::pmm_region_type type     = kernel::pmm_region_type::unknown;
         if (mb_mmap->type == MULTIBOOT_MEMORY_AVAILABLE) { type = kernel::pmm_region_type::ram; }
         kernel::g_pmm.add_region(kernel::pmm_region(type, addr, end_addr));
@@ -87,7 +87,8 @@ void boot_init_modules(multiboot_info_t* mb_info) {
             kernel::g_vmm.mmap_direct(placement_addr, p, 0x03);
         }
         g_heap.set_placmement(placement_addr);
-        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
+        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr,
+                           bfile.vaddr);
         kernel::g_bootfiles.add(bfile);
         mod_phys += sizeof(multiboot_module_t);
     }
@@ -97,9 +98,10 @@ void boot_init_modules(multiboot_info_t* mb_info) {
 /// All architecture specific core functions (Tables, Paging, APs, Display) should be setup before control is transfered
 /// to kernel_main
 extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
-    init_global_constructors();
     kernel::device::fb_text_console con_fb;
-    auto&                           log = kernel::log::get();
+
+    init_global_constructors();
+    auto& log = kernel::log::get();
     boot_init_log();  // Setup the log
 
     // Check that we can actually trust the boot enviroment
@@ -107,6 +109,8 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         kernel::log::critical("multiboot", "Multiboot magic was 0x%08x, halting!\n", mb_magic);
         panic("Multiboot magic incorrect");
     }
+
+    kernel::log::debug("kernel", "Alive!\n");
 
     boot_init_memory(mb_info);   // Initialise the memory map (get it from GRUB)
     kernel::x86::g_gdt.init();   // Initialise the GDT
@@ -120,14 +124,11 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         log.init(&con_vga);
     } else {
         kernel::log::debug("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
-              mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
+                           mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
 
         fb_format display_format = fb_format::rgb;
 
-        if (mb_info->framebuffer_red_field_position == 16) {
-            // TODO: Fix naieve implementation
-            display_format = fb_format::bgr;
-        }
+        if (mb_info->framebuffer_red_field_position == 16) { display_format = fb_format::bgr; }
 
         for (size_t i = 0; i < mb_info->framebuffer_height * mb_info->framebuffer_pitch; i += 0x1000) {
             kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i,

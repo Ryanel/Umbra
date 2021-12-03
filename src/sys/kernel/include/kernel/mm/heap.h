@@ -16,7 +16,7 @@ class kheap {
     virt_addr_t get_placement() { return early_placement; }
 
    private:
-    bool           full = false;
+    bool           m_full = false;
     slab_allocator slab_alloc;
     virt_addr_t    early_placement = 0xC1000000;
 };

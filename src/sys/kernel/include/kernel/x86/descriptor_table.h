@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-typedef struct gdt_entry_struct {
+typedef struct alignas(8) gdt_entry_struct {
     uint16_t limit_low;    // The lower 16 bits of the limit.
     uint16_t base_low;     // The lower 16 bits of the base.
     uint8_t  base_middle;  // The next 8 bits of the base.
@@ -11,12 +11,12 @@ typedef struct gdt_entry_struct {
     uint8_t  base_high;    // The last 8 bits of the base.
 } __attribute__((packed)) gdt_entry_t;
 
-typedef struct gdt_ptr_struct {
+typedef struct alignas(8) gdt_ptr_struct {
     uint16_t limit;  // The upper 16 bits of all selector limits.
     uint32_t base;   // The address of the first gdt_entry_t struct.
 } __attribute__((packed)) gdt_ptr_t;
 
-typedef volatile struct strtss {
+typedef volatile struct alignas(8) strtss {
     uint32_t prev_tss;
     uint32_t esp0;
     uint32_t ss0;
@@ -50,8 +50,8 @@ namespace kernel {
 namespace x86 {
 
 class gdt {
-    gdt_ptr_t   gdt_ptr;
-    gdt_entry_t gdt_entries[6];
+    volatile gdt_ptr_t   gdt_ptr;
+    volatile gdt_entry_t gdt_entries[6];
 
    public:
     tss_struct_t tss;

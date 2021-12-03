@@ -22,7 +22,7 @@ slab* slab_allocator::slab_alloc_meta() {
 
     // Store the metadata of this slab within this slab.
     slab* slab_self_meta;
-    bool  alloc     = slab_meta.alloc(sizeof(slab), slab_self_meta);
+    slab_meta.alloc(sizeof(slab), slab_self_meta);
     *slab_self_meta = slab_meta;  // Copy the structure into main memory.
     return slab_self_meta;        // Return the pointer. This should be equal to meta_addr.
 }
@@ -51,7 +51,7 @@ uintptr_t slab_allocator::allocate_heap(uint32_t size) {
 void* slab_allocator::alloc(uint32_t size) {
     critical_section cs;
 
-    uintptr_t out_addr;
+    uintptr_t out_addr = 0;
 
     // Search for a free size-appropreate slab.
     for (slab* s = slab_last_allocated; s; s = s->m_next) {
@@ -81,6 +81,7 @@ void* slab_allocator::alloc(uint32_t size) {
     out_slab->alloc(size, out_addr);
     return (void*)out_addr;
 }
+
 void slab_allocator::free(void* ptr) {
     critical_section cs;
 
@@ -115,7 +116,7 @@ void slab::init(uintptr_t start, uint32_t sz) {
 
     // Determine how many pages to allocate here.
     m_pages      = get_pages(sz);
-    m_maxEntries = ((PAGE_SIZE * m_pages) / m_size);
+    m_maxEntries = (uint16_t)((PAGE_SIZE * m_pages) / m_size);
 
     // vmm: Map the used pages here
     kernel::g_vmm.mmap(start, 0x1000 * m_pages, 0x3);  // TODO: Allow other types of protection

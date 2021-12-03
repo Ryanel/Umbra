@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 int   atoi(const char* str);
-char* itoa(unsigned long n, int base);
+char* itoa(unsigned long long n, unsigned int base);
 void  abort();
 #ifdef __cplusplus
 }

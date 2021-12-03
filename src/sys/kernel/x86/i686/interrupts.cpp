@@ -42,14 +42,9 @@ extern "C" void k_irq_handler(register_frame_t* regs) {
     // Signal interrupt handled
 
     if (regs->int_no == 33) {
+        // Reset keyboard
         unsigned char scan_code = inb(0x60);
         kernel::log::warn("irq", "Keyboard IRQ: %d\n", scan_code);
-
-            kernel::scheduler::disable();
-            kernel::scheduler::debug();
-            kernel::scheduler::enable();
-
-        // Reset keyboard
     } else if (regs->int_no == 32) {
         if (kernel::time::system_timer != nullptr) {
             kernel::time::system_timer->tick();
@@ -77,7 +72,6 @@ void x86_idt::init() {
     idtptr.base  = (uint32_t)&idt;
 
     memset(&idt, 0, sizeof(idt_entry_t) * 256);
-
     set_gate(0, (unsigned)interrupt_isr0, 0x08, 0x8E);
     set_gate(1, (unsigned)interrupt_isr1, 0x08, 0x8E);
     set_gate(2, (unsigned)interrupt_isr2, 0x08, 0x8E);
@@ -151,7 +145,7 @@ void x86_idt::init() {
 
 void x86_idt::set_gate(unsigned char num, unsigned long base, unsigned short sel, unsigned char flags) {
     idt[num].base_lo = (base & 0xFFFF);
-    idt[num].base_hi = (base >> 16) & 0xFFFF;
+    idt[num].base_hi = (uint16_t)((base >> 16) & 0xFFFF);
 
     idt[num].kernel_cs = sel;
     idt[num].always0   = 0;

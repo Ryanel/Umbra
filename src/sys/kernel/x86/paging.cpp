@@ -56,7 +56,7 @@ page_directory* page_directory::clone() {
     // Now, allocate the actual page directory read by the CPU
     phys_addr_t pd_phys;
     auto        pd_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
-    
+
     memset((void*)pd_virt, 0, 0x1000);
 
     // Setup the meta directory
@@ -65,11 +65,10 @@ page_directory* page_directory::clone() {
 
     kernel::log::debug("pg", "Cloning page directory 0x%08x to 0x%08x\n", this->directory_addr, dir->directory_addr);
     // Now, fill in the page table
-    bool               cow                = false;  // Clone pages as copy on write. COW is disabled for kernel pages
-    bool               kernel_only        = true;   // Clone only the kernel
-    unsigned const int kernel_start_index = 768;    // 0xC0000000 -> 768
+    // bool               cow                = false;  // Clone pages as copy on write. COW is disabled for kernel pages
+    bool               kernel_only        = true;  // Clone only the kernel
+    unsigned const int kernel_start_index = 768;   // 0xC0000000 -> 768
     unsigned int       start_index        = kernel_only ? kernel_start_index : 0;
-
 
     // Map entries
     for (size_t i = start_index; i < 1024; i++) {

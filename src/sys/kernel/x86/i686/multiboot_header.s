@@ -17,6 +17,6 @@
 .long 0
 .long 0
 .long 0     # Mode
-.long 1024  # Width
-.long 768   # Height
+.long 800   # Width
+.long 600   # Height
 .long 0     # Depth

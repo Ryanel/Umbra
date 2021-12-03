@@ -7,11 +7,11 @@
 namespace kernel {
 namespace device {
 struct fb_color {
-    unsigned char r;
-    unsigned char g;
-    unsigned char b;
+    unsigned char m_r;
+    unsigned char m_g;
+    unsigned char m_b;
 
-    fb_color(unsigned char r, unsigned char g, unsigned char b) : r(r), g(g), b(b) {}
+    fb_color(unsigned char r, unsigned char g, unsigned char b) : m_r(r), m_g(g), m_b(b) {}
 };
 
 /// A console that represents a textmode console drawn grapically.
@@ -58,9 +58,9 @@ class fb_text_console : public text_console {
     };
 
    private:
-    int x = 0;
-    int y = 0;
-    unsigned char last_bg;
+    int           m_x = 0;
+    int           m_y = 0;
+    unsigned char m_last_bg;
 };
 
 }  // namespace device

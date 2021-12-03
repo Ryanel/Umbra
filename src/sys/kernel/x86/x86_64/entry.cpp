@@ -1,7 +1,7 @@
+#include <kernel/config.h>
 #include <kernel/log.h>
 #include <kernel/x86/vga_text_console.h>
 #include <string.h>
-#include <kernel/config.h>
 
 extern "C" void _halt();
 
@@ -36,7 +36,4 @@ extern "C" void kernel_entry() {
     kernel_main();
 }
 
-
-void kernel_print_version() {
-    kprintf("kernel: Umbra v. %s on x86 (i686)\n", KERNEL_VERSION);
-}
+void kernel_print_version() { kprintf("kernel: Umbra v. %s on x86 (i686)\n", KERNEL_VERSION); }

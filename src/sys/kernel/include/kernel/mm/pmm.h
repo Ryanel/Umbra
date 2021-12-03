@@ -13,15 +13,11 @@ enum class pmm_region_type {
 };
 
 typedef struct pmm_region {
-    pmm_region_type type;
-    phys_addr_t     start;
-    phys_addr_t     end;
+    pmm_region_type m_type;
+    phys_addr_t     m_start;
+    phys_addr_t     m_end;
     pmm_region() {}
-    pmm_region(pmm_region_type type, phys_addr_t start, phys_addr_t end) {
-        this->type  = type;
-        this->start = start;
-        this->end   = end;
-    }
+    pmm_region(pmm_region_type type, phys_addr_t start, phys_addr_t end) : m_type(type), m_start(start), m_end(end) {}
 } pmm_region_t;
 
 // The physical memory manager keeps track of usage for each region.

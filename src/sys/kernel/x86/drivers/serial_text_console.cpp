@@ -53,9 +53,9 @@ int serial_text_console::width() { return 80; }
 int serial_text_console::height() { return 25; }
 
 bool serial_text_console::supports_cursor_position() { return false; }
-void serial_text_console::setX(int x) { this->x = x; }
-void serial_text_console::setY(int y) { this->y = y; }
-int  serial_text_console::getX() { return x; }
-int  serial_text_console::getY() { return y; }
+void serial_text_console::setX(int x) { this->m_x = x; }
+void serial_text_console::setY(int y) { this->m_y = y; }
+int  serial_text_console::getX() { return m_x; }
+int  serial_text_console::getY() { return m_y; }
 
 int serial_text_console::is_transmit_empty() { return inb(com1 + 5) & 0x20; }

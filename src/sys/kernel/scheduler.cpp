@@ -24,21 +24,21 @@ util::linked_list_inline<thread> scheduler::list_ready;
 util::linked_list_inline<thread> scheduler::list_sleeping;
 
 void scheduler::init(page_directory* kernel_vas) {
-    _kernel_task.task_id   = 0;
-    _kernel_task.task_name = "idle";
-    _kernel_task.vas       = kernel_vas->directory_addr;
-    _kernel_task.directory = kernel_vas;
+    _kernel_task.m_task_id   = 0;
+    _kernel_task.m_task_name = "idle";
+    _kernel_task.m_vas       = kernel_vas->directory_addr;
+    _kernel_task.m_directory = kernel_vas;
 
     current_task           = &_kernel_task;
     scheduler::kernel_task = &_kernel_task;
 
-    current_tcb              = &idle_thread;
-    current_tcb->k_stack_top = (uintptr_t)&stack_top;
-    current_tcb->state       = thread_state::running;
-    current_tcb->id          = 0;
-    current_tcb->owner       = kernel_task;
-    current_tcb->priority    = 0;  // Lowest priority
-    last_schedule_ns         = 0;
+    current_tcb                = &idle_thread;
+    current_tcb->m_k_stack_top = (uintptr_t)&stack_top;
+    current_tcb->m_state       = thread_state::running;
+    current_tcb->m_id          = 0;
+    current_tcb->m_owner       = kernel_task;
+    current_tcb->m_priority    = 0;  // Lowest priority
+    last_schedule_ns           = 0;
     thread_switch(&idle_thread);
 }
 
@@ -55,21 +55,21 @@ void scheduler::schedule() {
 
     // Perform time accounting
     uint64_t elapsed = (int64_t)(kernel::time::boot_time_ns() - last_schedule_ns);
-    if (elapsed > current_tcb->slice_ns) {
-        current_tcb->slice_ns = 0;
+    if (elapsed > current_tcb->m_slice_ns) {
+        current_tcb->m_slice_ns = 0;
     } else {
-        current_tcb->slice_ns -= elapsed;
+        current_tcb->m_slice_ns -= elapsed;
     }
 
-    current_tcb->time_elapsed += elapsed;
+    current_tcb->m_time_elapsed += elapsed;
     last_schedule_ns = kernel::time::boot_time_ns();
 
     // Unblock any sleeping processes
-    for (thread* t = list_sleeping.front(); t != nullptr; t = t->next) {
-        if (t->slice_ns <= last_schedule_ns) {
+    for (thread* t = list_sleeping.front(); t != nullptr; t = t->m_next) {
+        if (t->m_slice_ns <= last_schedule_ns) {
             list_sleeping.remove(t);
-            t->state    = thread_state::ready_to_run;
-            t->slice_ns = determine_timeslice(t);
+            t->m_state    = thread_state::ready_to_run;
+            t->m_slice_ns = determine_timeslice(t);
             list_ready.push_back(t);
         }
     }
@@ -77,30 +77,30 @@ void scheduler::schedule() {
     if (allow_swap == false) { return; }
 
     // Swap if: We ran out of time
-    if (current_tcb->slice_ns <= 0) { should_swap = true; }
+    if (current_tcb->m_slice_ns <= 0) { should_swap = true; }
     // Swap if: Process is no longer running (blocked or dead)
-    if (current_tcb->state != thread_state::running && current_tcb->state != thread_state::ready_to_run) { should_swap = true; }
+    if (!current_tcb->ready()) { should_swap = true; }
 
     if (allow_swap && should_swap) {
         if (!list_ready.empty()) {
             // Only enqueue processes that are running.
-            if (current_tcb->state == thread_state::running || current_tcb->state == thread_state::ready_to_run) {
-                current_tcb->state = thread_state::ready_to_run;
+            if (current_tcb->ready()) {
+                current_tcb->m_state = thread_state::ready_to_run;
                 list_ready.push_back(current_tcb);
-                current_tcb->slice_ns = 0;
+                current_tcb->m_slice_ns = 0;
             }
 
             auto* next                = list_ready.pop_front();
-            next->slice_ns            = determine_timeslice(next);
-            kernel::g_vmm.dir_current = next->owner->directory;
+            next->m_slice_ns          = determine_timeslice(next);
+            kernel::g_vmm.dir_current = next->m_owner->m_directory;
             thread_switch(next);
         }
     }
 }
 
 uint64_t kernel::scheduler::determine_timeslice(thread* t) {
-    if (t->priority == 0) { return 10000; }
-    return 10000000;
+    if (t->m_priority == 0) { return 10000; }
+    return 50000000;
 }
 
 const char* thread_state_to_name(thread_state state) {
@@ -117,8 +117,8 @@ const char* thread_state_to_name(thread_state state) {
 void scheduler::debug() {
     kernel::scheduler::disable();
     uint64_t ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
-    uint32_t secs      = ms / 1000;
-    uint32_t hundreths = ms % 1000;
+    uint32_t secs      = (uint32_t)(ms / 1000);
+    uint32_t hundreths = (uint32_t)(ms % 1000);
 
     kernel::log::debug("sched", "+-----------------------------------------------------------+\n");
     kernel::log::debug("sched", "| Scheduler status @ %04d.%03ds after boot                   |\n", secs, hundreths);
@@ -127,24 +127,25 @@ void scheduler::debug() {
     kernel::log::debug("sched", "+-----------------------+------+----------+-------+---------+\n");
     debug_print_thread(current_tcb);
 
-    for (thread* t = list_ready.front(); t != nullptr; t = t->next) { debug_print_thread(t); }
-    for (thread* t = list_sleeping.front(); t != nullptr; t = t->next) { debug_print_thread(t); }
+    for (thread* t = list_ready.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
+    for (thread* t = list_sleeping.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
 
     kernel::log::debug("sched", "+-----------------------------------------------------------+\n");
     kernel::scheduler::enable();
 }
 
 void scheduler::debug_print_thread(thread* t) {
-    uint64_t ms        = t->time_elapsed / (uint64_t)1000000;
-    uint32_t secs      = ms / 1000;
-    uint32_t hundreths = ms % 1000;
+    uint64_t ms        = t->m_time_elapsed / (uint64_t)1000000;
+    uint32_t secs      = (uint32_t)(ms / 1000);
+    uint32_t hundreths = (uint32_t)(ms % 1000);
 
-    uint64_t deadline_ms        = t->slice_ns / (uint64_t)1000000;
-    uint32_t deadline_secs      = deadline_ms / 1000;
-    uint32_t deadline_hundreths = deadline_ms % 1000;
+    uint64_t deadline_ms        = t->m_slice_ns / (uint64_t)1000000;
+    uint32_t deadline_secs      = (uint32_t)(deadline_ms / 1000);
+    uint32_t deadline_hundreths = (uint32_t)(deadline_ms % 1000);
 
-    kernel::log::debug("sched", "|%2d/%-19s | %4d | %4d.%03d | %5s | %4d.%03d|\n", t->owner->task_id, t->owner->task_name,
-                       t->id, secs, hundreths, thread_state_to_name(t->state), deadline_secs, deadline_hundreths);
+    kernel::log::debug("sched", "|%2d/%-19s | %4d | %4d.%03d | %5s | %4d.%03d|\n", t->m_owner->m_task_id,
+                       t->m_owner->m_task_name, t->m_id, secs, hundreths, thread_state_to_name(t->m_state), deadline_secs,
+                       deadline_hundreths);
 }
 
 void scheduler::enqueue(thread* t) {
@@ -155,8 +156,8 @@ void scheduler::enqueue(thread* t) {
 
 void scheduler::terminate(thread* t) {
     if (t == nullptr) { t = current_tcb; }
-    t->state    = thread_state::dead;
-    t->slice_ns = 0;
+    t->m_state    = thread_state::dead;
+    t->m_slice_ns = 0;
 
     interrupts_disable();
     schedule();
@@ -165,7 +166,7 @@ void scheduler::terminate(thread* t) {
 
 void scheduler::yield(thread* t) {
     if (t == nullptr) { t = current_tcb; }
-    t->slice_ns = 0;
+    t->m_slice_ns = 0;
     kernel::scheduler::disable();
     schedule();
     kernel::scheduler::enable();
@@ -174,8 +175,8 @@ void scheduler::yield(thread* t) {
 void scheduler::sleep(thread* t, uint64_t ns) {
     if (t == nullptr) { t = current_tcb; }
 
-    t->state    = thread_state::sleeping;
-    t->slice_ns = ns;
+    t->m_state    = thread_state::sleeping;
+    t->m_slice_ns = ns;
 
     list_sleeping.push_back(t);
 

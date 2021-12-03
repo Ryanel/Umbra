@@ -56,12 +56,8 @@ void initrd_provider::init() {
         // Set the type
         switch (header->type) {
             case '\0':
-            case '0':
-                node->type = vfs_type::file;
-                break;
-            case '5':
-                node->type = vfs_type::directory;
-                break;
+            case '0': node->type = vfs_type::file; break;
+            case '5': node->type = vfs_type::directory; break;
         }
 
         // Determine the parent and file name
@@ -78,7 +74,7 @@ void initrd_provider::init() {
             }
 
             // Nope, find the parent.
-            for (vfs_node_child* c = node->parent->children.front(); c != nullptr; c = c->next) {
+            for (vfs_node_child* c = node->parent->children.front(); c != nullptr; c = c->m_next) {
                 if (strcmp(c->node->name(), before_delim.data()) == 0) {
                     node->parent = c->node;
                     break;

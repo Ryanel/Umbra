@@ -25,12 +25,12 @@ class vga_text_console : public text_console {
    private:
     const uintptr_t buffer_address = 0xC00B8000;
 
-    int  x         = 0;
-    int  y         = 0;
+    int           m_x                = 0;
+    int           m_y                = 0;
     unsigned char current_background = 0;
 
     // Helpers
-    unsigned int index(int x, int y) { return ((width() * y) + x); }
+    unsigned int index(int x, int y) { return ((width() * m_y) + m_x); }
 
     void scroll_up();
     void set_cursor();

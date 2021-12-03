@@ -22,7 +22,7 @@ void init_global_constructors(void) {
 
 uintptr_t __stack_chk_guard = STACK_CHK_GUARD;
 
-extern "C" __attribute__((noreturn)) void __stack_chk_fail(void)  {
+extern "C" __attribute__((noreturn)) void __stack_chk_fail(void) {
     panic("Stack was smashed");
     while (true) {}
 }
