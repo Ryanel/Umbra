@@ -7,7 +7,7 @@
 
 namespace kernel {
 
-bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
+bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t proto, int flags) {
     // Make sure that both addresses are page-aligned.
     unsigned long pdindex = (unsigned long)virt >> 22;
     unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
@@ -30,8 +30,8 @@ bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
 
     auto* pt = (page_table_t*)pt_virt[pdindex];
 
-    bool demand_paging  = (flags & VMM_MMAP_FLAG_MAPNOW) == 0;
-    int  filtered_flags = (flags & 0xFFF) | (demand_paging ? VAS_DEMAND_MAPPED : VAS_PRESENT);
+    bool demand_paging       = (flags & VMM_FLAG_POPULATE) == 0;
+    int  filtered_flags      = (proto & 0xFFF) | (demand_paging ? VAS_DEMAND_MAPPED : VAS_PRESENT);
     pt->entries[ptindex].raw = ((unsigned long)phys) | filtered_flags;
 
     tlb_flush_single(phys);
@@ -66,7 +66,19 @@ page_t vas::get_page(uintptr_t virt) {
         return pt->entries[ptindex];
     }
 
-    return page_t();
+    page_t pg;
+    pg.raw = 0;
+    return pg;
+}
+
+bool vas::has_table(uintptr_t virt) {
+    uintptr_t aligned_addr = virt & 0xFFFFF000;
+
+    unsigned long pdindex = (unsigned long)aligned_addr >> 22;
+    unsigned long ptindex = (unsigned long)aligned_addr >> 12 & 0x03FF;
+
+    auto* pd_ent = &directory->entries[pdindex];
+    return pd_ent->present == 1;
 }
 
 vas* vas::clone() {

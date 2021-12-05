@@ -40,7 +40,7 @@ void boot_init_log() {
 }
 
 void boot_init_memory(multiboot_info_t* mb_info) {
-    boot_directory                = kernel::vas((phys_addr_t)(&boot_page_directory), (uint32_t)(&boot_page_directory) - 0xC0000000);
+    boot_directory = kernel::vas((phys_addr_t)(&boot_page_directory), (uint32_t)(&boot_page_directory) - 0xC0000000);
     boot_directory.set_table_physical(768, (uint32_t)(&boot_page_table1));
 
     // Parse the multiboot memory map for available regions
@@ -83,11 +83,11 @@ void boot_init_modules(multiboot_info_t* mb_info) {
 
         for (uintptr_t p = mod->mod_start; p <= mod->mod_end; p += 0x1000) {
             placement_addr += 0x1000;
-            kernel::g_vmm.mmap_direct(placement_addr, p, (VMM_MMAP_FLAG_MAPNOW | VMM_MMAP_WRITABLE));
+            kernel::g_vmm.mmap_direct(placement_addr, p, VMM_PROT_WRITE, VMM_FLAG_POPULATE);
         }
+
         g_heap.set_placmement(placement_addr);
-        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr,
-                           bfile.vaddr);
+        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
         kernel::g_bootfiles.add(bfile);
         mod_phys += sizeof(multiboot_module_t);
     }
@@ -122,21 +122,20 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         kernel::log::debug("display", "Using VGA 80x25 textmode\n");
         log.init(&con_vga);
     } else {
-        kernel::log::debug("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width,
-                           mb_info->framebuffer_height, mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
+        kernel::log::debug("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width, mb_info->framebuffer_height,
+                           mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
 
         fb_format display_format = fb_format::rgb;
 
         if (mb_info->framebuffer_red_field_position == 16) { display_format = fb_format::bgr; }
 
         for (size_t i = 0; i < mb_info->framebuffer_height * mb_info->framebuffer_pitch; i += 0x1000) {
-            kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i,
-                                      (VMM_MMAP_FLAG_MAPNOW | VMM_MMAP_WRITABLE));
+            kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i, VMM_PROT_WRITE,
+                                      VMM_FLAG_POPULATE);
         }
 
-        con_fb.framebuffer =
-            sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width, mb_info->framebuffer_height,
-                           mb_info->framebuffer_bpp, mb_info->framebuffer_pitch, display_format);
+        con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width, mb_info->framebuffer_height,
+                                            mb_info->framebuffer_bpp, mb_info->framebuffer_pitch, display_format);
         log.init(&con_fb);
     }
 

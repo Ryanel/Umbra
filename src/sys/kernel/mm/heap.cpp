@@ -8,27 +8,16 @@ kheap g_heap;
 
 virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
     if (m_full) {
-        // TODO: Fix this is very broken!
         if ((flags & KHEAP_PAGEALIGN) != 0) {
-            // Revert to early
-            early_placement = slab_alloc.m_heap;
+            // Round up sz to the next page size. If a structure is going to be page aligned, SLAB guarentees that page aligned allocation values
+            // will return page-aligned addresses.
 
-            if ((early_placement & 0xFFFFF000)) {
-                early_placement &= 0xFFFFF000;
-                early_placement += 0x1000;
-            }
+            sz = (sz + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
 
-            phys_addr_t phys = kernel::g_pmm.get_available_page();
-            kernel::g_vmm.mmap_direct(early_placement, phys, VMM_MMAP_WRITABLE);
-
-            if ((flags & KHEAP_PHYSADDR) != 0 && paddr != nullptr) { *paddr = phys; }
-
-            kernel::log::error("heap", "Returning 0x%08x @ 0x%08x\n", early_placement, phys);
-            slab_alloc.m_heap = (early_placement + sz);
-            return early_placement;
+            // We also need to retrieve the physical address. We'll do this with a special allocator instead
+            if ((flags & KHEAP_PHYSADDR) != 0 && paddr != nullptr) { return (virt_addr_t)slab_alloc.alloc(sz, flags, paddr); }
         }
-
-        return (virt_addr_t)slab_alloc.alloc(sz);
+        return (virt_addr_t)slab_alloc.alloc(sz, flags, nullptr);
     } else {
         // Align if requested
         if ((flags & KHEAP_PAGEALIGN) != 0 && (early_placement & 0xFFFFF000)) {
@@ -46,7 +35,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
             // It's not, map it...
             for (size_t i = 0; i < sz; i += 0x1000) {
                 kernel::log::trace("kheap", "grew a page @ 0x%08x\n", phys + i);
-                kernel::g_vmm.mmap_direct(early_placement + i, phys + i, VMM_MMAP_WRITABLE);
+                kernel::g_vmm.mmap_direct(early_placement + i, phys + i, VMM_PROT_WRITE, 0);
             }
         }
 

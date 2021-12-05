@@ -36,7 +36,7 @@ void test_thread() {
 
         // Load
         if (sec->p_type == 0x1) {
-            kernel::g_vmm.mmap(sec->p_vaddr, sec->p_memsz, 0x07);
+            kernel::g_vmm.mmap(sec->p_vaddr, sec->p_memsz, VMM_PROT_USER | VMM_PROT_WRITE, VMM_FLAG_POPULATE);
             memset((void*)sec->p_vaddr, 0, sec->p_memsz);
             memcpy((void*)sec->p_vaddr, (void*)((uintptr_t)test_exe.m_header + sec->p_offset), sec->p_filesz);
         }
@@ -76,6 +76,7 @@ void kernel_main() {
     initrd->init();
 
     // Start some tasks
+    kernel::log::info("debug", "Starting some test tasks\n");
     auto* cloned         = kernel::g_vmm.current_vas()->clone();
     auto* newtask        = new kernel::task(cloned->physical_addr(), 1, "test_program");
     newtask->m_directory = cloned;

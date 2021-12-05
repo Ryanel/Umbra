@@ -1,4 +1,6 @@
 #include <kernel/log.h>
+#include <kernel/mm/heap.h>
+#include <kernel/mm/pmm.h>
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
@@ -48,10 +50,18 @@ uintptr_t slab_allocator::allocate_heap(uint32_t size) {
     return original_heap;
 }
 
-void* slab_allocator::alloc(uint32_t size) {
+void* slab_allocator::alloc(uint32_t size, int flags, phys_addr_t* addr) {
     kernel::critical_section cs;
+    uintptr_t                out_addr = 0;
 
-    uintptr_t out_addr = 0;
+    // This is preliminary support. We can't free this either, which will lead to errors.
+    if (flags & KHEAP_PHYSADDR) {
+        out_addr = allocate_heap(size);
+        if (size > 0x1000) { panic("Unimplemented"); }
+        *addr   = kernel::g_pmm.get_available_page();
+        void* x = kernel::g_vmm.mmap_direct(out_addr, *addr, VMM_PROT_WRITE, flags);
+        return x;
+    }
 
     // Search for a free size-appropreate slab.
     for (slab* s = slab_last_allocated; s; s = s->m_next) {
@@ -98,8 +108,7 @@ void slab_allocator::free(void* ptr) {
 }
 
 void slab_allocator::debug() {
-    kernel::log::debug("slab", "slab allocator: start @ %08x, current is %08x, max is %08x\n", m_heap_start, m_heap,
-                       m_heap_max);
+    kernel::log::debug("slab", "slab allocator: start @ %08x, current is %08x, max is %08x\n", m_heap_start, m_heap, m_heap_max);
     for (slab* s = slab_last_allocated; s; s = s->m_next) { s->debug(); }
 }
 
@@ -119,11 +128,10 @@ void slab::init(uintptr_t start, uint32_t sz) {
     m_maxEntries = (uint16_t)((PAGE_SIZE * m_pages) / m_size);
 
     // vmm: Map the used pages here
-    kernel::g_vmm.mmap(start, 0x1000 * m_pages, VMM_MMAP_WRITABLE);
+    kernel::g_vmm.mmap(start, 0x1000 * m_pages, VMM_PROT_WRITE, 0);
 
     // Determine how many entires we can have
-    kernel::log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries,
-                       m_pages);
+    kernel::log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries, m_pages);
 
     // Populate the slabs free list
     m_free_list       = (slab_entry*)m_start;
@@ -149,13 +157,10 @@ bool slab::free(uintptr_t address) {
     if (address < m_start || address >= m_start + (PAGE_SIZE * m_pages)) { return false; }
     if (m_entries == 0) { return false; }
 
-
     // Check that address is size aligned to the size of object with this slab!
-    // We can do this because the slab is aligned to the page size
+    // We can do this because the slab is aligned to PAGE_SIZED
     uintptr_t offset = address - (address & 0xfffff000);
-    if ((offset % this->m_size) != 0) {
-        panic("Attempted heap corruption, offset to free is not a multiple of slab size!");
-    }
+    if ((offset % this->m_size) != 0) { panic("Attempted heap corruption, offset to free is not a multiple of slab size!"); }
 
     // Put this address on the free list.
     auto* entry   = (slab_entry*)address;
@@ -165,7 +170,4 @@ bool slab::free(uintptr_t address) {
     return true;
 }
 
-void slab::debug() {
-    kernel::log::debug("slab", "%08x: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries,
-                       m_pages);
-}
+void slab::debug() { kernel::log::debug("slab", "%08x: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries, m_pages); }

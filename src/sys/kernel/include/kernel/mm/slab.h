@@ -1,5 +1,6 @@
 #pragma once
 
+#include <kernel/types.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -46,7 +47,7 @@ struct slab {
 class slab_allocator {
    public:
     void  init(uintptr_t v_memstart, uintptr_t vmem_size);
-    void* alloc(uint32_t size);
+    void* alloc(uint32_t size, int flags, phys_addr_t* addr = nullptr);
     void  free(void* ptr);
     void  debug();
 
