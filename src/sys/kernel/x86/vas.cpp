@@ -1,9 +1,12 @@
+#include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/panic.h>
-#include <kernel/x86/paging.h>
+#include <kernel/x86/vas.h>
 #include <string.h>
 
-bool page_directory::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
+namespace kernel {
+
+bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
     // Make sure that both addresses are page-aligned.
     unsigned long pdindex = (unsigned long)virt >> 22;
     unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
@@ -32,7 +35,7 @@ bool page_directory::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
     return true;
 }
 
-bool page_directory::unmap(virt_addr_t virt) {
+bool vas::unmap(virt_addr_t virt) {
     unsigned long pdindex = (unsigned long)virt >> 22;
     unsigned long ptindex = (unsigned long)virt >> 12 & 0x03FF;
     auto*         pd_ent  = &directory->entries[pdindex];
@@ -48,15 +51,14 @@ bool page_directory::unmap(virt_addr_t virt) {
     return true;
 }
 
-page_directory* page_directory::clone() {
+vas* vas::clone() {
     // Allocate the page directory metadata structure from the heap
-    auto            pd_meta = g_heap.alloc(0x1000, 0);
-    page_directory* dir     = (page_directory*)pd_meta;
+    auto pd_meta = g_heap.alloc(0x1000, 0);
+    vas* dir     = (vas*)pd_meta;
 
     // Now, allocate the actual page directory read by the CPU
     phys_addr_t pd_phys;
     auto        pd_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
-
     memset((void*)pd_virt, 0, 0x1000);
 
     // Setup the meta directory
@@ -64,6 +66,7 @@ page_directory* page_directory::clone() {
     dir->directory_addr = pd_phys;
 
     kernel::log::debug("pg", "Cloning page directory 0x%08x to 0x%08x\n", this->directory_addr, dir->directory_addr);
+
     // Now, fill in the page table
     // bool               cow                = false;  // Clone pages as copy on write. COW is disabled for kernel pages
     bool               kernel_only        = true;  // Clone only the kernel
@@ -75,7 +78,6 @@ page_directory* page_directory::clone() {
         bool link = false;
         // Don't worry aboyut empty entries
         if (this->directory->entries[i].raw == 0) { continue; }
-
         // Link everything above this point
         if (i >= kernel_start_index) { link = true; }
 
@@ -90,3 +92,5 @@ page_directory* page_directory::clone() {
 
     return dir;
 }
+
+}  // namespace kernel

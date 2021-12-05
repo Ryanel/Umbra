@@ -1,6 +1,7 @@
 #include <kernel/critical.h>
 #include <kernel/interrupts.h>
 #include <kernel/log.h>
+#include <kernel/mm/heap.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/scheduler.h>
 #include <kernel/time.h>
@@ -9,6 +10,7 @@
 using namespace kernel;
 
 kernel::thread*      current_tcb;
+kernel::thread*      reaper;
 task*                current_task;
 extern "C" uint32_t* stack_top;
 
@@ -22,11 +24,32 @@ bool                             scheduler::task_switch_delayed     = false;
 uint64_t                         scheduler::last_schedule_ns        = 0;
 util::linked_list_inline<thread> scheduler::list_ready;
 util::linked_list_inline<thread> scheduler::list_sleeping;
+util::linked_list_inline<thread> scheduler::list_dead;
+util::linked_list_inline<thread> scheduler::list_blocked;
 
-void scheduler::init(page_directory* kernel_vas) {
+void thread_reaper() {
+    kernel::log::info("reaper", "Reaper online!\n");
+
+    while (true) {
+        if (!scheduler::list_dead.empty()) {
+            auto* dead_thread = scheduler::list_dead.pop_front();
+            kernel::log::warn("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id,
+                              dead_thread->m_name.value_or("anonymous"));
+
+            g_heap.free(dead_thread->m_k_stack_top);
+            delete dead_thread;
+        } else {
+            scheduler::block(nullptr, 1);
+        }
+    }
+}
+
+void scheduler::init(vas* kernel_vas) {
+    last_schedule_ns = kernel::time::boot_time_ns();
+
     _kernel_task.m_task_id   = 0;
-    _kernel_task.m_task_name = "idle";
-    _kernel_task.m_vas       = kernel_vas->directory_addr;
+    _kernel_task.m_task_name = "kernel";
+    _kernel_task.m_vas       = kernel_vas->physical_addr();
     _kernel_task.m_directory = kernel_vas;
 
     current_task           = &_kernel_task;
@@ -38,8 +61,13 @@ void scheduler::init(page_directory* kernel_vas) {
     current_tcb->m_id          = 0;
     current_tcb->m_owner       = kernel_task;
     current_tcb->m_priority    = 0;  // Lowest priority
-    last_schedule_ns           = 0;
+    current_tcb->m_name        = optional<char*>("idle thread");
+
     thread_switch(&idle_thread);
+
+    // Immediately, we'll spawn the reaper thread
+    reaper = new thread(kernel_task, (void*)&thread_reaper, "reaper");
+    enqueue(reaper);
 }
 
 void scheduler::schedule() {
@@ -92,7 +120,7 @@ void scheduler::schedule() {
 
             auto* next                = list_ready.pop_front();
             next->m_slice_ns          = determine_timeslice(next);
-            kernel::g_vmm.dir_current = next->m_owner->m_directory;
+            kernel::g_vmm.vas_current = next->m_owner->m_directory;
             thread_switch(next);
         }
     }
@@ -120,17 +148,18 @@ void scheduler::debug() {
     uint32_t secs      = (uint32_t)(ms / 1000);
     uint32_t hundreths = (uint32_t)(ms % 1000);
 
-    kernel::log::debug("sched", "+-----------------------------------------------------------+\n");
-    kernel::log::debug("sched", "| Scheduler status @ %04d.%03ds after boot                   |\n", secs, hundreths);
-
-    kernel::log::debug("sched", "|%22s | %4s | %8s | %5s | %8s|\n", "ID / Name", "TID", "CPU Time", "State", "Deadline");
-    kernel::log::debug("sched", "+-----------------------+------+----------+-------+---------+\n");
+    kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
+    kernel::log::debug("sched", "| Scheduler status @ %04d.%03ds after boot                             |\n", secs, hundreths);
+    kernel::log::debug("sched", "|        ID / Name | TID |  Thread Name | CPU Time | State | Deadline |\n");
+    kernel::log::debug("sched", "+------------------+-----+--------------+----------+-------+----------+\n");
     debug_print_thread(current_tcb);
 
     for (thread* t = list_ready.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
     for (thread* t = list_sleeping.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
+    for (thread* t = list_dead.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
+    for (thread* t = list_blocked.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
 
-    kernel::log::debug("sched", "+-----------------------------------------------------------+\n");
+    kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
     kernel::scheduler::enable();
 }
 
@@ -143,9 +172,9 @@ void scheduler::debug_print_thread(thread* t) {
     uint32_t deadline_secs      = (uint32_t)(deadline_ms / 1000);
     uint32_t deadline_hundreths = (uint32_t)(deadline_ms % 1000);
 
-    kernel::log::debug("sched", "|%2d/%-19s | %4d | %4d.%03d | %5s | %4d.%03d|\n", t->m_owner->m_task_id,
-                       t->m_owner->m_task_name, t->m_id, secs, hundreths, thread_state_to_name(t->m_state), deadline_secs,
-                       deadline_hundreths);
+    kernel::log::debug("sched", "| %2d:%-13s | %3d | %12s | %4d.%03d | %5s | %5d.%03d|\n", t->m_owner->m_task_id,
+                       t->m_owner->m_task_name, t->m_id, t->m_name.value_or("anonymous"), secs, hundreths,
+                       thread_state_to_name(t->m_state), deadline_secs, deadline_hundreths);
 }
 
 void scheduler::enqueue(thread* t) {
@@ -159,6 +188,8 @@ void scheduler::terminate(thread* t) {
     t->m_state    = thread_state::dead;
     t->m_slice_ns = 0;
 
+    list_dead.push_back(t);
+    unblock(reaper, 1);
     interrupts_disable();
     schedule();
     // Thread ends here...
@@ -169,6 +200,37 @@ void scheduler::yield(thread* t) {
     t->m_slice_ns = 0;
     kernel::scheduler::disable();
     schedule();
+    kernel::scheduler::enable();
+}
+
+void scheduler::block(thread* t, int reason) {
+    if (t == nullptr) { t = current_tcb; }
+    kernel::scheduler::disable();
+    t->m_blocked  = reason;
+    t->m_state    = thread_state::blocked;
+    t->m_slice_ns = 0;
+    list_blocked.push_back(t);
+    schedule();
+    kernel::scheduler::enable();
+}
+
+void scheduler::unblock(thread* t, int reason) {
+    if (t == nullptr) { t = current_tcb; }
+    // Don't unblock tasks that aren't blocked
+    if (t->ready()) { return; }
+    kernel::scheduler::disable();
+
+    // Search for the thread to unblock...
+    for (thread* ti = list_blocked.front(); ti != nullptr; ti = ti->m_next) {
+        if (ti == t) {
+            // Remove from list blocked
+            list_blocked.remove(t);
+            t->m_state = thread_state::ready_to_run;
+            list_ready.push_back(t);
+            break;
+        }
+    }
+
     kernel::scheduler::enable();
 }
 
@@ -185,7 +247,6 @@ void scheduler::sleep(thread* t, uint64_t ns) {
 
 void scheduler::lock() {
     interrupts_disable();
-
     lock_queues++;
 }
 

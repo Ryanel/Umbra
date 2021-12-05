@@ -12,9 +12,9 @@
 #include <kernel/types.h>
 #include <kernel/x86/descriptor_table.h>
 #include <kernel/x86/interrupts.h>
-#include <kernel/x86/paging.h>
 #include <kernel/x86/pit.h>
 #include <kernel/x86/serial_text_console.h>
+#include <kernel/x86/vas.h>
 #include <kernel/x86/vga_text_console.h>
 #include <string.h>
 
@@ -26,7 +26,7 @@ extern "C" uint32_t* _kernel_end;
 x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
-page_directory                      boot_directory;
+kernel::vas                         boot_directory;
 kernel::boot_file_container         kernel::g_bootfiles;
 
 void kernel_main();
@@ -40,9 +40,8 @@ void boot_init_log() {
 }
 
 void boot_init_memory(multiboot_info_t* mb_info) {
-    boot_directory                = page_directory((page_directory_raw_t*)(&boot_page_directory));
-    boot_directory.directory_addr = (uint32_t)(&boot_page_directory) - 0xC0000000;
-    boot_directory.pt_virt[768]   = (uint32_t)(&boot_page_table1);
+    boot_directory                = kernel::vas((phys_addr_t)(&boot_page_directory), (uint32_t)(&boot_page_directory) - 0xC0000000);
+    boot_directory.set_table_physical(768, (uint32_t)(&boot_page_table1));
 
     // Parse the multiboot memory map for available regions
     auto* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
@@ -54,7 +53,7 @@ void boot_init_memory(multiboot_info_t* mb_info) {
         if (mb_mmap->type == MULTIBOOT_MEMORY_AVAILABLE) { type = kernel::pmm_region_type::ram; }
         kernel::g_pmm.add_region(kernel::pmm_region(type, addr, end_addr));
     }
-    kernel::g_vmm.dir_current = &boot_directory;
+    kernel::g_vmm.vas_current = &boot_directory;
     kernel::g_pmm.init();
     g_heap.init(false, (uint32_t)(&_kernel_end));
 }

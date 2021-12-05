@@ -1,5 +1,6 @@
 #pragma once
 
+#include <kernel/optional.h>
 #include <kernel/types.h>
 #include <stdint.h>
 
@@ -11,22 +12,25 @@ enum class thread_state : uint8_t { dead, ready_to_run = 1, running = 2, blocked
 
 /// A thread of execution
 struct thread {
-    virt_addr_t  m_k_stack_current;  // Current stack pointer
-    virt_addr_t  m_k_stack_top;      // Stack top
-    thread*      m_next;             // Next thread in whatever queue
-    task*        m_owner;            // Owning task
-    thread_state m_state;            // Current state of this thread
-    uint64_t     m_time_elapsed;     // Time in NS this thread has been running
-    uint64_t     m_slice_ns;         // Time in NS for this threads slice
-    uint32_t     m_id;               // The Thread ID of this thread
-    uint8_t      m_priority;         // Priority of this thread
+    virt_addr_t     m_k_stack_current;  // Current stack pointer
+    virt_addr_t     m_k_stack_top;      // Stack top
+    thread*         m_next;             // Next thread in whatever queue
+    task*           m_owner;            // Owning task
+    thread_state    m_state;            // Current state of this thread
+    optional<char*> m_name;             // Thread name
+    uint64_t        m_time_elapsed;     // Time in NS this thread has been running
+    uint64_t        m_slice_ns;         // Time in NS for this threads slice
+    uint32_t        m_id;               // The Thread ID of this thread
+    int             m_blocked;          // Block reason
+    uint8_t         m_priority;         // Priority of this thread
 
     thread() { init_properties(); }
 
-    thread(task* owner, void* bootstrap_fn) {
+    thread(task* owner, void* bootstrap_fn, optional<char*> name = nullopt) {
         init_properties();
         m_owner = owner;
         m_state = thread_state::ready_to_run;
+        m_name  = name;
         setup(bootstrap_fn);
     }
 

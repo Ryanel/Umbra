@@ -44,7 +44,14 @@ extern "C" void k_irq_handler(register_frame_t* regs) {
     if (regs->int_no == 33) {
         // Reset keyboard
         unsigned char scan_code = inb(0x60);
-        kernel::log::warn("irq", "Keyboard IRQ: %d\n", scan_code);
+        if (scan_code == 31) {  // s
+            kernel::scheduler::disable();
+            kernel::log::get().write("s\n");
+            kernel::scheduler::debug();
+            kernel::scheduler::enable();
+        } else {
+            kernel::log::get().write('?');
+        }
     } else if (regs->int_no == 32) {
         if (kernel::time::system_timer != nullptr) {
             kernel::time::system_timer->tick();

@@ -2,6 +2,7 @@
 #include <kernel/elf.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
+#include <kernel/mm/vas.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/scheduler.h>
@@ -50,7 +51,11 @@ void test_thread() {
 }
 
 void dummy_thread() {
-    while (true) {}
+    int counter = 0;
+    while (counter < 5000) {
+        counter++;
+        kernel::scheduler::yield(nullptr);
+    }
 }
 
 /// The main kernel function.
@@ -61,7 +66,7 @@ void kernel_main() {
 
     // Setup the scheduler
     kernel::log::info("kernel", "Initializing the scheduler...\n");
-    kernel::scheduler::init(kernel::g_vmm.dir_current);
+    kernel::scheduler::init(kernel::g_vmm.vas_current);
 
     // Create a virtual filesystem.
     kernel::log::info("vfs", "Initiailize the virtual filesystem\n");
@@ -73,15 +78,16 @@ void kernel_main() {
     initrd->init();
 
     // Start some tasks
-    auto* cloned         = kernel::g_vmm.dir_current->clone();
-    auto* newtask        = new kernel::task(cloned->directory_addr, 1, "test_program");
+    auto* cloned         = kernel::g_vmm.current_vas()->clone();
+    auto* newtask        = new kernel::task(cloned->physical_addr(), 1, "test_program");
     newtask->m_directory = cloned;
-    kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread));
+    kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread, "test main"));
 
     for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
 
     kernel::log::get().flush();
+    kernel::scheduler::debug();
     kernel::scheduler::enable();  // Start scheduling processes
 
-    while (true) {}
+    while (true) { asm("hlt"); }
 }

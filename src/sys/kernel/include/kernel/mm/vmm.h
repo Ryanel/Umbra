@@ -1,12 +1,9 @@
 #pragma once
 
 #include <kernel/config.h>
+#include <kernel/mm/vas.h>
 #include <kernel/types.h>
-#include <kernel/util/bitmap.h>
 #include <stddef.h>
-
-// TODO: Replace with generic code to work on other architectures.
-#include <kernel/x86/paging.h>
 
 namespace kernel {
 class virt_mm {
@@ -16,13 +13,14 @@ class virt_mm {
 
     /// Forces a direct mapping between virt and phys
     virt_addr_t* mmap_direct(virt_addr_t virt, phys_addr_t phys, int protection);
+
     /// Unmaps a region of virtual memory from a tasks virtual memory.
     void munmap(virt_addr_t virt, size_t length);
 
    public:
     // Written for multi-cpu support down the line
-    page_directory* current_directory() { return dir_current; }
-    page_directory* dir_current;  // HACK: Only works for singlethreaded CPUs.
+    vas* current_vas() { return vas_current; }
+    vas* vas_current;  // HACK: Only works for singlethreaded CPUs.
 };
 
 extern virt_mm g_vmm;
