@@ -1,5 +1,5 @@
 #include <kernel/boot/boot_file.h>
-#include <kernel/string.h>
+#include <kernel/util/string.h>
 #include <kernel/vfs/initrd.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
@@ -45,12 +45,9 @@ void initrd_provider::init() {
         if (strcmp("ustar", (char const*)&header->ustar)) { break; }
 
         // Create the node
-        auto* node             = new vfs_node();
-        auto* dat              = new fdata();
-        node->parent           = root;
-        node->delegate         = this;
-        node->size             = oct2bin((unsigned char*)header->size_octal, 11);
-        dat->location          = ((virt_addr_t)header + 512);
+        size_t sz              = oct2bin((unsigned char*)header->size_octal, 11);
+        auto*  node            = new vfs_node(root, this, vfs_type::file, sz);
+        auto*  dat             = new fdata((virt_addr_t)header + 512);
         node->delegate_storage = (void*)dat;
 
         // Set the type

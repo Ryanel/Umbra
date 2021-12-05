@@ -1,8 +1,8 @@
-#include <kernel/critical.h>
 #include <kernel/log.h>
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
+#include <kernel/scheduler.h>
 #include <stdlib.h>
 
 uintptr_t power_ceil(uintptr_t x) {
@@ -49,7 +49,7 @@ uintptr_t slab_allocator::allocate_heap(uint32_t size) {
 }
 
 void* slab_allocator::alloc(uint32_t size) {
-    critical_section cs;
+    kernel::critical_section cs;
 
     uintptr_t out_addr = 0;
 
@@ -83,7 +83,7 @@ void* slab_allocator::alloc(uint32_t size) {
 }
 
 void slab_allocator::free(void* ptr) {
-    critical_section cs;
+    kernel::critical_section cs;
 
     if (ptr == nullptr) {
         panic("Attempted to free a null pointer");
@@ -148,7 +148,14 @@ bool slab::free(uintptr_t address) {
     // This address is not within this slab!
     if (address < m_start || address >= m_start + (PAGE_SIZE * m_pages)) { return false; }
     if (m_entries == 0) { return false; }
-    // TODO: Check that address is size aligned
+
+
+    // Check that address is size aligned to the size of object with this slab!
+    // We can do this because the slab is aligned to the page size
+    uintptr_t offset = address - (address & 0xfffff000);
+    if ((offset % this->m_size) != 0) {
+        panic("Attempted heap corruption, offset to free is not a multiple of slab size!");
+    }
 
     // Put this address on the free list.
     auto* entry   = (slab_entry*)address;

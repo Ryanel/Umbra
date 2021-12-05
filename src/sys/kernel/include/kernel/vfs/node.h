@@ -28,6 +28,9 @@ struct vfs_node {
     size_t                                   size;
     vfs_type                                 type;
 
+    vfs_node() {}
+    vfs_node(vfs_node* parent, vfs_delegate* delegate, vfs_type type, size_t sz) : parent(parent), delegate(delegate), type(type), size(sz) {}
+
     char* name() const { return (char*)&name_buffer[0]; }
 
     void add_child(vfs_node* node) {

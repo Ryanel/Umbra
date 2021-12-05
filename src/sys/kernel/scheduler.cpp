@@ -1,4 +1,3 @@
-#include <kernel/critical.h>
 #include <kernel/interrupts.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
@@ -9,10 +8,12 @@
 
 using namespace kernel;
 
-kernel::thread*      current_tcb;
-kernel::thread*      reaper;
-task*                current_task;
+kernel::thread* current_tcb;
+kernel::thread* reaper;
+task*           current_task;
+
 extern "C" uint32_t* stack_top;
+extern "C" void      set_kernel_stack(uint32_t addr);
 
 thread idle_thread;
 task   _kernel_task;
@@ -34,10 +35,10 @@ void thread_reaper() {
         if (!scheduler::list_dead.empty()) {
             auto* dead_thread = scheduler::list_dead.pop_front();
             kernel::log::trace("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id,
-                              dead_thread->m_name.value_or("anonymous"));
+                               dead_thread->m_name.value_or("anonymous"));
             // TODO: Implement!
-            //g_heap.free(dead_thread->m_k_stack_top);
-            //delete dead_thread;
+            // g_heap.free(dead_thread->m_k_stack_top);
+            // delete dead_thread;
         } else {
             scheduler::block(nullptr, 1);
         }
@@ -61,7 +62,7 @@ void scheduler::init(vas* kernel_vas) {
     current_tcb->m_id          = 0;
     current_tcb->m_owner       = kernel_task;
     current_tcb->m_priority    = 0;  // Lowest priority
-    current_tcb->m_name        = optional<char*>("idle thread");
+    current_tcb->m_name        = "idle thread";
 
     thread_switch(&idle_thread);
 
@@ -143,7 +144,7 @@ const char* thread_state_to_name(thread_state state) {
 }
 
 void scheduler::debug() {
-    kernel::scheduler::disable();
+    kernel::scheduler::lock();
     uint64_t ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
     uint32_t secs      = (uint32_t)(ms / 1000);
     uint32_t hundreths = (uint32_t)(ms % 1000);
@@ -160,7 +161,7 @@ void scheduler::debug() {
     for (thread* t = list_blocked.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
 
     kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
-    kernel::scheduler::enable();
+    kernel::scheduler::unlock();
 }
 
 void scheduler::debug_print_thread(thread* t) {
@@ -178,9 +179,9 @@ void scheduler::debug_print_thread(thread* t) {
 }
 
 void scheduler::enqueue(thread* t) {
-    kernel::scheduler::disable();
+    kernel::scheduler::lock();
     list_ready.push_back(t);
-    kernel::scheduler::enable();
+    kernel::scheduler::unlock();
 }
 
 void scheduler::terminate(thread* t) {
@@ -198,27 +199,27 @@ void scheduler::terminate(thread* t) {
 void scheduler::yield(thread* t) {
     if (t == nullptr) { t = current_tcb; }
     t->m_slice_ns = 0;
-    kernel::scheduler::disable();
+    kernel::scheduler::lock();
     schedule();
-    kernel::scheduler::enable();
+    kernel::scheduler::unlock();
 }
 
 void scheduler::block(thread* t, int reason) {
     if (t == nullptr) { t = current_tcb; }
-    kernel::scheduler::disable();
+    kernel::scheduler::lock();
     t->m_blocked  = reason;
     t->m_state    = thread_state::blocked;
     t->m_slice_ns = 0;
     list_blocked.push_back(t);
     schedule();
-    kernel::scheduler::enable();
+    kernel::scheduler::unlock();
 }
 
 void scheduler::unblock(thread* t, int reason) {
     if (t == nullptr) { t = current_tcb; }
     // Don't unblock tasks that aren't blocked
     if (t->ready()) { return; }
-    kernel::scheduler::disable();
+    kernel::scheduler::lock();
 
     // Search for the thread to unblock...
     for (thread* ti = list_blocked.front(); ti != nullptr; ti = ti->m_next) {
@@ -231,7 +232,7 @@ void scheduler::unblock(thread* t, int reason) {
         }
     }
 
-    kernel::scheduler::enable();
+    kernel::scheduler::unlock();
 }
 
 void scheduler::sleep(thread* t, uint64_t ns) {
@@ -247,34 +248,24 @@ void scheduler::sleep(thread* t, uint64_t ns) {
 
 void scheduler::lock() {
     interrupts_disable();
-    lock_queues++;
-}
-
-void scheduler::unlock() {
-    lock_queues--;
-    if (lock_queues == 0) { interrupts_enable(); }
-}
-
-void scheduler::disable() {
-    interrupts_disable();
-    // printf(">");
     lock_prevent_scheduling++;
     lock_queues++;
 }
 
-void scheduler::enable() {
+void scheduler::unlock() {
     lock_prevent_scheduling--;
 
     if (lock_prevent_scheduling == 0) {
         if (task_switch_delayed) {
             task_switch_delayed = false;
-            kernel::scheduler::lock();
             schedule();
-            kernel::scheduler::unlock();
         }
     }
+
     lock_queues--;
-    if (lock_queues == 0) { interrupts_enable(); }
+    if (lock_queues == 0) {
+        interrupts_enable();
+    }
 
     // printf("<");
 }

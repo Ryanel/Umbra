@@ -4,13 +4,12 @@
 #include <kernel/scheduler.h>
 
 void panic(const char* s) {
-    kernel::scheduler::disable();
-    interrupts_disable();
-
-    kernel::log& log = kernel::log::get();
+    kernel::scheduler::lock();
     kernel::log::critical("panic", "%s\n", s);
-    log.flush();
+    kernel::log::get().flush();
 
     // TODO: Shut down all processors.
-    while (true) {}
+    while (true) {
+        asm("cli; hlt");
+    }
 }

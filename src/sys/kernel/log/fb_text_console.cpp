@@ -15,11 +15,8 @@ void fb_text_console::clear(unsigned char bg) {
     m_y = 0;
 
     fb_color bgcolor = color_table[bg];
-
     for (unsigned int yi = 0; yi < framebuffer.m_height; yi++) {
-        for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) {
-            framebuffer.putpixel(xi, yi, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b);
-        }
+        for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) { framebuffer.putpixel(xi, yi, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b); }
     }
 }
 
@@ -38,43 +35,39 @@ void fb_text_console::wrap() {
         for (size_t line = 0; line < font_height; line++) {
             unsigned int y_line  = (height() - 1) * 8 + line;
             fb_color     bgcolor = color_table[m_last_bg];
-            for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) {
-                framebuffer.putpixel(xi, y_line, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b);
-            }
+            for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) { framebuffer.putpixel(xi, y_line, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b); }
         }
         m_y -= 1;
     }
 }
 
 void fb_text_console::write(char c, unsigned char fore, unsigned char back) {
-    if (c == '\n') {
-        m_y++;
-        m_x = 0;
-        wrap();
-        return;
-    }
-
     m_last_bg = back;
-
-    draw_char(m_x, m_y, c, fore, back);
-    m_x++;
+    switch (c) {
+        case '\n':
+            m_y++;
+            m_x = 0;
+            break;
+        default:
+            draw_char(m_x, m_y, c, fore, back);
+            m_x++;
+            break;
+    }
     wrap();
 }
 
 void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back) {
     unsigned int glyph_index = c - 32;
-
     if (c < 32) { return; }
 
-    unsigned int glyph_x, glyph_y;
     unsigned int screen_x = xpos * font_width;
     unsigned int screen_y = ypos * font_height;
 
     fb_color& forecolor = color_table[fore];
     fb_color& backcolor = color_table[back];
 
-    for (glyph_y = 0; glyph_y < font_height; glyph_y++) {
-        for (glyph_x = 0; glyph_x < font_width; glyph_x++) {
+    for (unsigned int glyph_y = 0; glyph_y < font_height; glyph_y++) {
+        for (unsigned int glyph_x = 0; glyph_x < font_width; glyph_x++) {
             unsigned char data = font_unscii8_bitmap[(uint8_t)glyph_index][glyph_y];
 
 #ifndef FONT_RENDER_INVERSE

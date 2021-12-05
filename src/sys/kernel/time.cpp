@@ -1,10 +1,14 @@
 #include <kernel/scheduler.h>
 #include <kernel/time.h>
 
+// Data
+// ----------------------------------------------------------------------------
 uint64_t                   kernel::time::real_time       = 0;
 uint64_t                   kernel::time::time_since_boot = 0;
 kernel::hal::system_timer* kernel::time::system_timer    = nullptr;
 
+// Methods
+// ----------------------------------------------------------------------------
 void kernel::time::increment(uint64_t ns) {
     real_time += ns;
     time_since_boot += ns;

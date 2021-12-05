@@ -1,17 +1,16 @@
 #pragma once
 
-#include <kernel/string.h>
+#include <kernel/util/string.h>
 #include <kernel/vfs/node.h>
 
 namespace kernel {
 namespace vfs {
+
 class virtual_filesystem {
    public:
-    void      init();
-    void      print_tree(vfs_node* n, int depth = 0);
-    void      debug();
-    vfs_node* get_root() const { return m_root; }
+    void init();
 
+    vfs_node* get_root() const { return m_root; }
     vfs_node* find(kernel::string path);
 
    private:

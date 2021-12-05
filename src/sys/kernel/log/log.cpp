@@ -22,6 +22,7 @@ void kernel::log::init(device::text_console* device) {
     log_priority      = 0;
     shouldBuffer      = false;
     flush_on_newlines = true;
+
     device->init();
     device->clear(colorBack);
 }
@@ -68,6 +69,19 @@ void kernel::log::flush() {
     buffer_index = 0;
 }
 
+unsigned char kernel::log::log_print_common(const char* category, unsigned char color) {
+    unsigned char oldFore   = kernel_logger.colorFore;
+    kernel_logger.colorFore = color;
+
+    uint64_t boot_ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
+    uint32_t boot_secs      = (uint32_t)(boot_ms / 1000);
+    uint32_t boot_hundreths = (uint32_t)(boot_ms % 1000);
+
+    printf("%4d.%03d | %s: ", boot_secs, boot_hundreths, category);
+
+    return oldFore;
+}
+
 #define LOG_BODY(LNAME, LCOLOR, LPRIO)                                    \
     void kernel::log::LNAME(const char* category, const char* fmt, ...) { \
         if (LPRIO <= kernel_logger.log_priority) { return; }              \
@@ -87,25 +101,3 @@ LOG_BODY(error, 0xC, 5);
 LOG_BODY(critical, 0xC, 6);
 
 #undef LOG_BODY
-
-unsigned char kernel::log::log_print_common(const char* category, unsigned char color) {
-    unsigned char oldFore   = kernel_logger.colorFore;
-    kernel_logger.colorFore = color;
-
-    uint64_t boot_ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
-    uint32_t boot_secs      = (uint32_t)(boot_ms / 1000);
-    uint32_t boot_hundreths = (uint32_t)(boot_ms % 1000);
-
-    kprintf("%4d.%03d | %s: ", boot_secs, boot_hundreths, category);
-
-    return oldFore;
-}
-
-int kprintf(const char* fmt, ...) {
-    va_list arg;
-    va_start(arg, fmt);
-    vprintf(fmt, arg);
-    va_end(arg);
-
-    return 0;
-}

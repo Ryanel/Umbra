@@ -1,4 +1,3 @@
-#include <kernel/critical.h>
 #include <kernel/elf.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
@@ -33,8 +32,7 @@ void test_thread() {
 
     for (unsigned int i = 0; i < test_exe.prog_num(); i++) {
         auto* sec = test_exe.prog_header(i);
-        kernel::log::debug("elf", "ph %d: %s vaddr: 0x%08x, filesz: 0x%08x, memsz: 0x%08x\n", i, sec->type_name(), sec->p_vaddr,
-                           sec->p_filesz, sec->p_memsz);
+        kernel::log::debug("elf", "ph %d: %s vaddr: 0x%08x, filesz: 0x%08x, memsz: 0x%08x\n", i, sec->type_name(), sec->p_vaddr, sec->p_filesz, sec->p_memsz);
 
         // Load
         if (sec->p_type == 0x1) {
@@ -83,11 +81,11 @@ void kernel_main() {
     newtask->m_directory = cloned;
     kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread, "test main"));
 
-    for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
+    // for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
 
     kernel::log::get().flush();
     kernel::scheduler::debug();
-    kernel::scheduler::enable();  // Start scheduling processes
+    kernel::scheduler::unlock();  // Start scheduling processes
 
     while (true) { asm("hlt"); }
 }
