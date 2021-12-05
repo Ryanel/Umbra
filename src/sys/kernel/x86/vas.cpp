@@ -109,7 +109,10 @@ vas* vas::clone() {
         // Don't worry aboyut empty entries
         if (this->directory->entries[i].raw == 0) { continue; }
         // Link everything above this point
-        if (i >= kernel_start_index) { link = true; }
+        if (i >= kernel_start_index) {
+            link = true;
+            // cow = false;
+        }
 
         if (link) {
             dir->directory->entries[i] = this->directory->entries[i];

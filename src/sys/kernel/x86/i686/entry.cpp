@@ -12,6 +12,7 @@
 #include <kernel/types.h>
 #include <kernel/x86/descriptor_table.h>
 #include <kernel/x86/interrupts.h>
+#include <kernel/x86/pager.h>
 #include <kernel/x86/pit.h>
 #include <kernel/x86/serial_text_console.h>
 #include <kernel/x86/vas.h>
@@ -111,10 +112,13 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
 
     kernel::log::debug("kernel", "Alive!\n");
 
-    boot_init_memory(mb_info);   // Initialise the memory map (get it from GRUB)
-    kernel::x86::g_gdt.init();   // Initialise the GDT
-    g_idt.init();                // Initialise the IDT
-    g_idt.enable_interrupts();   // Start tracking interrupts (scheduling is diabled)
+    boot_init_memory(mb_info);  // Initialise the memory map (get it from GRUB)
+    kernel::x86::g_gdt.init();  // Initialise the GDT
+    g_idt.init();               // Initialise the IDT
+
+    kernel::interrupts::handler_register(14, new kernel::x86_pager());  // Handle paging
+    g_idt.enable_interrupts();                                          // Start tracking interrupts (scheduling is diabled)
+
     boot_init_modules(mb_info);  // Locate and load in the modules
 
     // Initialise the display

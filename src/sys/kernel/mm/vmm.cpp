@@ -12,7 +12,7 @@ virt_addr_t* kernel::virt_mm::mmap(virt_addr_t virt, size_t length, int protecti
     // We need to choose an address to return.
     virt_addr_t aligned_vaddr = get_virt_addr(virt & 0xFFFFF000, flags);
 
-    flags |= VMM_FLAG_POPULATE;  // Direct MMAPs always will have the MAPNOW flag set
+    flags |= VMM_FLAG_POPULATE;  // FIXME: Always set due to bugs. Fix.
 
     for (size_t i = 0; i < length; i += 0x1000) {
         if ((flags & VMM_FLAG_POPULATE) != 0) {

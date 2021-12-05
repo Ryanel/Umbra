@@ -15,30 +15,11 @@ void interrupts_enable() { asm("sti"); }
 void interrupts_after_thread() { outb(0x20, 0x20); }
 
 extern "C" void k_exception_handler(register_frame_t* regs) {
-    if (regs->int_no == 14) {
-        volatile uint32_t faulting_address;
-        asm volatile("mov %%cr2, %0" : "=r"(faulting_address));
-
-        bool user    = ((regs->err_code & 0b100) != 0);
-        bool write   = ((regs->err_code & 0b10) != 0);
-        bool present = ((regs->err_code & 0b1) != 0);
-
-        if (!present && !user) {
-            bool demand_paging = (kernel::g_vmm.vas_current->get_page(faulting_address).raw & (1 << 9)) != 0;
-            if (demand_paging) {
-                kernel::log::trace("paging", "Fufilling demand paging: 0x%08x\n", faulting_address);
-                kernel::g_vmm.fulfill_demand_page(faulting_address);
-                return;
-            }
-        }
-
-        // Print a message
-        const char* privilage_s = user ? "User" : "Kernel";
-        const char* write_s     = write ? "write to " : "read";
-        const char* present_s   = present ? "present" : "non-present";
-
-        kernel::log::error("paging", "faulting addr: 0x%08x\n", faulting_address);
-        kernel::log::error("paging", "%s process tried to %s a %s page\n", privilage_s, write_s, present_s);
+    if (kernel::interrupts::dispatch(regs->int_no, regs)) {
+        // We've handled and returned from this exception. Let the PIT know and we'll return to the process
+        if (regs->int_no >= 40) { outb(0xA0, 0x20); }
+        outb(0x20, 0x20);
+        return;
     }
 
     kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
@@ -49,37 +30,7 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
     panic("Unhandled exception");
 }
 extern "C" void k_irq_handler(register_frame_t* regs) {
-    // Signal interrupt handled
-
-    if (regs->int_no == 33) {
-        // Reset keyboard
-        unsigned char scan_code = inb(0x60);
-        if (scan_code == 31) {  // s
-            kernel::scheduler::lock();
-            kernel::log::get().write("s\n");
-            kernel::scheduler::debug();
-            kernel::scheduler::unlock();
-        } else {
-            kernel::log::get().write('?');
-        }
-    } else if (regs->int_no == 32) {
-        if (kernel::time::system_timer != nullptr) {
-            kernel::time::system_timer->tick();
-
-            kernel::scheduler::lock();
-            kernel::scheduler::schedule();
-            kernel::scheduler::unlock();
-        }
-    } else if (regs->int_no == 0x80) {
-        kernel::log::info("syscall", "Syscall %d!\n", regs->eax);
-        if (regs->eax == 0x0) {
-            kernel::log::info("syscall", "Syscall exit!\n");
-            kernel::scheduler::terminate(nullptr);
-        }
-    } else {
-        kernel::log::warn("irq", "Unhandled IRQ%x\n", regs->int_no - 32);
-    }
-
+    kernel::interrupts::dispatch(regs->int_no, regs);
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }
     outb(0x20, 0x20);
 }
@@ -158,6 +109,8 @@ void x86_idt::init() {
     set_gate(0x80, (unsigned)interrupt_syscall, 0x08, 0x8E);
 
     x86_set_idt((uint32_t)&idtptr);
+
+    kernel::interrupts::init();
 }
 
 void x86_idt::set_gate(unsigned char num, unsigned long base, unsigned short sel, unsigned char flags) {

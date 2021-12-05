@@ -54,6 +54,8 @@ void* slab_allocator::alloc(uint32_t size, int flags, phys_addr_t* addr) {
     kernel::critical_section cs;
     uintptr_t                out_addr = 0;
 
+    if (size < SLAB_MIN_OBJSIZE) { size = SLAB_MIN_OBJSIZE; }
+
     // This is preliminary support. We can't free this either, which will lead to errors.
     if (flags & KHEAP_PHYSADDR) {
         out_addr = allocate_heap(size);

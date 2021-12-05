@@ -5,6 +5,7 @@
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/scheduler.h>
+#include <kernel/syscall.h>
 #include <kernel/task.h>
 #include <kernel/thread.h>
 #include <kernel/time.h>
@@ -24,7 +25,7 @@ void test_thread() {
     auto fd = kernel::vfs::g_vfs.open_file(fpath, 0);
     if (fd == -1) { kernel::scheduler::terminate(nullptr); }
     auto  size = kernel::vfs::g_vfs.fstat(fd).size;
-    auto* buf  = new uint8_t[size];
+    auto* buf  = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to not make unnessisary slabs.
     kernel::vfs::g_vfs.read(fd, buf, size);
 
     // Parse as an ELF
@@ -60,6 +61,10 @@ void kernel_main() {
     kernel::log::debug("heap", "Setup SLAB heap allocator\n");
     g_heap.init(true);
 
+    // Setup interrupt handler for system calls
+    kernel::log::info("kernel", "Setting up System calls\n");
+    kernel::interrupts::handler_register(0x80, new kernel::syscall_handler());
+
     // Setup the scheduler
     kernel::log::info("kernel", "Initializing the scheduler...\n");
     kernel::scheduler::init(kernel::g_vmm.vas_current);
@@ -79,11 +84,10 @@ void kernel_main() {
     auto* newtask        = new kernel::task(cloned->physical_addr(), 1, "test_program");
     newtask->m_directory = cloned;
     kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread, "test main"));
-
+    // Dummy tasks to be reaper
     for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
 
     kernel::log::get().flush();
-    kernel::scheduler::debug();
     kernel::scheduler::unlock();  // Start scheduling processes
 
     while (true) { asm("hlt"); }

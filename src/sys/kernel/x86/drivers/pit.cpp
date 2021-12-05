@@ -4,14 +4,19 @@
 #include <kernel/x86/ports.h>
 
 void pit_timer::init() {
+    kernel::interrupts::handler_register(32, this);  // Register for IRQ0
     set_phase(1000);
-
     kernel::log::debug("timer", "x86 PIT initialised at %d ns resolution\n", resolution_ns());
 }
 
 void pit_timer::tick() {
     ticks++;
     kernel::time::increment(resolution_ns());
+}
+
+bool pit_timer::handle_interrupt(register_frame_t* regs) {
+    tick();
+    return true;
 }
 
 uint64_t pit_timer::resolution_ns() { return 1000000000 / resolution_hz; }
