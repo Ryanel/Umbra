@@ -1,5 +1,10 @@
 #pragma once
 
+#define VAS_PRESENT       0x1
+#define VAS_WRITABLE      0x2
+#define VAS_USER          0x4
+#define VAS_DEMAND_MAPPED (1 << 9)
+
 typedef struct paging_page {
     union {
         struct {
@@ -56,7 +61,8 @@ class vas {
     bool        unmap(virt_addr_t addr);
     phys_addr_t physical_addr() const { return directory_addr; }
     inline void tlb_flush_single(unsigned long addr) { asm volatile("invlpg (%0)" ::"r"(addr) : "memory"); }
-    void set_table_physical(int index, uintptr_t address) { pt_virt[index] = address; }
+    void        set_table_physical(int index, uintptr_t address) { pt_virt[index] = address; }
+    page_t      get_page(uintptr_t address);
 
    private:
     page_directory_raw_t* directory;

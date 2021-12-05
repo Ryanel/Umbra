@@ -33,11 +33,11 @@ void thread_reaper() {
     while (true) {
         if (!scheduler::list_dead.empty()) {
             auto* dead_thread = scheduler::list_dead.pop_front();
-            kernel::log::warn("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id,
+            kernel::log::trace("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id,
                               dead_thread->m_name.value_or("anonymous"));
-
-            g_heap.free(dead_thread->m_k_stack_top);
-            delete dead_thread;
+            // TODO: Implement!
+            //g_heap.free(dead_thread->m_k_stack_top);
+            //delete dead_thread;
         } else {
             scheduler::block(nullptr, 1);
         }

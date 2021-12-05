@@ -119,7 +119,7 @@ void slab::init(uintptr_t start, uint32_t sz) {
     m_maxEntries = (uint16_t)((PAGE_SIZE * m_pages) / m_size);
 
     // vmm: Map the used pages here
-    kernel::g_vmm.mmap(start, 0x1000 * m_pages, 0x3);  // TODO: Allow other types of protection
+    kernel::g_vmm.mmap(start, 0x1000 * m_pages, VMM_MMAP_WRITABLE);
 
     // Determine how many entires we can have
     kernel::log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries,

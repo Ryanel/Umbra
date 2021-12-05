@@ -83,7 +83,7 @@ void boot_init_modules(multiboot_info_t* mb_info) {
 
         for (uintptr_t p = mod->mod_start; p <= mod->mod_end; p += 0x1000) {
             placement_addr += 0x1000;
-            kernel::g_vmm.mmap_direct(placement_addr, p, 0x03);
+            kernel::g_vmm.mmap_direct(placement_addr, p, (VMM_MMAP_FLAG_MAPNOW | VMM_MMAP_WRITABLE));
         }
         g_heap.set_placmement(placement_addr);
         kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr,
@@ -131,7 +131,7 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
 
         for (size_t i = 0; i < mb_info->framebuffer_height * mb_info->framebuffer_pitch; i += 0x1000) {
             kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i,
-                                      0x03);
+                                      (VMM_MMAP_FLAG_MAPNOW | VMM_MMAP_WRITABLE));
         }
 
         con_fb.framebuffer =

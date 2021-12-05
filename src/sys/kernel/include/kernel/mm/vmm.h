@@ -5,17 +5,24 @@
 #include <kernel/types.h>
 #include <stddef.h>
 
+#define VMM_MMAP_WRITABLE 0x2
+#define VMM_MMAP_USERMODE 0x4
+#define VMM_MMAP_FLAG_MAPNOW 0x2000
+#define VMM_MMAP_DEMAND_INTERNAL (1 << 9)
+
 namespace kernel {
 class virt_mm {
    public:
     /// Maps a potentially noncontiguous region of RAM to vaddr virt of size length bytes, with the specified protection flags
-    virt_addr_t* mmap(virt_addr_t virt, size_t length, int protection);
+    virt_addr_t* mmap(virt_addr_t virt, size_t length, int flags);
 
     /// Forces a direct mapping between virt and phys
-    virt_addr_t* mmap_direct(virt_addr_t virt, phys_addr_t phys, int protection);
+    virt_addr_t* mmap_direct(virt_addr_t virt, phys_addr_t phys, int flags);
 
     /// Unmaps a region of virtual memory from a tasks virtual memory.
     void munmap(virt_addr_t virt, size_t length);
+
+    void fulfill_demand_page(virt_addr_t addr);
 
    public:
     // Written for multi-cpu support down the line

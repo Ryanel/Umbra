@@ -19,7 +19,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
             }
 
             phys_addr_t phys = kernel::g_pmm.get_available_page();
-            kernel::g_vmm.mmap_direct(early_placement, phys, 0x03);
+            kernel::g_vmm.mmap_direct(early_placement, phys, VMM_MMAP_WRITABLE);
 
             if ((flags & KHEAP_PHYSADDR) != 0 && paddr != nullptr) { *paddr = phys; }
 
@@ -46,7 +46,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
             // It's not, map it...
             for (size_t i = 0; i < sz; i += 0x1000) {
                 kernel::log::trace("kheap", "grew a page @ 0x%08x\n", phys + i);
-                kernel::g_vmm.mmap_direct(early_placement + i, phys + i, 0x03);
+                kernel::g_vmm.mmap_direct(early_placement + i, phys + i, VMM_MMAP_WRITABLE);
             }
         }
 

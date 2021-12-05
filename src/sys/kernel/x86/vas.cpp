@@ -1,5 +1,6 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
+#include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/x86/vas.h>
 #include <string.h>
@@ -24,12 +25,14 @@ bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t flags) {
         // if (new_pt_virt == -1) { return false; }
 
         this->pt_virt[pdindex]          = new_pt_virt;
-        directory->entries[pdindex].raw = (new_page_table_phys | 0x03);
+        directory->entries[pdindex].raw = (new_page_table_phys | VAS_PRESENT | VAS_WRITABLE);
     }
 
     auto* pt = (page_table_t*)pt_virt[pdindex];
 
-    pt->entries[ptindex].raw = ((unsigned long)phys) | (flags & 0xFFF) | 0x01;
+    bool demand_paging  = (flags & VMM_MMAP_FLAG_MAPNOW) == 0;
+    int  filtered_flags = (flags & 0xFFF) | (demand_paging ? VAS_DEMAND_MAPPED : VAS_PRESENT);
+    pt->entries[ptindex].raw = ((unsigned long)phys) | filtered_flags;
 
     tlb_flush_single(phys);
     return true;
@@ -49,6 +52,21 @@ bool vas::unmap(virt_addr_t virt) {
 
     tlb_flush_single(virt);
     return true;
+}
+
+page_t vas::get_page(uintptr_t virt) {
+    uintptr_t aligned_addr = virt & 0xFFFFF000;
+
+    unsigned long pdindex = (unsigned long)aligned_addr >> 22;
+    unsigned long ptindex = (unsigned long)aligned_addr >> 12 & 0x03FF;
+
+    auto* pd_ent = &directory->entries[pdindex];
+    if (pd_ent->present == 1) {
+        auto* pt = (page_table_t*)pt_virt[pdindex];
+        return pt->entries[ptindex];
+    }
+
+    return page_t();
 }
 
 vas* vas::clone() {
