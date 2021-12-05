@@ -20,20 +20,18 @@ void test_thread() {
     // The job of this thread is to load and execute the test executable
     const char* fpath = "/apps/test_program";
 
-    auto* file = kernel::vfs::g_vfs.find(fpath);
-    if (file == nullptr) { kernel::scheduler::terminate(nullptr); }
+    // Load file
+    auto fd = kernel::vfs::g_vfs.open_file(fpath, 0);
+    if (fd == -1) { kernel::scheduler::terminate(nullptr); }
+    auto  size = kernel::vfs::g_vfs.fstat(fd).size;
+    auto* buf  = new uint8_t[size];
+    kernel::vfs::g_vfs.read(fd, buf, size);
 
-    uint8_t* buf = new uint8_t[file->size];
-
-    file->delegate->read(file, 0, file->size, buf);
-
+    // Parse as an ELF
     auto test_exe = kernel::elf_file(buf);
-    test_exe.debug_print();
 
     for (unsigned int i = 0; i < test_exe.prog_num(); i++) {
         auto* sec = test_exe.prog_header(i);
-        kernel::log::debug("elf", "ph %d: %s vaddr: 0x%08x, filesz: 0x%08x, memsz: 0x%08x\n", i, sec->type_name(), sec->p_vaddr, sec->p_filesz, sec->p_memsz);
-
         // Load
         if (sec->p_type == 0x1) {
             kernel::g_vmm.mmap(sec->p_vaddr, sec->p_memsz, VMM_PROT_USER | VMM_PROT_WRITE, VMM_FLAG_POPULATE);
@@ -82,7 +80,7 @@ void kernel_main() {
     newtask->m_directory = cloned;
     kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread, "test main"));
 
-    // for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
+    for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
 
     kernel::log::get().flush();
     kernel::scheduler::debug();

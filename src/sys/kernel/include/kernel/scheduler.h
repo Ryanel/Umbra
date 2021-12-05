@@ -12,7 +12,9 @@ class vas;
 
 class scheduler {
    public:
-    static task* kernel_task;
+    static task*   kernel_task;
+    static task*   get_current_task();
+    static thread* get_current_thread();
 
     static void schedule();
     static void init(vas* kernel_vas);

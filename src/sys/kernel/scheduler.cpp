@@ -34,8 +34,7 @@ void thread_reaper() {
     while (true) {
         if (!scheduler::list_dead.empty()) {
             auto* dead_thread = scheduler::list_dead.pop_front();
-            kernel::log::trace("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id,
-                               dead_thread->m_name.value_or("anonymous"));
+            kernel::log::trace("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id, dead_thread->m_name.value_or("anonymous"));
             // TODO: Implement!
             // g_heap.free(dead_thread->m_k_stack_top);
             // delete dead_thread;
@@ -70,6 +69,9 @@ void scheduler::init(vas* kernel_vas) {
     reaper = new thread(kernel_task, (void*)&thread_reaper, "reaper");
     enqueue(reaper);
 }
+
+task*   scheduler::get_current_task() { return current_task; }
+thread* scheduler::get_current_thread() { return current_tcb; }
 
 void scheduler::schedule() {
     if (current_tcb == nullptr) { return; }
@@ -173,9 +175,8 @@ void scheduler::debug_print_thread(thread* t) {
     uint32_t deadline_secs      = (uint32_t)(deadline_ms / 1000);
     uint32_t deadline_hundreths = (uint32_t)(deadline_ms % 1000);
 
-    kernel::log::debug("sched", "| %2d:%-13s | %3d | %12s | %4d.%03d | %5s | %5d.%03d|\n", t->m_owner->m_task_id,
-                       t->m_owner->m_task_name, t->m_id, t->m_name.value_or("anonymous"), secs, hundreths,
-                       thread_state_to_name(t->m_state), deadline_secs, deadline_hundreths);
+    kernel::log::debug("sched", "| %2d:%-13s | %3d | %12s | %4d.%03d | %5s | %5d.%03d|\n", t->m_owner->m_task_id, t->m_owner->m_task_name, t->m_id,
+                       t->m_name.value_or("anonymous"), secs, hundreths, thread_state_to_name(t->m_state), deadline_secs, deadline_hundreths);
 }
 
 void scheduler::enqueue(thread* t) {
@@ -263,9 +264,7 @@ void scheduler::unlock() {
     }
 
     lock_queues--;
-    if (lock_queues == 0) {
-        interrupts_enable();
-    }
+    if (lock_queues == 0) { interrupts_enable(); }
 
     // printf("<");
 }

@@ -13,10 +13,22 @@ class vfs_delegate;
 class vfs_node;
 
 enum class vfs_type : uint8_t { file = 1, directory = 2 };
+typedef uint32_t file_id_t;
 
 struct vfs_node_child {
     vfs_node*       node;
     vfs_node_child* m_next;
+};
+
+struct file_descriptor {
+    vfs_node*        m_node;
+    file_descriptor* m_next;
+    int              flags;
+    file_id_t        m_id;
+};
+
+struct file_stats {
+    size_t size;
 };
 
 struct vfs_node {
@@ -29,7 +41,9 @@ struct vfs_node {
     vfs_type                                 type;
 
     vfs_node() {}
-    vfs_node(vfs_node* parent, vfs_delegate* delegate, vfs_type type, size_t sz) : parent(parent), delegate(delegate), type(type), size(sz) {}
+    vfs_node(vfs_node* parent, vfs_delegate* delegate, vfs_type type, size_t sz) : parent(parent), delegate(delegate), type(type), size(sz) {
+        if (parent != nullptr) { parent->add_child(this); }
+    }
 
     char* name() const { return (char*)&name_buffer[0]; }
 
