@@ -37,10 +37,10 @@ class scheduler {
 
     static bool task_switch_delayed;
 
-    static util::linked_list_inline<thread> list_ready;
-    static util::linked_list_inline<thread> list_sleeping;
-    static util::linked_list_inline<thread> list_dead;
-    static util::linked_list_inline<thread> list_blocked;
+    static util::linked_list<thread> list_ready;
+    static util::linked_list<thread> list_sleeping;
+    static util::linked_list<thread> list_dead;
+    static util::linked_list<thread> list_blocked;
 
    private:
     static uint64_t determine_timeslice(thread* t);

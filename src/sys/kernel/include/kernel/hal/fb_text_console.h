@@ -36,7 +36,6 @@ class fb_text_console : public text_console {
     unsigned int   font_height = 8;
 
     void draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back);
-    void wrap();
 
     fb_color color_table[16] = {
         {0x28, 0x2A, 0x2E},  // 0

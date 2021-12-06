@@ -105,7 +105,6 @@ class elf_file {
     bool valid() const;       //< Determines the integrity of the file
     bool loadable() const;    //< Determines if this is natively loadable by this operating system
     bool executable() const;  //< Is this file runnable as a task?
-    void debug_print();
     elf_file(void* header) : m_header((elf32_header*)header) {}
 
     inline unsigned int section_num() const { return m_header->e_shnum; }

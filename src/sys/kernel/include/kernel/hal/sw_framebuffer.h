@@ -26,7 +26,7 @@ class sw_framebuffer {
         this->m_format = format;
     }
 
-    void putpixel(unsigned int x, unsigned int y, unsigned char r, unsigned char g, unsigned char b) {
+    inline void putpixel(unsigned int x, unsigned int y, unsigned char r, unsigned char g, unsigned char b) {
         uint8_t* pixaddr = m_buffer + (y * m_pitch) + (x * 3);
 
         if (m_format == fb_format::rgb) {
@@ -40,8 +40,8 @@ class sw_framebuffer {
         }
     }
 
-    void clear() { memset(m_buffer, 0, m_height * m_pitch); }
-    void lineclear(int y) { memset(m_buffer + (y * m_pitch), 0, m_pitch); }
+    inline void clear() { memset(m_buffer, 0, m_height * m_pitch); }
+    inline void lineclear(int y) { memset(m_buffer + (y * m_pitch), 0, m_pitch); }
 
     void linemove(int src, int dest, int num_lines = 1) {
         uint8_t* ybuff_src  = m_buffer + (src * m_pitch);

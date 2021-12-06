@@ -84,8 +84,6 @@ void kernel_main() {
     auto* newtask        = new kernel::task(cloned->physical_addr(), 1, "test_program");
     newtask->m_directory = cloned;
     kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread, "test main"));
-    // Dummy tasks to be reaper
-    for (size_t i = 0; i < 10; i++) { kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&dummy_thread)); }
 
     kernel::log::get().flush();
     kernel::scheduler::unlock();  // Start scheduling processes

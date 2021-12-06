@@ -1,8 +1,7 @@
 #pragma once
 
 #include <kernel/types.h>
-
-#define BOOTFILE_MAX 10
+#include <kernel/config.h>
 
 namespace kernel {
 
@@ -15,13 +14,11 @@ struct boot_file {
 
 class boot_file_container {
    public:
+    void add(boot_file f) { files[numfiles++] = f; }
+
+   public:
     boot_file files[BOOTFILE_MAX];
     int       numfiles = 0;
-
-    void add(boot_file f) {
-        files[numfiles] = f;
-        numfiles++;
-    }
 };
 
 extern boot_file_container g_bootfiles;

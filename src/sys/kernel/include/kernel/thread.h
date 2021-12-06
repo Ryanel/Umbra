@@ -14,7 +14,6 @@ enum class thread_state : uint8_t { dead, ready_to_run = 1, running = 2, blocked
 struct thread {
     virt_addr_t           m_k_stack_current;  // Current stack pointer
     virt_addr_t           m_k_stack_top;      // Stack top
-    thread*               m_next;             // Next thread in whatever queue
     task*                 m_owner;            // Owning task
     thread_state          m_state;            // Current state of this thread
     optional<const char*> m_name;             // Thread name
@@ -37,7 +36,6 @@ struct thread {
     void init_properties() {
         m_k_stack_current = 0;
         m_k_stack_top     = 0;
-        m_next            = nullptr;
         m_owner           = nullptr;
         m_state           = thread_state::dead;
         m_time_elapsed    = 0;
@@ -47,6 +45,11 @@ struct thread {
     }
 
     void setup(void* bootstrap_fn);
+
+    void set_state(thread_state state, uint64_t timeslice_left = 0) {
+        m_state    = state;
+        m_slice_ns = timeslice_left;
+    }
 
     bool ready() const { return m_state == thread_state::running || m_state == thread_state::ready_to_run; }
 };

@@ -1,4 +1,6 @@
 #include <stdint.h>
+
+// http://viznut.fi/unscii/ , created by Viznut. Unscii is licensed under Public Domain
 static const uint8_t font_unscii8_bitmap[][8] = {
 
     {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},  // U+0020

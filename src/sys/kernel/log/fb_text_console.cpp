@@ -6,6 +6,8 @@
 using namespace kernel::device;
 
 void fb_text_console::init() {
+    font_height = 8;
+    font_width = 8;
     kernel::log::debug("console", "Framebuffer text console is: %dx%d\n", width(), height());
     clear(0x0);
 }
@@ -17,27 +19,6 @@ void fb_text_console::clear(unsigned char bg) {
     fb_color bgcolor = color_table[bg];
     for (unsigned int yi = 0; yi < framebuffer.m_height; yi++) {
         for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) { framebuffer.putpixel(xi, yi, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b); }
-    }
-}
-
-void fb_text_console::wrap() {
-    if (m_x >= width()) {
-        m_x = 0;
-        m_y += 1;
-    }
-
-    if (m_y >= (height())) {
-        int y_i   = 1;
-        int y_max = m_y - 1;
-
-        framebuffer.linemove(font_height, 0, font_height * (height() - 1));
-
-        for (size_t line = 0; line < font_height; line++) {
-            unsigned int y_line  = (height() - 1) * 8 + line;
-            fb_color     bgcolor = color_table[m_last_bg];
-            for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) { framebuffer.putpixel(xi, y_line, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b); }
-        }
-        m_y -= 1;
     }
 }
 
@@ -53,7 +34,27 @@ void fb_text_console::write(char c, unsigned char fore, unsigned char back) {
             m_x++;
             break;
     }
-    wrap();
+
+    // Wrap console around
+    if (m_x >= width()) {
+        m_x = 0;
+        m_y += 1;
+    }
+
+    // Scroll if needed
+    if (m_y >= (height())) {
+        int y_i   = 1;
+        int y_max = m_y - 1;
+
+        framebuffer.linemove(font_height, 0, font_height * (height() - 1));
+
+        for (size_t line = 0; line < font_height; line++) {
+            unsigned int y_line  = (height() - 1) * font_height + line;
+            fb_color     bgcolor = color_table[m_last_bg];
+            for (unsigned int xi = 0; xi < framebuffer.m_width; xi++) { framebuffer.putpixel(xi, y_line, bgcolor.m_r, bgcolor.m_g, bgcolor.m_b); }
+        }
+        m_y -= 1;
+    }
 }
 
 void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back) {

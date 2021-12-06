@@ -21,10 +21,10 @@ thread_switch:
 
     # Update scheduling information
     mov     [current_tcb],esi       # current_tcb = new TCB
-    movb    [esi + (4*4)], 2        # Set state to "running"
+    movb    [esi + (4*3)], 2        # Set state to "running"
 
     # Now, manipulate the tasks 
-    mov     edi, [esi + (4 * 3)]    # Load thread task ptr
+    mov     edi, [esi + (4 * 2)]    # Load thread task ptr
     mov     eax, [current_task]     # Load current task ptr
     cmp     eax, edi                # Compare
     je      .switch_vas_done        # No need to swap VAS...

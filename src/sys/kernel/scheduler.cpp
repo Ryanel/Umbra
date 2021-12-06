@@ -18,30 +18,20 @@ extern "C" void      set_kernel_stack(uint32_t addr);
 thread idle_thread;
 task   _kernel_task;
 
-task*                            scheduler::kernel_task;
-int                              scheduler::lock_queues             = 1;
-int                              scheduler::lock_prevent_scheduling = 1;
-bool                             scheduler::task_switch_delayed     = false;
-uint64_t                         scheduler::last_schedule_ns        = 0;
-util::linked_list_inline<thread> scheduler::list_ready;
-util::linked_list_inline<thread> scheduler::list_sleeping;
-util::linked_list_inline<thread> scheduler::list_dead;
-util::linked_list_inline<thread> scheduler::list_blocked;
+task*                     scheduler::kernel_task;
+int                       scheduler::lock_queues             = 1;
+int                       scheduler::lock_prevent_scheduling = 1;
+bool                      scheduler::task_switch_delayed     = false;
+uint64_t                  scheduler::last_schedule_ns        = 0;
+util::linked_list<thread> scheduler::list_ready;
+util::linked_list<thread> scheduler::list_sleeping;
+util::linked_list<thread> scheduler::list_dead;
+util::linked_list<thread> scheduler::list_blocked;
 
 void thread_reaper() {
     kernel::log::info("reaper", "Reaper online!\n");
 
-    while (true) {
-        if (!scheduler::list_dead.empty()) {
-            auto* dead_thread = scheduler::list_dead.pop_front();
-            kernel::log::trace("reaper", "Reaped thread %d(%s)!\n", dead_thread->m_id, dead_thread->m_name.value_or("anonymous"));
-            // TODO: Implement!
-            // g_heap.free(dead_thread->m_k_stack_top);
-            // delete dead_thread;
-        } else {
-            scheduler::block(nullptr, 1);
-        }
-    }
+    while (true) { scheduler::block(nullptr, 1); }
 }
 
 void scheduler::init(vas* kernel_vas) {
@@ -96,23 +86,23 @@ void scheduler::schedule() {
     last_schedule_ns = kernel::time::boot_time_ns();
 
     // Unblock any sleeping processes
-    for (thread* t = list_sleeping.front(); t != nullptr; t = t->m_next) {
-        if (t->m_slice_ns <= last_schedule_ns) {
-            list_sleeping.remove(t);
-            t->m_state    = thread_state::ready_to_run;
-            t->m_slice_ns = determine_timeslice(t);
-            list_ready.push_back(t);
+    for (auto* t = list_sleeping.front(); t != nullptr; t = t->m_next) {
+        if (t->val->m_slice_ns <= last_schedule_ns) {
+            auto* thr = t->val;
+            list_sleeping.remove(thr);
+            list_ready.push_back(thr);
+            thr->set_state(thread_state::ready_to_run, determine_timeslice(thr));
+            t = list_sleeping.front();  // FIXME: Fixes terrible looping code at cost of performance.
         }
     }
 
     if (allow_swap == false) { return; }
-
     // Swap if: We ran out of time
     if (current_tcb->m_slice_ns <= 0) { should_swap = true; }
     // Swap if: Process is no longer running (blocked or dead)
     if (!current_tcb->ready()) { should_swap = true; }
 
-    if (allow_swap && should_swap) {
+    if (should_swap) {
         if (!list_ready.empty()) {
             // Only enqueue processes that are running.
             if (current_tcb->ready()) {
@@ -146,24 +136,24 @@ const char* thread_state_to_name(thread_state state) {
 }
 
 void scheduler::debug() {
-    kernel::scheduler::lock();
-    uint64_t ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
-    uint32_t secs      = (uint32_t)(ms / 1000);
-    uint32_t hundreths = (uint32_t)(ms % 1000);
+    critical_section cs;
+    uint64_t         ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
+    uint32_t         secs      = (uint32_t)(ms / 1000);
+    uint32_t         hundreths = (uint32_t)(ms % 1000);
 
     kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
-    kernel::log::debug("sched", "| Scheduler status @ %04d.%03ds after boot                             |\n", secs, hundreths);
+    kernel::log::debug("sched", "| Scheduler status @ %04d.%03ds after boot                             |\n", secs,
+                       hundreths);
     kernel::log::debug("sched", "|        ID / Name | TID |  Thread Name | CPU Time | State | Deadline |\n");
     kernel::log::debug("sched", "+------------------+-----+--------------+----------+-------+----------+\n");
     debug_print_thread(current_tcb);
 
-    for (thread* t = list_ready.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
-    for (thread* t = list_sleeping.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
-    for (thread* t = list_dead.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
-    for (thread* t = list_blocked.front(); t != nullptr; t = t->m_next) { debug_print_thread(t); }
+    for (auto* t = list_ready.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
+    for (auto* t = list_sleeping.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
+    for (auto* t = list_dead.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
+    for (auto* t = list_blocked.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
 
     kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
-    kernel::scheduler::unlock();
 }
 
 void scheduler::debug_print_thread(thread* t) {
@@ -175,75 +165,68 @@ void scheduler::debug_print_thread(thread* t) {
     uint32_t deadline_secs      = (uint32_t)(deadline_ms / 1000);
     uint32_t deadline_hundreths = (uint32_t)(deadline_ms % 1000);
 
-    kernel::log::debug("sched", "| %2d:%-13s | %3d | %12s | %4d.%03d | %5s | %5d.%03d|\n", t->m_owner->m_task_id, t->m_owner->m_task_name, t->m_id,
-                       t->m_name.value_or("anonymous"), secs, hundreths, thread_state_to_name(t->m_state), deadline_secs, deadline_hundreths);
+    kernel::log::debug("sched", "| %2d:%-13s | %3d | %12s | %4d.%03d | %5s | %5d.%03d|\n", t->m_owner->m_task_id,
+                       t->m_owner->m_task_name, t->m_id, t->m_name.value_or("anonymous"), secs, hundreths,
+                       thread_state_to_name(t->m_state), deadline_secs, deadline_hundreths);
 }
 
 void scheduler::enqueue(thread* t) {
-    kernel::scheduler::lock();
+    critical_section cs;
     list_ready.push_back(t);
-    kernel::scheduler::unlock();
 }
 
 void scheduler::terminate(thread* t) {
+    critical_section cs;
     if (t == nullptr) { t = current_tcb; }
     t->m_state    = thread_state::dead;
     t->m_slice_ns = 0;
 
     list_dead.push_back(t);
     unblock(reaper, 1);
-    interrupts_disable();
     schedule();
     // Thread ends here...
 }
 
 void scheduler::yield(thread* t) {
+    critical_section cs;
     if (t == nullptr) { t = current_tcb; }
-    t->m_slice_ns = 0;
-    kernel::scheduler::lock();
+    t->m_slice_ns = determine_timeslice(t);
     schedule();
-    kernel::scheduler::unlock();
 }
 
 void scheduler::block(thread* t, int reason) {
+    critical_section cs;
     if (t == nullptr) { t = current_tcb; }
-    kernel::scheduler::lock();
-    t->m_blocked  = reason;
-    t->m_state    = thread_state::blocked;
-    t->m_slice_ns = 0;
+
+    t->set_state(thread_state::blocked);
+    t->m_blocked = reason;
     list_blocked.push_back(t);
     schedule();
-    kernel::scheduler::unlock();
 }
 
 void scheduler::unblock(thread* t, int reason) {
+    critical_section cs;
     if (t == nullptr) { t = current_tcb; }
     // Don't unblock tasks that aren't blocked
     if (t->ready()) { return; }
-    kernel::scheduler::lock();
 
     // Search for the thread to unblock...
-    for (thread* ti = list_blocked.front(); ti != nullptr; ti = ti->m_next) {
-        if (ti == t) {
+    for (auto* tnode = list_blocked.front(); tnode != nullptr; tnode = tnode->m_next) {
+        if (tnode->val == t) {
             // Remove from list blocked
             list_blocked.remove(t);
-            t->m_state = thread_state::ready_to_run;
+            t->set_state(thread_state::ready_to_run, determine_timeslice(t));
             list_ready.push_back(t);
             break;
         }
     }
-
-    kernel::scheduler::unlock();
 }
 
 void scheduler::sleep(thread* t, uint64_t ns) {
+    critical_section cs;
     if (t == nullptr) { t = current_tcb; }
-
-    t->m_state    = thread_state::sleeping;
-    t->m_slice_ns = ns;
-
+    t->set_state(thread_state::sleeping, ns);
     list_sleeping.push_back(t);
-
     schedule();
 }
 
@@ -265,6 +248,4 @@ void scheduler::unlock() {
 
     lock_queues--;
     if (lock_queues == 0) { interrupts_enable(); }
-
-    // printf("<");
 }
