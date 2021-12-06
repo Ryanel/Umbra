@@ -3,6 +3,8 @@
 #include <kernel/util/linked_list.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <kernel/log.h>
+#include <string.h>
 
 #define VFS_MAX_FILENAME 128
 
@@ -12,7 +14,7 @@ namespace vfs {
 class vfs_delegate;
 class vfs_node;
 
-enum class vfs_type : uint8_t { file = 1, directory = 2 };
+enum class vfs_type : uint8_t { file = 1, directory = 2, device = 3 };
 typedef uint32_t file_id_t;
 
 struct vfs_node_child {
@@ -41,8 +43,19 @@ struct vfs_node {
     vfs_type                                 type;
 
     vfs_node() {}
-    vfs_node(vfs_node* parent, vfs_delegate* delegate, vfs_type type, size_t sz) : parent(parent), delegate(delegate), type(type), size(sz) {
-        if (parent != nullptr) { parent->add_child(this); }
+    vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz)
+        : parent(parent), delegate(delegate), type(type), size(sz) {
+        if (p != nullptr) { p->add_child(this); }
+    }
+
+    vfs_node(const vfs_node& n) {
+        memcpy(name_buffer, n.name_buffer, VFS_MAX_FILENAME);
+        delegate         = n.delegate;
+        parent           = n.parent;
+        delegate_storage = n.delegate_storage;
+        size             = n.size;
+        type             = n.type;
+        kernel::log::error("node", "Copy\n");
     }
 
     char* name() const { return (char*)&name_buffer[0]; }

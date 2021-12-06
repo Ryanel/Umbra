@@ -22,6 +22,7 @@ class virtual_filesystem {
 
     file_id_t  open_file(kernel::string path, int flags);
     size_t     read(file_id_t fd, uint8_t* buf, size_t count);
+    size_t     write(file_id_t fd, uint8_t* buf, size_t count);
     file_stats fstat(file_id_t fd);
 
     file_descriptor* taskfd_to_fd(file_id_t);

@@ -25,8 +25,12 @@ void test_thread() {
     auto fd = kernel::vfs::g_vfs.open_file(fpath, 0);
     if (fd == -1) { kernel::scheduler::terminate(nullptr); }
     auto  size = kernel::vfs::g_vfs.fstat(fd).size;
-    auto* buf  = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to not make unnessisary slabs.
+    auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
+                                                                    // not make unnessisary slabs.
     kernel::vfs::g_vfs.read(fd, buf, size);
+
+    // Open a console for the program
+    auto term = kernel::vfs::g_vfs.open_file("/dev/console", 0);
 
     // Parse as an ELF
     auto test_exe = kernel::elf_file(buf);
@@ -54,6 +58,17 @@ void dummy_thread() {
         kernel::scheduler::yield(nullptr);
     }
 }
+
+class terminal_delegate : public kernel::vfs::vfs_delegate {
+   public:
+    terminal_delegate() {}
+    int read(kernel::vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
+    int write(kernel::vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
+        for (size_t i = 0; i < size; i++) { kernel::log::get().write(buffer[i]); }
+        return 0;
+    }
+    char const* delegate_name() { return "null delegate"; }
+};
 
 /// The main kernel function.
 void kernel_main() {
@@ -84,6 +99,18 @@ void kernel_main() {
     auto* newtask        = new kernel::task(cloned->physical_addr(), 1, "test_program");
     newtask->m_directory = cloned;
     kernel::scheduler::enqueue(new kernel::thread(newtask, (void*)&test_thread, "test main"));
+
+    auto* dev_dir = kernel::vfs::g_vfs.find("/dev/");
+    auto* term    = new kernel::vfs::vfs_node(dev_dir, new terminal_delegate(), kernel::vfs::vfs_type::device, 0);
+    
+    term->name_buffer[0] = 'c';
+    term->name_buffer[1] = 'o';
+    term->name_buffer[2] = 'n';
+    term->name_buffer[3] = 's';
+    term->name_buffer[4] = 'o';
+    term->name_buffer[5] = 'l';
+    term->name_buffer[6] = 'e';
+    term->name_buffer[7] = '\0';
 
     kernel::log::get().flush();
     kernel::scheduler::unlock();  // Start scheduling processes

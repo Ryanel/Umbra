@@ -23,6 +23,12 @@ void virtual_filesystem::init() {
     vfs_root->name_buffer[0] = '/';
     vfs_root->name_buffer[1] = 0;
     m_root                   = vfs_root;
+
+    auto* dev           = new vfs_node(m_root, new null_delegate(), vfs_type::directory, 0);
+    dev->name_buffer[0] = 'd';
+    dev->name_buffer[1] = 'e';
+    dev->name_buffer[2] = 'v';
+    dev->name_buffer[3] = '\0';
 }
 
 vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
@@ -35,8 +41,11 @@ vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
         size_t delim_pos    = path.find('/');
         auto   before_delim = path.substr(0, delim_pos);
 
-        // This is a directory, return it.
-        if (delim_pos == (path.size() - 1)) { return directory; }
+        // This is a directory, which means its a child of the parent. 
+        if (delim_pos == (path.size() - 1)) {
+            path = before_delim;
+            break;
+        }
 
         // Check the prospective parents children to see if this directory is one of them.
         for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->m_next) {
@@ -115,6 +124,24 @@ size_t virtual_filesystem::read(file_id_t fdid, uint8_t* buf, size_t count) {
     if (node->delegate == nullptr) { return -1; }
 
     return node->delegate->read(node, 0, count, buf);
+}
+
+size_t virtual_filesystem::write(file_id_t fdid, uint8_t* buf, size_t count) {
+    auto* fd = taskfd_to_fd(fdid);
+    if (fd == nullptr || fd->m_node == nullptr) { return -1; }
+
+    auto* node = fd->m_node;
+
+    if (count == 0) { return 0; }
+    // We don't care about limits in devices
+    if (node->type != vfs_type::device) {
+        if (count > node->size) { count = node->size; }
+    }
+
+    if (buf == nullptr) { return -1; }
+
+    if (node->delegate == nullptr) { return -1; }
+    return node->delegate->write(node, 0, count, buf);
 }
 
 file_stats virtual_filesystem::fstat(file_id_t fdid) {
