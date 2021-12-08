@@ -28,9 +28,9 @@ class virtual_filesystem {
     file_descriptor* taskfd_to_fd(file_id_t);
 
    private:
-    vfs_node*                                 m_root;
-    util::linked_list_inline<file_descriptor> open_files;
-    file_id_t                                 next_descriptor_id = 0;
+    vfs_node*                          m_root;
+    util::linked_list<file_descriptor> open_files;
+    file_id_t                          next_descriptor_id = 0;
 };
 
 extern kernel::vfs::virtual_filesystem g_vfs;

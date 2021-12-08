@@ -2,14 +2,12 @@
 
 #include <kernel/interrupts.h>
 #include <kernel/panic.h>
-#include <kernel/task.h>
-#include <kernel/thread.h>
+#include <kernel/tasks/task.h>
+#include <kernel/tasks/thread.h>
 #include <kernel/util/linked_list.h>
 
 namespace kernel {
-
-class vas;
-
+namespace tasks {
 class scheduler {
    public:
     static task*   kernel_task;
@@ -49,9 +47,5 @@ class scheduler {
     static int      lock_queues;
 };
 
-struct critical_section {
-    critical_section() { kernel::scheduler::lock(); }
-    ~critical_section() { kernel::scheduler::unlock(); }
-};
-
+}  // namespace tasks
 }  // namespace kernel

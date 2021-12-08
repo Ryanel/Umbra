@@ -1,10 +1,10 @@
 #pragma once
 
-#include <kernel/types.h>
 #include <kernel/config.h>
+#include <kernel/types.h>
 
 namespace kernel {
-
+namespace boot {
 struct boot_file {
     char const* name;
     virt_addr_t vaddr;
@@ -23,4 +23,5 @@ class boot_file_container {
 
 extern boot_file_container g_bootfiles;
 
+}  // namespace boot
 }  // namespace kernel

@@ -2,8 +2,10 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/panic.h>
-#include <kernel/scheduler.h>
-#include <kernel/thread.h>
+#include <kernel/tasks/scheduler.h>
+#include <kernel/tasks/thread.h>
+
+using namespace kernel::tasks;
 
 extern "C" uint32_t* stack_top;
 
@@ -13,10 +15,10 @@ void thread_setup_function(void (*fn)(void)) {
     interrupts_enable();
     interrupts_after_thread();
     (*fn)();
-    kernel::scheduler::terminate(nullptr);
+    kernel::tasks::scheduler::terminate(nullptr);
 }
 
-void kernel::thread::setup(void* bootstrap_fn) {
+void thread::setup(void* bootstrap_fn) {
     m_k_stack_top     = g_heap.alloc(0x1000, 0);
     m_k_stack_current = m_k_stack_top;
     m_id              = ++next_thread_id;

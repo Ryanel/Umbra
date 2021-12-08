@@ -14,8 +14,9 @@ struct file_descriptor;
 struct task_file_descriptor {
     uint32_t              m_local_id;
     vfs::file_descriptor* m_descriptor;
-    task_file_descriptor* m_next;
 };
+
+namespace tasks {
 
 /// A task is a collection of resources, including at minimum a virtual address space.
 struct task {
@@ -24,10 +25,11 @@ struct task {
     const char* m_task_name;  // Name of this task
     vas*        m_directory;  // The directory
 
-    util::linked_list_inline<task_file_descriptor> m_file_descriptors;
-    uint32_t                                       next_fd_id = 0;
+    util::linked_list<task_file_descriptor> m_file_descriptors;
+    uint32_t                                next_fd_id = 0;
 
-    task(uintptr_t vas = 0, uint32_t id = 0, const char* name = nullptr) : m_vas(vas), m_task_id(id), m_task_name(name) {
+    task(uintptr_t vas = 0, uint32_t id = 0, const char* name = nullptr)
+        : m_vas(vas), m_task_id(id), m_task_name(name) {
         if (vas == 0) { panic("Unimplemented: kernel::task::vas creation"); }
 
         this->m_task_id   = id;
@@ -39,4 +41,6 @@ struct task {
         return m_task_name;
     }
 };
+
+}  // namespace tasks
 }  // namespace kernel

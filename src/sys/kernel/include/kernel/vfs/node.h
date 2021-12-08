@@ -1,9 +1,9 @@
 #pragma once
 
+#include <kernel/log.h>
 #include <kernel/util/linked_list.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <kernel/log.h>
 #include <string.h>
 
 #define VFS_MAX_FILENAME 128
@@ -17,11 +17,6 @@ class vfs_node;
 enum class vfs_type : uint8_t { file = 1, directory = 2, device = 3 };
 typedef uint32_t file_id_t;
 
-struct vfs_node_child {
-    vfs_node*       node;
-    vfs_node_child* m_next;
-};
-
 struct file_descriptor {
     vfs_node*        m_node;
     file_descriptor* m_next;
@@ -34,13 +29,13 @@ struct file_stats {
 };
 
 struct vfs_node {
-    char                                     name_buffer[VFS_MAX_FILENAME];
-    vfs_delegate*                            delegate;
-    vfs_node*                                parent;
-    void*                                    delegate_storage;
-    util::linked_list_inline<vfs_node_child> children;
-    size_t                                   size;
-    vfs_type                                 type;
+    char                        name_buffer[VFS_MAX_FILENAME];
+    vfs_delegate*               delegate;
+    vfs_node*                   parent;
+    void*                       delegate_storage;
+    util::linked_list<vfs_node> children;
+    size_t                      size;
+    vfs_type                    type;
 
     vfs_node() {}
     vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz)
@@ -59,12 +54,16 @@ struct vfs_node {
     }
 
     char* name() const { return (char*)&name_buffer[0]; }
+    void  set_name(char const* s) {
+        for (size_t cnt = 0; cnt < VFS_MAX_FILENAME; cnt++) {
+            name_buffer[cnt] = s[cnt];
+            if (name_buffer[cnt] == '\0') { return; }
+        }
+    }
 
     void add_child(vfs_node* node) {
-        auto* llnode = new vfs_node_child();
         node->parent = this;
-        llnode->node = node;
-        children.push_back(llnode);
+        children.push_back(node);
     }
 };
 

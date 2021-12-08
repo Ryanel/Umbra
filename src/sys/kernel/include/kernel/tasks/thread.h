@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 namespace kernel {
+namespace tasks {
 
 struct task;
 
@@ -54,6 +55,7 @@ struct thread {
     bool ready() const { return m_state == thread_state::running || m_state == thread_state::ready_to_run; }
 };
 
+}
 }  // namespace kernel
 
-extern "C" void thread_switch(kernel::thread* to_switch);
+extern "C" void thread_switch(kernel::tasks::thread* to_switch);

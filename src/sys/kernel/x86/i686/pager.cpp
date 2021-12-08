@@ -1,6 +1,5 @@
 #include <kernel/log.h>
 #include <kernel/mm/vmm.h>
-#include <kernel/scheduler.h>
 #include <kernel/x86/pager.h>
 
 bool kernel::x86_pager::handle_interrupt(register_frame_t* regs) {

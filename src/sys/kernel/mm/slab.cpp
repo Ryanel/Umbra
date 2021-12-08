@@ -4,8 +4,11 @@
 #include <kernel/mm/slab.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
-#include <kernel/scheduler.h>
+#include <kernel/tasks/critical_section.h>
 #include <stdlib.h>
+
+using namespace kernel;
+using namespace kernel::tasks;
 
 uintptr_t power_ceil(uintptr_t x) {
     if (x <= 1) return 1;
@@ -51,8 +54,8 @@ uintptr_t slab_allocator::allocate_heap(uint32_t size) {
 }
 
 void* slab_allocator::alloc(uint32_t size, int flags, phys_addr_t* addr) {
-    kernel::critical_section cs;
-    uintptr_t                out_addr = 0;
+    critical_section cs;
+    uintptr_t        out_addr = 0;
 
     if (size < SLAB_MIN_OBJSIZE) { size = SLAB_MIN_OBJSIZE; }
 
@@ -60,8 +63,8 @@ void* slab_allocator::alloc(uint32_t size, int flags, phys_addr_t* addr) {
     if (flags & KHEAP_PHYSADDR) {
         out_addr = allocate_heap(size);
         if (size > 0x1000) { panic("Unimplemented"); }
-        *addr   = kernel::g_pmm.get_available_page();
-        void* x = kernel::g_vmm.mmap_direct(out_addr, *addr, VMM_PROT_WRITE, flags);
+        *addr   = g_pmm.get_available_page();
+        void* x = g_vmm.mmap_direct(out_addr, *addr, VMM_PROT_WRITE, flags);
         return x;
     }
 
@@ -95,7 +98,7 @@ void* slab_allocator::alloc(uint32_t size, int flags, phys_addr_t* addr) {
 }
 
 void slab_allocator::free(void* ptr) {
-    kernel::critical_section cs;
+    critical_section cs;
 
     if (ptr == nullptr) {
         panic("Attempted to free a null pointer");
@@ -104,7 +107,7 @@ void slab_allocator::free(void* ptr) {
 
     for (slab* s = slab_last_allocated; s; s = s->m_next) {
         if (s->free((uintptr_t)ptr)) {
-            // kernel::log::trace("slab", "Freed 0x%08x (%d bytes)\n", (uintptr_t)ptr, s->m_size);
+            // log::trace("slab", "Freed 0x%08x (%d bytes)\n", (uintptr_t)ptr, s->m_size);
             return;
         }
     }
@@ -114,14 +117,14 @@ void slab_allocator::free(void* ptr) {
 }
 
 void slab_allocator::debug() {
-    kernel::log::debug("slab", "slab allocator: start @ %08x, current is %08x, max is %08x\n", m_heap_start, m_heap,
-                       m_heap_max);
+    log::debug("slab", "slab allocator: start @ %08x, current is %08x, max is %08x\n", m_heap_start, m_heap,
+               m_heap_max);
     for (slab* s = slab_last_allocated; s; s = s->m_next) { s->debug(); }
 }
 
 void slab::init(uintptr_t start, uint32_t sz) {
     if (sz < sizeof(uintptr_t)) {
-        kernel::log::error("slab", "Attempted alloc of size < %u. Raised to minimum size.\n", sizeof(uintptr_t));
+        log::error("slab", "Attempted alloc of size < %u. Raised to minimum size.\n", sizeof(uintptr_t));
         sz = sizeof(uintptr_t);
     }
 
@@ -135,11 +138,11 @@ void slab::init(uintptr_t start, uint32_t sz) {
     m_maxEntries = (uint16_t)((PAGE_SIZE * m_pages) / m_size);
 
     // vmm: Map the used pages here
-    kernel::g_vmm.mmap(start, 0x1000 * m_pages, VMM_PROT_WRITE, 0);
+    g_vmm.mmap(start, 0x1000 * m_pages, VMM_PROT_WRITE, 0);
 
     // Determine how many entires we can have
-    kernel::log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz,
-                       m_maxEntries, m_pages);
+    log::trace("slab", "Creating new slab @ 0x%08x with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries,
+               m_pages);
 
     // Populate the slabs free list
     m_free_list       = (slab_entry*)m_start;
@@ -181,6 +184,6 @@ bool slab::free(uintptr_t address) {
 }
 
 void slab::debug() {
-    kernel::log::debug("slab", "%08x: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries,
-                       m_maxEntries, m_pages);
+    log::debug("slab", "%08x: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries,
+               m_pages);
 }

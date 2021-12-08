@@ -2,15 +2,18 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/mm/vmm.h>
-#include <kernel/scheduler.h>
+#include <kernel/tasks/critical_section.h>
+#include <kernel/tasks/scheduler.h>
 #include <kernel/time.h>
+#include <kernel/util/math.h>
 #include <stdio.h>
 
 using namespace kernel;
+using namespace kernel::tasks;
 
-kernel::thread* current_tcb;
-kernel::thread* reaper;
-task*           current_task;
+thread* current_tcb;
+thread* reaper;
+task*   current_task;
 
 extern "C" uint32_t* stack_top;
 extern "C" void      set_kernel_stack(uint32_t addr);
@@ -65,25 +68,18 @@ thread* scheduler::get_current_thread() { return current_tcb; }
 
 void scheduler::schedule() {
     if (current_tcb == nullptr) { return; }
-
-    bool allow_swap  = true;
     bool should_swap = false;
 
     if (lock_prevent_scheduling > 0) {
         task_switch_delayed = true;
-        allow_swap          = false;
+        return;
     }
 
     // Perform time accounting
-    uint64_t elapsed = (int64_t)(kernel::time::boot_time_ns() - last_schedule_ns);
-    if (elapsed > current_tcb->m_slice_ns) {
-        current_tcb->m_slice_ns = 0;
-    } else {
-        current_tcb->m_slice_ns -= elapsed;
-    }
-
+    uint64_t elapsed        = (int64_t)(kernel::time::boot_time_ns() - last_schedule_ns);
+    last_schedule_ns        = kernel::time::boot_time_ns();
+    current_tcb->m_slice_ns = max<int64_t>(current_tcb->m_slice_ns - elapsed, 0);
     current_tcb->m_time_elapsed += elapsed;
-    last_schedule_ns = kernel::time::boot_time_ns();
 
     // Unblock any sleeping processes
     for (auto* t = list_sleeping.front(); t != nullptr; t = t->m_next) {
@@ -96,9 +92,8 @@ void scheduler::schedule() {
         }
     }
 
-    if (allow_swap == false) { return; }
     // Swap if: We ran out of time
-    if (current_tcb->m_slice_ns <= 0) { should_swap = true; }
+    if (current_tcb->m_slice_ns == 0) { should_swap = true; }
     // Swap if: Process is no longer running (blocked or dead)
     if (!current_tcb->ready()) { should_swap = true; }
 
@@ -119,7 +114,7 @@ void scheduler::schedule() {
     }
 }
 
-uint64_t kernel::scheduler::determine_timeslice(thread* t) {
+uint64_t scheduler::determine_timeslice(thread* t) {
     if (t->m_priority == 0) { return 10000; }
     return 50000000;
 }
@@ -148,10 +143,10 @@ void scheduler::debug() {
     kernel::log::debug("sched", "+------------------+-----+--------------+----------+-------+----------+\n");
     debug_print_thread(current_tcb);
 
-    for (auto* t = list_ready.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
-    for (auto* t = list_sleeping.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
-    for (auto* t = list_dead.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
-    for (auto* t = list_blocked.front(); t != nullptr; t = t->m_next) { debug_print_thread(t->val); }
+    for (auto t : list_ready) { debug_print_thread(&t); }
+    for (auto t : list_sleeping) { debug_print_thread(&t); }
+    for (auto t : list_dead) { debug_print_thread(&t); }
+    for (auto t : list_blocked) { debug_print_thread(&t); }
 
     kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
 }
@@ -178,11 +173,9 @@ void scheduler::enqueue(thread* t) {
 void scheduler::terminate(thread* t) {
     critical_section cs;
     if (t == nullptr) { t = current_tcb; }
-    t->m_state    = thread_state::dead;
-    t->m_slice_ns = 0;
-
+    t->set_state(thread_state::dead);
     list_dead.push_back(t);
-    unblock(reaper, 1);
+    unblock(reaper, 1);  // If the reaper is blocked, unblock it!
     schedule();
     // Thread ends here...
 }
@@ -211,8 +204,8 @@ void scheduler::unblock(thread* t, int reason) {
     if (t->ready()) { return; }
 
     // Search for the thread to unblock...
-    for (auto* tnode = list_blocked.front(); tnode != nullptr; tnode = tnode->m_next) {
-        if (tnode->val == t) {
+    for (auto i : list_blocked) {
+        if (&i == t) {
             // Remove from list blocked
             list_blocked.remove(t);
             t->set_state(thread_state::ready_to_run, determine_timeslice(t));

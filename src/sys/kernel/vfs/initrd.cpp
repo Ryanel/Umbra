@@ -35,8 +35,8 @@ namespace vfs {
 
 void initrd_provider::init() {
     // First, get the initrd
-    initrd_data = &kernel::g_bootfiles.files[1];  // TODO: A proper search
-    auto* root  = kernel::vfs::g_vfs.get_root();  // The initial ramdisk directly overlays ontop of the root.
+    initrd_data = &kernel::boot::g_bootfiles.files[1];  // TODO: A proper search
+    auto* root  = kernel::vfs::g_vfs.get_root();        // The initial ramdisk directly overlays ontop of the root.
 
     // Now, comb throug the USTAR formatted initrd.
     virt_addr_t ptr = initrd_data->vaddr;
@@ -71,9 +71,9 @@ void initrd_provider::init() {
             }
 
             // Nope, find the parent.
-            for (vfs_node_child* c = node->parent->children.front(); c != nullptr; c = c->m_next) {
-                if (strcmp(c->node->name(), before_delim.data()) == 0) {
-                    node->parent = c->node;
+            for (auto* c = node->parent->children.front(); c != nullptr; c = c->m_next) {
+                if (strcmp(c->val->name(), before_delim.data()) == 0) {
+                    node->parent = c->val;
                     break;
                 }
             }

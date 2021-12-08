@@ -1,8 +1,11 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
-#include <kernel/scheduler.h>
+#include <kernel/tasks/scheduler.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
+
+using namespace kernel;
+using namespace kernel::tasks;
 
 namespace kernel {
 namespace vfs {
@@ -19,16 +22,12 @@ class null_delegate : public vfs_delegate {
 };
 
 void virtual_filesystem::init() {
-    auto* vfs_root           = new vfs_node(nullptr, new null_delegate(), vfs_type::directory, 0);
-    vfs_root->name_buffer[0] = '/';
-    vfs_root->name_buffer[1] = 0;
-    m_root                   = vfs_root;
+    auto* vfs_root = new vfs_node(nullptr, new null_delegate(), vfs_type::directory, 0);
+    vfs_root->set_name("/");
+    m_root = vfs_root;
 
-    auto* dev           = new vfs_node(m_root, new null_delegate(), vfs_type::directory, 0);
-    dev->name_buffer[0] = 'd';
-    dev->name_buffer[1] = 'e';
-    dev->name_buffer[2] = 'v';
-    dev->name_buffer[3] = '\0';
+    auto* dev = new vfs_node(m_root, new null_delegate(), vfs_type::directory, 0);
+    dev->set_name("dev");
 }
 
 vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
@@ -41,16 +40,16 @@ vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
         size_t delim_pos    = path.find('/');
         auto   before_delim = path.substr(0, delim_pos);
 
-        // This is a directory, which means its a child of the parent. 
+        // This is a directory, which means its a child of the parent.
         if (delim_pos == (path.size() - 1)) {
             path = before_delim;
             break;
         }
 
         // Check the prospective parents children to see if this directory is one of them.
-        for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->m_next) {
-            if (strcmp(c->node->name(), before_delim.data()) == 0) {
-                directory = c->node;
+        for (auto* c = directory->children.front(); c != nullptr; c = c->m_next) {
+            if (strcmp(c->val->name(), before_delim.data()) == 0) {
+                directory = c->val;
                 break;
             }
         }
@@ -58,10 +57,10 @@ vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
     }
 
     // Search all the children of directory
-    for (vfs_node_child* c = directory->children.front(); c != nullptr; c = c->m_next) {
-        if (strcmp(c->node->name(), path.data()) == 0) {
-            if (flags & VFS_FIND_PARENT) { return c->node->parent; }
-            return c->node;
+    for (auto* c = directory->children.front(); c != nullptr; c = c->m_next) {
+        if (strcmp(c->val->name(), path.data()) == 0) {
+            if (flags & VFS_FIND_PARENT) { return c->val->parent; }
+            return c->val;
         }
     }
 
@@ -70,7 +69,7 @@ vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
 }
 
 file_id_t virtual_filesystem::open_file(kernel::string path, int flags) {
-    task* current_task = kernel::scheduler::get_current_task();
+    task* current_task = scheduler::get_current_task();
 
     auto* file = find(path);
 
@@ -94,7 +93,7 @@ file_id_t virtual_filesystem::open_file(kernel::string path, int flags) {
     open_files.push_back(descriptor);
 
     // Now, in the current task, we'll open this file.
-    auto* task_fd         = new kernel::task_file_descriptor();
+    auto* task_fd         = new task_file_descriptor();
     task_fd->m_descriptor = descriptor;
     task_fd->m_local_id   = current_task->next_fd_id;
     current_task->next_fd_id++;
@@ -103,10 +102,10 @@ file_id_t virtual_filesystem::open_file(kernel::string path, int flags) {
 }
 
 file_descriptor* virtual_filesystem::taskfd_to_fd(file_id_t id) {
-    task* current_task = kernel::scheduler::get_current_task();
+    task* current_task = scheduler::get_current_task();
 
-    for (auto* fd = current_task->m_file_descriptors.front(); fd != nullptr; fd = fd->m_next) {
-        if (fd->m_local_id == id) { return fd->m_descriptor; }
+    for (auto fd : current_task->m_file_descriptors) {
+        if (fd.m_local_id == id) { return fd.m_descriptor; }
     }
     return nullptr;
 }

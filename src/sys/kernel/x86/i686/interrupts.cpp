@@ -4,7 +4,6 @@
 #include <kernel/log.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
-#include <kernel/scheduler.h>
 #include <kernel/time.h>
 #include <kernel/x86/interrupts.h>
 #include <kernel/x86/ports.h>

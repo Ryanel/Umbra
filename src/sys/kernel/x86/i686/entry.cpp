@@ -28,7 +28,7 @@ x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
 kernel::vas                         boot_directory;
-kernel::boot_file_container         kernel::g_bootfiles;
+kernel::boot::boot_file_container         kernel::boot::g_bootfiles;
 
 void kernel_main();
 void init_global_constructors();
@@ -73,7 +73,7 @@ void boot_init_modules(multiboot_info_t* mb_info) {
         // Map this into the heap area
         auto mod = (multiboot_module_t*)mod_virt;
 
-        auto bfile  = kernel::boot_file();
+        auto bfile  = kernel::boot::boot_file();
         bfile.name  = (char const*)mod->cmdline + 0xC0000000;
         bfile.paddr = mod->mod_start;
         bfile.size  = mod->mod_end - mod->mod_start;
@@ -89,7 +89,7 @@ void boot_init_modules(multiboot_info_t* mb_info) {
 
         g_heap.set_placmement(placement_addr);
         kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
-        kernel::g_bootfiles.add(bfile);
+        kernel::boot::g_bootfiles.add(bfile);
         mod_phys += sizeof(multiboot_module_t);
     }
 }
