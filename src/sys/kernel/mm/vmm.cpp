@@ -19,7 +19,7 @@ virt_addr_t* virt_mm::mmap(virt_addr_t virt, size_t length, int protection, int 
 
     for (size_t i = 0; i < length; i += 0x1000) {
         if ((flags & VMM_FLAG_POPULATE) != 0) {
-            phys_addr_t physpage = kernel::g_pmm.get_available_page();
+            phys_addr_t physpage = kernel::g_pmm.alloc_single(PMM_REGION_RAM);
             kernel::log::trace("vmm", "mmap: 0x%08x->0x%08x\n", physpage, aligned_vaddr + i);
             if (!vas_current->map(physpage, aligned_vaddr + i, protection, flags)) { panic("Unable to map page"); }
         } else {

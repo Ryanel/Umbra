@@ -28,7 +28,7 @@ x86_idt                             g_idt;
 kernel::device::vga_text_console    con_vga;
 kernel::device::serial_text_console con_serial;
 kernel::vas                         boot_directory;
-kernel::boot::boot_file_container         kernel::boot::g_bootfiles;
+kernel::boot::boot_file_container   kernel::boot::g_bootfiles;
 
 void kernel_main();
 void init_global_constructors();
@@ -48,15 +48,17 @@ void boot_init_memory(multiboot_info_t* mb_info) {
     auto* mb_mmap = (multiboot_memory_map_t*)(mb_info->mmap_addr + 0xC0000000);
     for (; (uint32_t)mb_mmap < (mb_info->mmap_addr + 0xC0000000) + mb_info->mmap_length;
          mb_mmap = (multiboot_memory_map_t*)((uint32_t)mb_mmap + mb_mmap->size + sizeof(mb_mmap->size))) {
-        uint32_t                addr     = (uint32_t)mb_mmap->addr;
-        uint32_t                end_addr = (uint32_t)(mb_mmap->addr + mb_mmap->len - 1);
-        kernel::pmm_region_type type     = kernel::pmm_region_type::unknown;
-        if (mb_mmap->type == MULTIBOOT_MEMORY_AVAILABLE) { type = kernel::pmm_region_type::ram; }
-        kernel::g_pmm.add_region(kernel::pmm_region(type, addr, end_addr));
+        uint32_t                             addr     = (uint32_t)mb_mmap->addr;
+        uint32_t                             end_addr = (uint32_t)(mb_mmap->addr + mb_mmap->len - 1);
+        kernel::mm::pmm::region::region_type type     = kernel::mm::pmm::region::region_type::unmapped;
+        if (mb_mmap->type == MULTIBOOT_MEMORY_AVAILABLE) { type = kernel::mm::pmm::region::region_type::ram; }
+        kernel::g_pmm.add_region(kernel::mm::pmm::region(addr, end_addr, type));
     }
     kernel::g_vmm.vas_current = &boot_directory;
     kernel::g_pmm.init();
+
     g_heap.init(false, (uint32_t)(&_kernel_end));
+    kernel::g_pmm.update_statistics();
 }
 
 void boot_init_modules(multiboot_info_t* mb_info) {
@@ -88,7 +90,8 @@ void boot_init_modules(multiboot_info_t* mb_info) {
         }
 
         g_heap.set_placmement(placement_addr);
-        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr, bfile.vaddr);
+        kernel::log::trace("boot", "loaded file %s: sz:%d 0x%08x -> 0x%08x\n", bfile.name, bfile.size, bfile.paddr,
+                           bfile.vaddr);
         kernel::boot::g_bootfiles.add(bfile);
         mod_phys += sizeof(multiboot_module_t);
     }
@@ -117,7 +120,7 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     g_idt.init();               // Initialise the IDT
 
     kernel::interrupts::handler_register(14, new kernel::x86_pager());  // Handle paging
-    g_idt.enable_interrupts();                                          // Start tracking interrupts (scheduling is diabled)
+    g_idt.enable_interrupts();  // Start tracking interrupts (scheduling is diabled)
 
     boot_init_modules(mb_info);  // Locate and load in the modules
 
@@ -126,20 +129,22 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
         kernel::log::debug("display", "Using VGA 80x25 textmode\n");
         log.init(&con_vga);
     } else {
-        kernel::log::debug("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n", mb_info->framebuffer_width, mb_info->framebuffer_height,
-                           mb_info->framebuffer_bpp, mb_info->framebuffer_addr);
+        kernel::log::debug("display", "Recieved framebuffer: %dx%dx%d @ 0x%p from multiboot\n",
+                           mb_info->framebuffer_width, mb_info->framebuffer_height, mb_info->framebuffer_bpp,
+                           mb_info->framebuffer_addr);
 
         fb_format display_format = fb_format::rgb;
 
         if (mb_info->framebuffer_red_field_position == 16) { display_format = fb_format::bgr; }
 
         for (size_t i = 0; i < mb_info->framebuffer_height * mb_info->framebuffer_pitch; i += 0x1000) {
-            kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i, (phys_addr_t)mb_info->framebuffer_addr + i, VMM_PROT_WRITE,
-                                      VMM_FLAG_POPULATE);
+            kernel::g_vmm.mmap_direct((virt_addr_t)mb_info->framebuffer_addr + i,
+                                      (phys_addr_t)mb_info->framebuffer_addr + i, VMM_PROT_WRITE, VMM_FLAG_POPULATE);
         }
 
-        con_fb.framebuffer = sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width, mb_info->framebuffer_height,
-                                            mb_info->framebuffer_bpp, mb_info->framebuffer_pitch, display_format);
+        con_fb.framebuffer =
+            sw_framebuffer((uint8_t*)mb_info->framebuffer_addr, mb_info->framebuffer_width, mb_info->framebuffer_height,
+                           mb_info->framebuffer_bpp, mb_info->framebuffer_pitch, display_format);
         log.init(&con_fb);
     }
 

@@ -18,10 +18,10 @@ set(CMAKE_AR i686-elf-ar)
 
 set(KERNEL_ADDITIONAL_LINK_FLAGS "")
 
-set(CMAKE_C_FLAGS "-march=i686 -mtune=generic -Wall -Wextra -Wshadow -Wformat=2 -Wformat-truncation -Wconversion -Wno-unused-parameter")
+set(CMAKE_C_FLAGS "-march=i686 -mtune=generic -Wall -Wextra -Wformat=2 -Wformat-truncation -Wconversion -Wno-unused-parameter")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_C_FLAGS_DEBUG "-g3 -ggdb -gdwarf-3 -gstrict-dwarf")
-set (OPT_FLAGS "-O3")
+set (OPT_FLAGS "-Og")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG} ${OPT_FLAGS}")
 

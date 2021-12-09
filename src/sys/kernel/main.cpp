@@ -1,5 +1,6 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
+#include <kernel/mm/pmm.h>
 #include <kernel/mm/vas.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
@@ -77,7 +78,7 @@ void kernel_main() {
     // Initialise the full heap
     log::debug("heap", "Setup SLAB heap allocator\n");
     g_heap.init(true);
-
+    kernel::g_pmm.print_statistics();
     // Setup interrupt handler for system calls
     log::info("kernel", "Setting up System calls\n");
     interrupts::handler_register(0x80, new syscall_handler());
@@ -106,6 +107,8 @@ void kernel_main() {
     auto* dev_dir = vfs::g_vfs.find("/dev/");
     auto* term    = new vfs::vfs_node(dev_dir, new terminal_delegate(), vfs::vfs_type::device, 0);
     term->set_name("console");
+
+    kernel::g_pmm.print_statistics();
 
     log::get().flush();
     scheduler::unlock();  // Start scheduling processes

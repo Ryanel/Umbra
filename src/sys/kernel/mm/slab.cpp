@@ -63,7 +63,7 @@ void* slab_allocator::alloc(uint32_t size, int flags, phys_addr_t* addr) {
     if (flags & KHEAP_PHYSADDR) {
         out_addr = allocate_heap(size);
         if (size > 0x1000) { panic("Unimplemented"); }
-        *addr   = g_pmm.get_available_page();
+        *addr   = g_pmm.alloc_single(PMM_REGION_RAM);
         void* x = g_vmm.mmap_direct(out_addr, *addr, VMM_PROT_WRITE, flags);
         return x;
     }

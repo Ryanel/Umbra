@@ -4,46 +4,67 @@
 #include <kernel/types.h>
 #include <kernel/util/bitmap.h>
 
+#define PMM_REGION_RAM 0x1
+#define PMM_DMA        0x2
+
 namespace kernel {
+namespace mm {
 
-enum class pmm_region_type {
-    unknown,
-    ram,
-    rom,
-};
-
-typedef struct pmm_region {
-    pmm_region_type m_type;
-    phys_addr_t     m_start;
-    phys_addr_t     m_end;
-    pmm_region() {}
-    pmm_region(pmm_region_type type, phys_addr_t start, phys_addr_t end) : m_type(type), m_start(start), m_end(end) {}
-} pmm_region_t;
-
-// The physical memory manager keeps track of usage for each region.
-
-class phys_mm {
+class buddy_bitmap {
    public:
-    pmm_region_t   m_regions[KERNEL_PMM_MAXREGIONS];
-    unsigned short m_region_count;
-    uintptr_t      m_available_pages     = 0;
-    uintptr_t      m_max_available_pages = 0;
-    // Stack for free pages
+    int          granularity = 0;
+    const size_t size() { return (granularity + 1) * 0x1000; }
+    bitmap       backing;
 
-    bitmap backing_store;  // Backing bitmap, 1 = available, 0 = occupied
+    void init(uintptr_t max_address) {
+        size_t needed_ram = (max_address / size() / 8) + 1;
+        // backing.array      = new uintptr_t[needed_ram];
+        backing.size_bytes = needed_ram;
+    }
 
-    void        describe() const;
-    void        add_region(pmm_region_t region);
-    void        init();
-    phys_addr_t get_available_page();
-    void        mark_used(phys_addr_t addr);
-    void        mark_free(phys_addr_t addr);
-    bool        page_available(phys_addr_t addr);
-
-    uintptr_t ram_available() const { return m_available_pages; }
-    uintptr_t ram_max() const { return m_max_available_pages; }
+    inline bool used(uintptr_t address) { return backing.test((address & 0xFFFFF000) / size()); }
+    inline void mark(uintptr_t address) { backing.set((address & 0xFFFFF000) / size()); }
+    inline bool mark_if_clear(uintptr_t address) { return backing.mark_if_clear((address & 0xFFFFF000) / size()); }
+    inline void free(uintptr_t address) { backing.clear((address & 0xFFFFF000) / size()); }
 };
 
-extern phys_mm g_pmm;
+class pmm {
+   public:
+    struct region {
+        enum class region_type { rom, ram, dma, unmapped };
+        phys_addr_t m_start;
+        phys_addr_t m_end;
+        region_type m_type;
+
+        region() : m_start(0), m_end(0), m_type(region_type::unmapped) {}
+        region(phys_addr_t start, phys_addr_t end, region_type type) : m_start(start), m_end(end), m_type(type) {}
+    };
+
+   public:
+    void        init();
+    phys_addr_t alloc_single(int flags);
+    phys_addr_t alloc_contiguous(int flags);
+    void        free_single(phys_addr_t addr);
+
+    bool used(phys_addr_t addr) { return bitmap.used(addr); }
+    void mark_used(phys_addr_t addr) { bitmap.mark(addr); }
+
+    void add_region(region r);
+
+    void update_statistics();
+    void print_statistics();
+
+   private:
+    const static phys_addr_t maxAddr = 0xFFFFF000;
+    buddy_bitmap             bitmap;
+    region                   regions[20];
+    size_t                   region_count      = 0;
+    phys_addr_t              opt_firstFreeAddr = 0;
+    uint32_t                 ram_pages_used    = 0;
+    uint32_t                 ram_pages_max     = 0;
+};
+}  // namespace mm
+
+extern mm::pmm g_pmm;
 
 }  // namespace kernel
