@@ -5,11 +5,16 @@
 extern "C" void __cxa_pure_virtual() { panic("__cxa_pure_virtual called, vtable corruption!"); }
 
 // Global constructors
-typedef void (*func_ptr)(void);
-extern "C" func_ptr __init_array_start[0], __init_array_end[0];
+extern void (*start_ctors)(void) __attribute__((weak));
+extern void (*end_ctors)(void) __attribute__((weak));
 
 void init_global_constructors(void) {
-    for (func_ptr* func = __init_array_start; func != __init_array_end; func++) { (*func)(); }
+    uintptr_t* iterator = reinterpret_cast<uintptr_t*>(&start_ctors);
+    while (iterator < reinterpret_cast<uintptr_t*>(&end_ctors)) {
+        void (*fp)(void) = reinterpret_cast<void (*)(void)>(*iterator);
+        fp();
+        iterator++;
+    }
 }
 
 // Stack smashing

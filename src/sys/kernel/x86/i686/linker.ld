@@ -32,13 +32,18 @@ SECTIONS
 	.rodata BLOCK(4K) :  AT (ADDR (.rodata) - 0xC0000000)
 	{
 		*(.rodata)
-	}
 
-	.init_array :
-	{
-	    __init_array_start = .;
-	    KEEP (*(.init_array*))
-	    __init_array_end = .;
+        start_ctors = .;
+        *(SORT(.ctors*))  /* Note the "SORT" */
+        end_ctors = .;
+
+        start_dtors = .;
+        *(SORT(.dtors*))
+        end_dtors = .;
+
+        *(.rodata*)
+        *(.gnu.linkonce.r*)
+    
 	}
 
 	.data BLOCK(4K) : AT (ADDR (.data) - 0xC0000000)

@@ -2,6 +2,7 @@
 
 #include <kernel/util/linked_list.h>
 #include <stdint.h>
+#include <kernel/panic.h>
 
 namespace kernel {
 
@@ -30,7 +31,7 @@ struct task {
 
     task(uintptr_t vas = 0, uint32_t id = 0, const char* name = nullptr)
         : m_vas(vas), m_task_id(id), m_task_name(name) {
-        if (vas == 0) { panic("Unimplemented: kernel::task::vas creation"); }
+        //if (vas == 0) { panic("Unimplemented: kernel::task::vas creation"); }
 
         this->m_task_id   = id;
         this->m_task_name = name;

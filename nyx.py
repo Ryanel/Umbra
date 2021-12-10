@@ -140,7 +140,7 @@ def mod_build():
 
     subprocess.run([config['buildtool'], 'install'], stdout=sys.stdout, cwd=src_dir)
 
-    if config['target'] == 'i686':
+    if (config['target'] == 'i686') or (config['target'] == 'i686-clang'):
         subprocess.run(['./nyx/scripts/x86-create-iso.sh'], shell=True, stdout=sys.stdout)
         if config['run_on_completion']:
             mod_run()
