@@ -6,7 +6,6 @@ file(GLOB KERNEL_SOURCES_ARCH CONFIGURE_DEPENDS ${BUILD_ARCH}/*.c ${BUILD_ARCH}/
 file(GLOB_RECURSE KERNEL_SOURCES_MACH CONFIGURE_DEPENDS ${BUILD_ARCH}/${BUILD_BOARD}/*.c ${BUILD_ARCH}/${BUILD_BOARD}/*.cpp ${BUILD_ARCH}/${BUILD_BOARD}/*.s includes/kernel/${BUILD_ARCH}/${BUILD_ARCH_VER}/${BUILD_BOARD}/*.h)
 file(GLOB_RECURSE KERNEL_SOURCES_DRIVERS CONFIGURE_DEPENDS ${BUILD_ARCH}/drivers/*.cpp ${BUILD_ARCH}/drivers/*.s includes/kernel/${BUILD_ARCH}/drivers/*.h)
 
-
 set(KERNEL_SOURCES  ${KERNEL_SOURCES_ROOT} ${KERNEL_SOURCES_ARCH} ${KERNEL_SOURCES_MACH} ${KERNEL_SOURCES_DRIVERS})
 
 # Configuration
@@ -18,6 +17,7 @@ configure_file (
 # Headers and include files
 file(GLOB_RECURSE PUBLIC_HEADER_FILES CONFIGURE_DEPENDS "{CMAKE_CURRENT_SOURCE_DIR}/include/public/*.h")
 include_directories(./include)
+include_directories(./include/stl/)
 include_directories("${PROJECT_BINARY_DIR}/include")
 # Linking ---------------------------------------------------------------------
 

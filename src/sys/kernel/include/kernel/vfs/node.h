@@ -39,7 +39,7 @@ struct vfs_node {
 
     vfs_node() {}
     vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz)
-        : parent(parent), delegate(delegate), type(type), size(sz) {
+        : delegate(delegate), parent(p), size(sz), type(type) {
         if (p != nullptr) { p->add_child(this); }
     }
 

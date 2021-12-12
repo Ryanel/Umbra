@@ -43,9 +43,6 @@ void fb_text_console::write(char c, unsigned char fore, unsigned char back) {
 
     // Scroll if needed
     if (m_y >= (height())) {
-        int y_i   = 1;
-        int y_max = m_y - 1;
-
         framebuffer.linemove(font_height, 0, font_height * (height() - 1));
 
         for (size_t line = 0; line < font_height; line++) {

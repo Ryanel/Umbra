@@ -73,8 +73,6 @@ file_id_t virtual_filesystem::open_file(kernel::string path, int flags) {
 
     auto* file = find(path);
 
-    vfs_node* directory = nullptr;
-
     if (flags & FILE_CREATE) {
         if (file == nullptr) {
             auto* parent = find(path, VFS_FIND_FILE);

@@ -13,7 +13,7 @@ namespace mm {
 class buddy_bitmap {
    public:
     int          granularity = 0;
-    const size_t size() { return (granularity + 1) * 0x1000; }
+    size_t size() const { return (granularity + 1) * 0x1000; }
     bitmap       backing;
 
     void init(uintptr_t max_address) {
