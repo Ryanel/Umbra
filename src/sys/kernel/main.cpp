@@ -3,6 +3,7 @@
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vas.h>
 #include <kernel/mm/vmm.h>
+#include <kernel/object.h>
 #include <kernel/panic.h>
 #include <kernel/tasks/elf.h>
 #include <kernel/tasks/scheduler.h>

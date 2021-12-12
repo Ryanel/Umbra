@@ -1,5 +1,6 @@
 #pragma once
 
+#include <kernel/util/ref.h>
 #include <stddef.h>
 #include <stdint.h>
 

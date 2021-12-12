@@ -154,6 +154,7 @@ extern "C" void kernel_entry(uint32_t mb_magic, multiboot_info_t* mb_info) {
     pit_timer timer_pit;
     timer_pit.init();
     kernel::time::system_timer = &timer_pit;
+    g_idt.enable_interrupts();
 
     // Call into the kernel now that all supported hardware is initialised.
     kernel_main();
