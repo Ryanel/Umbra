@@ -71,6 +71,7 @@ class string {
     // Data functions
     size_t      size() const { return strlen(m_buffer); }
     char const* data() { return m_buffer; }
+    char const* data() const { return m_buffer; }
 
     // Constants
     static const size_t npos     = -1;

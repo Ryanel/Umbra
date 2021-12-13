@@ -1,10 +1,11 @@
 #pragma once
 
 #include <kernel/log.h>
-#include <kernel/util/linked_list.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+#include <list>
 
 #define VFS_MAX_FILENAME 128
 
@@ -29,13 +30,13 @@ struct file_stats {
 };
 
 struct vfs_node {
-    char                        name_buffer[VFS_MAX_FILENAME];
-    vfs_delegate*               delegate;
-    vfs_node*                   parent;
-    void*                       delegate_storage;
-    util::linked_list<vfs_node> children;
-    size_t                      size;
-    vfs_type                    type;
+    char                name_buffer[VFS_MAX_FILENAME];
+    vfs_delegate*       delegate;
+    vfs_node*           parent;
+    void*               delegate_storage;
+    std::list<vfs_node*> children;
+    size_t              size;
+    vfs_type            type;
 
     vfs_node() {}
     vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz)

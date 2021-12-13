@@ -1,10 +1,12 @@
 #pragma once
 
 #include <kernel/config.h>
-#include <kernel/util/linked_list.h>
 #include <kernel/util/ref.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#include <algorithm>
+#include <list>
 
 #ifdef ASSERT_HANDLE_TYPE
 #include <kernel/log.h>
@@ -108,20 +110,20 @@ class handle_registry {
     }
 
     void remove(handle* hnd) {
-        m_handles.remove(hnd);
+        m_handles.erase(std::find(m_handles.begin(), m_handles.end(), hnd));
         delete hnd;
     }
 
     handle* get(uint32_t hid) {
-        for (auto* x = m_handles.front(); x != nullptr; x = x->m_next) {
-            if (x->val->m_id == hid) { return x->val; }
+        for (auto&& i : m_handles) {
+            if (i->m_id == hid) { return i; }
         }
         return nullptr;
     }
 
     // Transfer
     uint32_t transfer(handle_registry* r, handle* hnd) {
-        m_handles.remove(hnd);
+        m_handles.erase(std::find(m_handles.begin(), m_handles.end(),hnd));
         hnd->m_id = 0;
         return r->recieve_transfer(hnd);
     }
@@ -134,8 +136,8 @@ class handle_registry {
     }
 
    private:
-    kernel::util::linked_list<handle> m_handles;
-    uint32_t                          next_id = 1;
+    std::list<handle*> m_handles;
+    uint32_t           next_id = 1;
 };
 
 }  // namespace kernel

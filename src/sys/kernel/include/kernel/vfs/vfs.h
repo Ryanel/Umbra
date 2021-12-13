@@ -1,8 +1,9 @@
 #pragma once
 
-#include <kernel/util/linked_list.h>
 #include <kernel/util/string.h>
 #include <kernel/vfs/node.h>
+
+#include <list>
 
 #define FILE_CREATE    0x1
 #define FILE_TEMPORARY 0x2
@@ -28,9 +29,9 @@ class virtual_filesystem {
     file_descriptor* taskfd_to_fd(file_id_t);
 
    private:
-    vfs_node*                          m_root;
-    util::linked_list<file_descriptor> open_files;
-    file_id_t                          next_descriptor_id = 0;
+    vfs_node*                   m_root;
+    std::list<file_descriptor*> open_files;
+    file_id_t                   next_descriptor_id = 0;
 };
 
 extern kernel::vfs::virtual_filesystem g_vfs;

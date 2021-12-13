@@ -8,6 +8,8 @@
 #include <kernel/util/math.h>
 #include <stdio.h>
 
+#include <algorithm>
+
 using namespace kernel;
 using namespace kernel::tasks;
 
@@ -21,19 +23,19 @@ extern "C" void      set_kernel_stack(uint32_t addr);
 thread idle_thread;
 task   _kernel_task;
 
-task*                     scheduler::kernel_task;
-int                       scheduler::lock_queues             = 1;
-int                       scheduler::lock_prevent_scheduling = 1;
-bool                      scheduler::task_switch_delayed     = false;
-uint64_t                  scheduler::last_schedule_ns        = 0;
-util::linked_list<thread> scheduler::list_ready;
-util::linked_list<thread> scheduler::list_sleeping;
-util::linked_list<thread> scheduler::list_dead;
-util::linked_list<thread> scheduler::list_blocked;
+task*    scheduler::kernel_task;
+int      scheduler::lock_queues             = 1;
+int      scheduler::lock_prevent_scheduling = 1;
+bool     scheduler::task_switch_delayed     = false;
+uint64_t scheduler::last_schedule_ns        = 0;
+
+std::list<thread*> scheduler::list_ready;
+std::list<thread*> scheduler::list_sleeping;
+std::list<thread*> scheduler::list_dead;
+std::list<thread*> scheduler::list_blocked;
 
 void thread_reaper() {
     kernel::log::info("reaper", "Reaper online!\n");
-
     while (true) { scheduler::block(nullptr, 1); }
 }
 
@@ -82,13 +84,15 @@ void scheduler::schedule() {
     current_tcb->m_time_elapsed += elapsed;
 
     // Unblock any sleeping processes
-    for (auto* t = list_sleeping.front(); t != nullptr; t = t->m_next) {
-        if (t->val->m_slice_ns <= last_schedule_ns) {
-            auto* thr = t->val;
-            list_sleeping.remove(thr);
-            list_ready.push_back(thr);
-            thr->set_state(thread_state::ready_to_run, determine_timeslice(thr));
-            t = list_sleeping.front();  // FIXME: Fixes terrible looping code at cost of performance.
+    auto slp_itr = list_sleeping.begin();
+    while (slp_itr != list_sleeping.end()) {
+        auto* t = *slp_itr;
+        if (t->m_slice_ns <= last_schedule_ns) {
+            slp_itr = list_sleeping.erase(slp_itr);
+            t->set_state(thread_state::ready_to_run, determine_timeslice(t));
+            list_ready.push_back(t);
+        } else {
+            ++slp_itr;
         }
     }
 
@@ -106,7 +110,8 @@ void scheduler::schedule() {
                 current_tcb->m_slice_ns = 0;
             }
 
-            auto* next                = list_ready.pop_front();
+            auto* next = list_ready.front();
+            list_ready.pop_front();
             next->m_slice_ns          = determine_timeslice(next);
             kernel::g_vmm.vas_current = next->m_owner->m_directory;
             thread_switch(next);
@@ -143,10 +148,10 @@ void scheduler::debug() {
     kernel::log::debug("sched", "+------------------+-----+--------------+----------+-------+----------+\n");
     debug_print_thread(current_tcb);
 
-    for (auto t : list_ready) { debug_print_thread(&t); }
-    for (auto t : list_sleeping) { debug_print_thread(&t); }
-    for (auto t : list_dead) { debug_print_thread(&t); }
-    for (auto t : list_blocked) { debug_print_thread(&t); }
+    for (auto t : list_ready) { debug_print_thread(t); }
+    for (auto t : list_sleeping) { debug_print_thread(t); }
+    for (auto t : list_dead) { debug_print_thread(t); }
+    for (auto t : list_blocked) { debug_print_thread(t); }
 
     kernel::log::debug("sched", "+---------------------------------------------------------------------+\n");
 }
@@ -204,14 +209,12 @@ void scheduler::unblock(thread* t, int reason) {
     if (t->ready()) { return; }
 
     // Search for the thread to unblock...
-    for (auto i : list_blocked) {
-        if (&i == t) {
-            // Remove from list blocked
-            list_blocked.remove(t);
-            t->set_state(thread_state::ready_to_run, determine_timeslice(t));
-            list_ready.push_back(t);
-            break;
-        }
+    auto itr = std::find(list_sleeping.begin(), list_sleeping.end(), t);
+
+    if (itr != list_sleeping.end()) {
+        list_blocked.erase(itr);
+        t->set_state(thread_state::ready_to_run, determine_timeslice(t));
+        list_ready.push_back(t);
     }
 }
 

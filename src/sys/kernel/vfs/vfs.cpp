@@ -4,6 +4,8 @@
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
 
+#include <algorithm>
+
 using namespace kernel;
 using namespace kernel::tasks;
 
@@ -47,20 +49,23 @@ vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
         }
 
         // Check the prospective parents children to see if this directory is one of them.
-        for (auto* c = directory->children.front(); c != nullptr; c = c->m_next) {
-            if (strcmp(c->val->name(), before_delim.data()) == 0) {
-                directory = c->val;
-                break;
-            }
+        auto child_dir_it =
+            std::find_if(directory->children.begin(), directory->children.end(),
+                         [before_delim](vfs_node* n) { return strcmp(n->name(), before_delim.data()) == 0; });
+
+        if (child_dir_it == directory->children.end()) {
+            return nullptr;  // We did not find it...
         }
-        path = path.substr(delim_pos + 1);
+
+        directory = *child_dir_it;
+        path      = path.substr(delim_pos + 1);
     }
 
     // Search all the children of directory
-    for (auto* c = directory->children.front(); c != nullptr; c = c->m_next) {
-        if (strcmp(c->val->name(), path.data()) == 0) {
-            if (flags & VFS_FIND_PARENT) { return c->val->parent; }
-            return c->val;
+    for (auto&& i : directory->children) {
+        if (strcmp(i->name(), path.data()) == 0) {
+            if (flags & VFS_FIND_PARENT) { return i->parent; }
+            return i;
         }
     }
 
@@ -91,12 +96,12 @@ file_id_t virtual_filesystem::open_file(kernel::string path, int flags) {
     open_files.push_back(descriptor);
 
     // Now, in the current task, we'll open this file.
-    auto* task_fd         = new task_file_descriptor();
-    task_fd->m_descriptor = descriptor;
-    task_fd->m_local_id   = current_task->next_fd_id;
+    auto task_fd         = task_file_descriptor();
+    task_fd.m_descriptor = descriptor;
+    task_fd.m_local_id   = current_task->next_fd_id;
     current_task->next_fd_id++;
     current_task->m_file_descriptors.push_back(task_fd);
-    return task_fd->m_local_id;
+    return task_fd.m_local_id;
 }
 
 file_descriptor* virtual_filesystem::taskfd_to_fd(file_id_t id) {

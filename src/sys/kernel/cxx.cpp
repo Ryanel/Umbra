@@ -31,3 +31,30 @@ extern "C" __attribute__((noreturn)) void __stack_chk_fail(void) {
     panic("Stack was smashed");
     while (true) {}
 }
+
+// DSO and AtExit
+
+void* __dso_handle = 0;
+
+struct atexit_func_entry_t {
+    /*
+     * Each member is at least 4 bytes large. Such that each entry is 12bytes.
+     * 128 * 12 = 1.5KB exact.
+     **/
+    void (*destructor_func)(void*);
+    void* obj_ptr;
+    void* dso_handle;
+};
+
+#define ATEXIT_MAX_FUNCS 128
+atexit_func_entry_t __atexit_funcs[ATEXIT_MAX_FUNCS];
+unsigned int        __atexit_func_count = 0;
+
+extern "C" int __cxa_atexit(void (*f)(void*), void* objptr, void* dso) {
+    if (__atexit_func_count >= ATEXIT_MAX_FUNCS) { return -1; };
+    __atexit_funcs[__atexit_func_count].destructor_func = f;
+    __atexit_funcs[__atexit_func_count].obj_ptr         = objptr;
+    __atexit_funcs[__atexit_func_count].dso_handle      = dso;
+    __atexit_func_count++;
+    return 0;
+};

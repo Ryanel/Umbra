@@ -1,5 +1,6 @@
 #pragma once
 
+#include <kernel/object.h>
 #include <kernel/types.h>
 #include <kernel/util/optional.h>
 #include <stdint.h>
@@ -12,7 +13,7 @@ struct task;
 enum class thread_state : uint8_t { dead, ready_to_run = 1, running = 2, blocked, sleeping };
 
 /// A thread of execution
-struct thread {
+struct thread : public object {
     virt_addr_t           m_k_stack_current;  // Current stack pointer
     virt_addr_t           m_k_stack_top;      // Stack top
     task*                 m_owner;            // Owning task
@@ -23,6 +24,8 @@ struct thread {
     uint32_t              m_id;               // The Thread ID of this thread
     int                   m_blocked;          // Block reason
     uint8_t               m_priority;         // Priority of this thread
+
+    KOBJECT_CLASS_ID(2, "thread");
 
     thread() { init_properties(); }
 
@@ -55,7 +58,7 @@ struct thread {
     bool ready() const { return m_state == thread_state::running || m_state == thread_state::ready_to_run; }
 };
 
-}
+}  // namespace tasks
 }  // namespace kernel
 
 extern "C" void thread_switch(kernel::tasks::thread* to_switch);

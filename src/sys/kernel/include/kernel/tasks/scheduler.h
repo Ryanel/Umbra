@@ -4,7 +4,8 @@
 #include <kernel/panic.h>
 #include <kernel/tasks/task.h>
 #include <kernel/tasks/thread.h>
-#include <kernel/util/linked_list.h>
+
+#include <list>
 
 namespace kernel {
 namespace tasks {
@@ -35,10 +36,10 @@ class scheduler {
 
     static bool task_switch_delayed;
 
-    static util::linked_list<thread> list_ready;
-    static util::linked_list<thread> list_sleeping;
-    static util::linked_list<thread> list_dead;
-    static util::linked_list<thread> list_blocked;
+    static std::list<thread*> list_ready;
+    static std::list<thread*> list_sleeping;
+    static std::list<thread*> list_dead;
+    static std::list<thread*> list_blocked;
 
    private:
     static uint64_t determine_timeslice(thread* t);

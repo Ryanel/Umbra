@@ -71,9 +71,9 @@ void initrd_provider::init() {
             }
 
             // Nope, find the parent.
-            for (auto* c = node->parent->children.front(); c != nullptr; c = c->m_next) {
-                if (strcmp(c->val->name(), before_delim.data()) == 0) {
-                    node->parent = c->val;
+            for (auto&& i : node->parent->children) {
+                if (strcmp(i->name(), before_delim.data()) == 0) {
+                    node->parent = i;
                     break;
                 }
             }

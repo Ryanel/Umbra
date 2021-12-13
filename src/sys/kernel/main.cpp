@@ -98,11 +98,14 @@ void kernel_main() {
     initrd->init();
 
     // Start some tasks
+
     log::info("debug", "Starting some test tasks\n");
-    auto* cloned         = g_vmm.current_vas()->clone();
-    auto* newtask        = new task(cloned->physical_addr(), 1, "test_program");
-    newtask->m_directory = cloned;
-    scheduler::enqueue(new thread(newtask, (void*)&test_thread, "test main"));
+    auto* cloned   = g_vmm.current_vas()->clone();
+    auto* task_hnd = new handle(make_ref(new task(cloned->physical_addr(), 1, "test_program")), 1, 0xFFFFFFFF, 1);
+    task_hnd->as<task>()->m_directory = cloned;
+
+    auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test main", (void*)&test_thread);
+    scheduler::enqueue(thread_hnd->as<thread>().get());
 
     // Create the console
     auto* dev_dir = vfs::g_vfs.find("/dev/");
