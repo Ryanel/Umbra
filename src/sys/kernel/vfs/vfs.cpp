@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <string_view>
 
 using namespace kernel;
 using namespace kernel::tasks;
@@ -32,38 +33,39 @@ void virtual_filesystem::init() {
     dev->set_name("dev");
 }
 
-vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
+vfs_node* virtual_filesystem::find(std::string_view path, int flags) {
     auto* directory = m_root;
 
-    kernel::log::debug("vfs", "Finding %s\n", path.data());
-    if (path.find('/') == 0) { path = path.substr(1); }
+    std::string_view path_view(path.data());
 
-    while (path.find('/') != kernel::string::npos) {
-        size_t delim_pos    = path.find('/');
-        auto   before_delim = path.substr(0, delim_pos);
+    kernel::log::debug("vfs", "Finding %s\n", path_view.data());
+    if (path_view.find('/') == 0) { path_view = path_view.substr(1); }
+
+    while (path_view.find('/') != std::string::npos) {
+        size_t delim_pos    = path_view.find('/');
+        auto   before_delim = path_view.substr(0, delim_pos);
 
         // This is a directory, which means its a child of the parent.
-        if (delim_pos == (path.size() - 1)) {
-            path = before_delim;
+        if (delim_pos == (path_view.size() - 1)) {
+            path_view = before_delim;
             break;
         }
 
         // Check the prospective parents children to see if this directory is one of them.
-        auto child_dir_it =
-            std::find_if(directory->children.begin(), directory->children.end(),
-                         [before_delim](vfs_node* n) { return strcmp(n->name(), before_delim.data()) == 0; });
+        auto child_dir_it = std::find_if(directory->children.begin(), directory->children.end(),
+                                         [before_delim](vfs_node* n) { return before_delim.compare(n->name()) == 0; });
 
         if (child_dir_it == directory->children.end()) {
             return nullptr;  // We did not find it...
         }
 
         directory = *child_dir_it;
-        path      = path.substr(delim_pos + 1);
+        path_view = path_view.substr(delim_pos + 1);
     }
 
     // Search all the children of directory
     for (auto&& i : directory->children) {
-        if (strcmp(i->name(), path.data()) == 0) {
+        if (path_view.compare(i->name()) == 0) {
             if (flags & VFS_FIND_PARENT) { return i->parent; }
             return i;
         }
@@ -73,14 +75,14 @@ vfs_node* virtual_filesystem::find(kernel::string path, int flags) {
     return nullptr;
 }
 
-file_id_t virtual_filesystem::open_file(kernel::string path, int flags) {
+file_id_t virtual_filesystem::open_file(std::string_view path, int flags) {
     task* current_task = scheduler::get_current_task();
 
     auto* file = find(path);
 
     if (flags & FILE_CREATE) {
         if (file == nullptr) {
-            auto* parent = find(path, VFS_FIND_FILE);
+            auto* parent = find(path, VFS_FIND_PARENT);
             if (parent == nullptr) { return -1; }
 
             if (flags & FILE_TEMPORARY) { file = new vfs_node(parent, nullptr, vfs_type::file, 0); }

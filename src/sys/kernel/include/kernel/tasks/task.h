@@ -3,10 +3,10 @@
 #include <kernel/object.h>
 #include <kernel/panic.h>
 #include <kernel/tasks/thread.h>
-#include <kernel/util/optional.h>
 #include <stdint.h>
 
 #include <list>
+#include <optional>
 
 namespace kernel {
 
@@ -45,7 +45,7 @@ class task : public object {
 
     const char* name() { return m_task_name != nullptr ? m_task_name : "<unnamed task>"; }
 
-    handle* spawn_local_thread(optional<const char*> name, void* bootstrap) {
+    handle* spawn_local_thread(std::optional<const char*> name, void* bootstrap) {
         return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, name)), m_task_id, 0xFFFFFFFF, 1);
     }
 };

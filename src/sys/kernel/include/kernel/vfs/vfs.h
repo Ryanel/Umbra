@@ -1,9 +1,10 @@
 #pragma once
 
-#include <kernel/util/string.h>
 #include <kernel/vfs/node.h>
 
 #include <list>
+#include <string>
+#include <string_view>
 
 #define FILE_CREATE    0x1
 #define FILE_TEMPORARY 0x2
@@ -19,9 +20,9 @@ class virtual_filesystem {
     void init();
 
     vfs_node* get_root() const { return m_root; }
-    vfs_node* find(kernel::string path, int flags = VFS_FIND_FILE);
+    vfs_node* find(std::string_view path, int flags = VFS_FIND_FILE);
 
-    file_id_t  open_file(kernel::string path, int flags);
+    file_id_t  open_file(std::string_view path, int flags);
     size_t     read(file_id_t fd, uint8_t* buf, size_t count);
     size_t     write(file_id_t fd, uint8_t* buf, size_t count);
     file_stats fstat(file_id_t fd);

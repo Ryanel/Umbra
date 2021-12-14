@@ -5,7 +5,6 @@
 #include <kernel/tasks/critical_section.h>
 #include <kernel/tasks/scheduler.h>
 #include <kernel/time.h>
-#include <kernel/util/math.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -80,7 +79,7 @@ void scheduler::schedule() {
     // Perform time accounting
     uint64_t elapsed        = (int64_t)(kernel::time::boot_time_ns() - last_schedule_ns);
     last_schedule_ns        = kernel::time::boot_time_ns();
-    current_tcb->m_slice_ns = max<int64_t>(current_tcb->m_slice_ns - elapsed, 0);
+    current_tcb->m_slice_ns = std::max<int64_t>(current_tcb->m_slice_ns - elapsed, 0);
     current_tcb->m_time_elapsed += elapsed;
 
     // Unblock any sleeping processes

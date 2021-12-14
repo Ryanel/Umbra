@@ -1,0 +1,52 @@
+#pragma once
+
+#include <algorithm>
+#include <string>
+
+namespace std {
+
+class string_view {
+   public:
+    constexpr string_view() : m_ptr(nullptr), m_size(0) {}
+    constexpr string_view(const string_view& other) = default;
+    constexpr string_view(const char* str, size_t count) : m_ptr(str), m_size(count) {}
+    string_view(const char* str) : m_ptr(str), m_size(strlen(str)) {}
+    string_view(const std::string str) : m_ptr(str.data()), m_size(str.size()) {}
+
+    constexpr const char* data() const { return m_ptr; }
+    constexpr size_t      size() const { return m_size; }
+
+    constexpr size_t find(char c) const {
+        for (size_t i = 0; i < m_size; i++) {
+            if (m_ptr[i] == c) { return i; }
+        }
+        return npos;
+    }
+
+    string_view substr(size_t start, size_t count = npos) const {
+        size_t rcount = std::min(count, m_size - start);
+        return string_view(m_ptr + start, rcount);
+    }
+
+    constexpr int compare(const char* s) const {
+        const char* str1 = s;
+        const char* str2 = m_ptr;
+
+        for (size_t i = 0; i < m_size; i++) {
+            if (*str1 != *str2) { return *str1 - *str2; }
+            str1++;
+            str2++;
+        }
+
+        return 0;
+    }
+
+    // Constants
+    static const size_t npos = -1;
+
+   private:
+    const char* m_ptr;
+    size_t      m_size;
+};
+
+}  // namespace std

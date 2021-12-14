@@ -1,9 +1,9 @@
 #include <kernel/boot/boot_file.h>
-#include <kernel/util/string.h>
 #include <kernel/vfs/initrd.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
-#include <string.h>
+
+#include <string>
 
 int oct2bin(unsigned char* str, int size) {
     int            n = 0;
@@ -58,8 +58,8 @@ void initrd_provider::init() {
         }
 
         // Determine the parent and file name
-        kernel::string filename = kernel::string((char*)&header->name);
-        while (filename.find('/') != kernel::string::npos) {
+        auto filename = std::string((char*)&header->name);
+        while (filename.find('/') != std::string::npos) {
             size_t delim_pos = filename.find('/');
 
             auto before_delim = filename.substr(0, delim_pos);

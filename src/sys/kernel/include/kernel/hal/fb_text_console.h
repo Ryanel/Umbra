@@ -38,7 +38,7 @@ class fb_text_console : public text_console {
     void draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back);
 
     fb_color color_table[16] = {
-        {0x28, 0x2A, 0x2E},  // 0
+        {0, 0, 0},  // 0
         {0x5F, 0x81, 0x9D},  // dblue
         {0x8C, 0x94, 0x40},  // dgreen
         {0x5E, 0x8D, 0x87},  // dcyan
@@ -46,7 +46,7 @@ class fb_text_console : public text_console {
         {0x85, 0x67, 0x8F},  // dpurple
         {0xDE, 0x93, 0x5F},  // dyellow
         {0x70, 0x78, 0x80},  // lgray
-        {0x37, 0x3B, 0x41},  // dgray
+        {0x47, 0x4B, 0x51},  // dgray
         {0x81, 0xA2, 0xBE},  // lblue
         {0xb5, 0xBD, 0x68},  // lgreen
         {0x8a, 0xBE, 0xB7},  // lcyan

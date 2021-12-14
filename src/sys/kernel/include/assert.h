@@ -1,6 +1,5 @@
 #pragma once
 
-#include <kernel/log.h>
 #include <kernel/config.h>
 
 #ifdef KERNEL_ASSERT_ENABLED

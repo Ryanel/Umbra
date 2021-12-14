@@ -2,6 +2,7 @@
 
 namespace std {
 
+// std::find
 template <class InputIt, class T>
 constexpr InputIt find(InputIt first, InputIt last, const T& value) {
     for (; first != last; ++first) {
@@ -17,6 +18,17 @@ InputIterator find_if(InputIterator first, InputIterator last, UnaryPredicate pr
         ++first;
     }
     return last;
+}
+
+// std::min, std::max
+template <typename T>
+constexpr T const& max(T const& a, T const& b) {
+    return a > b ? a : b;
+}
+
+template <typename T>
+constexpr T const& min(T const& a, T const& b) {
+    return a < b ? a : b;
 }
 
 }  // namespace std

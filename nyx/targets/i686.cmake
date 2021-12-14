@@ -21,7 +21,7 @@ set(KERNEL_ADDITIONAL_LINK_FLAGS "")
 set(CMAKE_C_FLAGS "-march=i686 -mtune=generic -Wall -Wextra -Wformat=2 -Wformat-truncation -Wconversion -Wno-unused-parameter")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_C_FLAGS_DEBUG "-g3 -ggdb -gdwarf-3 -gstrict-dwarf")
-set (OPT_FLAGS "-Og")
+set (OPT_FLAGS "-O0")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG} ${OPT_FLAGS}")
 
