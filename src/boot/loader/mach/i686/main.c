@@ -16,7 +16,7 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
         console_init();
         panic("Multiboot magic is incorrect");
     }
-    
+
     // Extract data from multiboot into system configuration, initialse the console
     multiboot_get_configuration(multiboot_struct);
 
@@ -45,7 +45,7 @@ void loader_main(uint32_t multiboot_magic, multiboot_info_t* multiboot_struct) {
     // paging_init();
 
     // size, physstart, virtstart
-    
+
     // paging_map(0x1000000, 0x0, 0x0); // Memory Map the first megabyte.
     // paging_map(kinfo->mem_size, kernel_start_address, kinfo->virt_start); // Map kernel to proper virtual address at
     // 0xC00000000 paging_map(multiboot_modules.initrd->size, multiboot_modules.initrd->start, 0xD0000000); //Map initrd

@@ -140,11 +140,13 @@ def mod_build():
 
     subprocess.run([config['buildtool'], 'install'], stdout=sys.stdout, cwd=src_dir)
 
-    if (config['target'] == 'i686') or (config['target'] == 'i686-clang'):
+    if (config['target'] == 'i686'):
         subprocess.run(['./nyx/scripts/x86-create-iso.sh'], shell=True, stdout=sys.stdout)
-        if config['run_on_completion']:
-            mod_run()
-    
+    elif (config['target'] == 'x86_64'):
+        subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
+    if config['run_on_completion']:
+        mod_run()
+
 def mod_run():
     if config['debugging']:
         mod_debug()
@@ -154,7 +156,12 @@ def mod_run():
 def mod_debug():
     global config
     subprocess.Popen([config['debugger']])
-    subprocess.run(['./nyx/scripts/x86-run-debug.sh'], shell=True, stdout=sys.stdout)
+
+    if (config['target'] == 'i686'):
+        subprocess.run(['./nyx/scripts/x86-run-debug.sh'], shell=True, stdout=sys.stdout)
+    elif (config['target'] == 'x86_64'):
+        subprocess.run(['./nyx/scripts/x86_64-run-debug.sh'], shell=True, stdout=sys.stdout)
+    
 
 def mod_clean():
     global config

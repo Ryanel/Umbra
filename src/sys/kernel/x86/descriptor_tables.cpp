@@ -19,7 +19,7 @@ void kernel::x86::gdt::gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, 
 
 void kernel::x86::gdt::init() {
     gdt_ptr.limit = (sizeof(gdt_entry_t) * 6) - 1;
-    gdt_ptr.base  = (uint32_t)&gdt_entries;
+    gdt_ptr.base  = (uintptr_t)&gdt_entries;
 
     gdt_set_gate(0, 0, 0, 0, 0);                 // Null segment
     gdt_set_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);  // Code segment
@@ -27,7 +27,7 @@ void kernel::x86::gdt::init() {
     gdt_set_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);  // User mode code segment
     gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);  // User mode data segment
 
-    auto tss_ptr = (uint32_t)&tss;
+    auto tss_ptr = (uintptr_t)&tss;
     gdt_set_gate(5, tss_ptr, tss_ptr + sizeof(tss_struct_t), 0x89, 0xCF);  // TSS
 
     tss.ss0  = 0x10;
@@ -36,7 +36,7 @@ void kernel::x86::gdt::init() {
     tss.ss = tss.ds = tss.es = tss.fs = tss.gs = 0x13;
     tss.iomap_base                             = sizeof(tss_struct_t);
 
-    setupGDT((uint32_t)&gdt_ptr);
+    setupGDT((uintptr_t)&gdt_ptr);
 }
 
 extern "C" void set_kernel_stack(uint32_t stk) { kernel::x86::g_gdt.set_kernel_stack(stk); }

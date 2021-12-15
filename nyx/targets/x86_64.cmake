@@ -27,7 +27,7 @@ set(CMAKE_AR x86_64-elf-ar)
 
 set(KERNEL_ADDITIONAL_LINK_FLAGS "-z max-page-size=0x1000")
 
-set(CMAKE_C_FLAGS "-mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2")
+set(CMAKE_C_FLAGS "-mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -Og -DARCH_X86_64")
 set(CMAKE_CXX_FLAGS ${CMAKE_C_FLAGS})
 
 set(CMAKE_C_FLAGS_RELEASE "-O2")

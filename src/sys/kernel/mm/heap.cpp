@@ -22,7 +22,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
         return (virt_addr_t)slab_alloc.alloc(sz, flags, nullptr);
     } else {
         // Align if requested
-        if ((flags & KHEAP_PAGEALIGN) != 0 && (early_placement & 0xFFFFF000)) {
+        if (((flags & KHEAP_PAGEALIGN) != 0) && ((early_placement & 0xFFFFF000) != early_placement)) {
             early_placement &= 0xFFFFF000;
             early_placement += 0x1000;
         }

@@ -64,6 +64,7 @@ class vas {
     void        set_table_physical(int index, uintptr_t address) { pt_virt[index] = address; }
     page_t      get_page(uintptr_t address);
     bool        has_table(uintptr_t address);
+    bool        create_table(uintptr_t address);
 
    private:
     page_directory_raw_t* directory;

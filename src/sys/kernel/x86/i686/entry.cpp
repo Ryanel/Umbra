@@ -59,6 +59,10 @@ void boot_init_memory(multiboot_info_t* mb_info) {
 
     g_heap.init(false, (uint32_t)(&_kernel_end));
     kernel::g_pmm.update_statistics();
+
+    // Now, allocate page tables for the entire kernel. These never need to be freed, and are mapped into every process.
+    // This is for the region 0xC0000000 -> 0xFFFFFFFF. 
+    for (uintptr_t i = 768; i < 1024; i++) { boot_directory.create_table(i << 22); }
 }
 
 void boot_init_modules(multiboot_info_t* mb_info) {

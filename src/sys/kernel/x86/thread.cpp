@@ -25,15 +25,15 @@ void thread::setup(void* bootstrap_fn) {
 
     if (m_owner == nullptr) { panic("Thread has no owner!"); }
 
-    auto* stack_ptr   = (uint32_t*)m_k_stack_current;
+    auto* stack_ptr   = (uintptr_t*)m_k_stack_current;
     *--stack_ptr      = 0;                                 // EAX
     *--stack_ptr      = 0;                                 // ECX
-    *--stack_ptr      = (uint32_t)bootstrap_fn;            // Return address as paramater
+    *--stack_ptr      = (uintptr_t)bootstrap_fn;            // Return address as paramater
     *--stack_ptr      = 0;                                 // EDX
-    *--stack_ptr      = (uint32_t)&thread_setup_function;  // Address to call on thread start.
+    *--stack_ptr      = (uintptr_t)&thread_setup_function;  // Address to call on thread start.
     *--stack_ptr      = 0;                                 // EBX
     *--stack_ptr      = 0;                                 // ESI
     *--stack_ptr      = 0;                                 // EDI
     *--stack_ptr      = 0;                                 // EBP
-    m_k_stack_current = (uint32_t)stack_ptr;
+    m_k_stack_current = (uintptr_t)stack_ptr;
 }

@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/mm/pmm.h>
@@ -27,6 +28,7 @@ void test_thread() {
 
     // Load file
     auto fd = g_vfs.open_file(fpath, 0);
+
     if (fd == -1) { scheduler::terminate(nullptr); }
     auto  size = g_vfs.fstat(fd).size;
     auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
@@ -39,6 +41,8 @@ void test_thread() {
     // Parse as an ELF
     auto test_exe = elf_file(buf);
 
+    assert(test_exe.valid() == true);
+    log::info("elfloader", "Mapping PHs\n");
     for (unsigned int i = 0; i < test_exe.prog_num(); i++) {
         auto* sec = test_exe.prog_header(i);
         // Load

@@ -83,7 +83,7 @@ bool vas::has_table(uintptr_t virt) {
 
 vas* vas::clone() {
     // Allocate the page directory metadata structure from the heap
-    auto pd_meta = g_heap.alloc(0x1000, 0);
+    auto pd_meta = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
     vas* dir     = (vas*)pd_meta;
 
     // Now, allocate the actual page directory read by the CPU
@@ -124,6 +124,29 @@ vas* vas::clone() {
     }
 
     return dir;
+}
+
+bool vas::create_table(uintptr_t vaddr) {
+    // Make sure that both addresses are page-aligned.
+    unsigned long pdindex = (unsigned long)vaddr >> 22;
+    unsigned long ptindex = (unsigned long)vaddr >> 12 & 0x03FF;
+
+    // Check if the PD entry exists.
+    if (pt_virt[pdindex] == 0) {
+        kernel::log::debug("create", "0x%08x\n", vaddr);
+        phys_addr_t new_page_table_phys;
+
+        auto new_pt_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &new_page_table_phys);
+        memset((void*)new_pt_virt, 0, 0x1000);
+
+        kernel::log::debug("map", "No page table, allocated a new one at %x\n", new_pt_virt);
+        // if (new_pt_virt == -1) { return false; }
+
+        this->pt_virt[pdindex]          = new_pt_virt;
+        directory->entries[pdindex].raw = (new_page_table_phys | VAS_PRESENT | VAS_WRITABLE);
+        return true;
+    }
+    return false;
 }
 
 }  // namespace kernel
