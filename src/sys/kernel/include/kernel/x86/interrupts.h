@@ -9,24 +9,36 @@
 #define IDT_ENTRY_ATTR_INTERRUPT 0x05
 
 /// IDT Entry
+#ifdef ARCH_X86
 typedef struct idt_entry {
     uint16_t base_lo;
-    uint16_t kernel_cs;
-    uint8_t  always0;
+    uint16_t selector;
+    uint8_t  always_zero;
     uint8_t  flags;
     uint16_t base_hi;
 } __attribute__((__packed__)) idt_entry_t;
+#else
+typedef struct idt_entry {
+    uint16_t base_lo;      // offset bits 0..15
+    uint16_t selector;     // a code segment selector in GDT or LDT
+    uint8_t  ist;          // bits 0..2 holds Interrupt Stack Table offset, rest of bits zero.
+    uint8_t  flags;        // gate type, dpl, and p fields
+    uint16_t base_mid;     // offset bits 16..31
+    uint32_t base_hi;      // offset bits 32..63
+    uint32_t always_zero;  // reserved
+} __attribute__((__packed__)) idt_entry_t;
+#endif
 
 /// Pointer to IDT
 typedef struct idt_ptr {
-    uint16_t limit;
-    uint32_t base;
+    uint16_t  limit;
+    uintptr_t base;
 } __attribute__((__packed__)) idt_ptr_t;
 
 class x86_idt {
    public:
     void init();
-    void set_gate(unsigned char num, unsigned long base, unsigned short sel, unsigned char flags);
+    void set_gate(unsigned char num, uintptr_t base, unsigned short sel, unsigned char flags);
     void enable_interrupts();
     void disable_interrupts();
 

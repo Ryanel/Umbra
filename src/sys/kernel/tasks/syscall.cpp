@@ -7,14 +7,19 @@ using namespace kernel;
 using namespace kernel::tasks;
 
 bool syscall_handler::handle_interrupt(register_frame_t* regs) {
-    if (regs->eax == 0x00) {
+#ifdef ARCH_X86
+    int int_no = regs->eax;
+#else
+    int int_no = regs->rax;
+#endif
+    if (int_no == 0x00) {
         log::trace("syscall", "exit()\n");
         scheduler::terminate(nullptr);
-    } else if (regs->eax == 0x01) {
+    } else if (int_no == 0x01) {
         log::trace("syscall", "write()\n");
-        vfs::g_vfs.write(regs->ebx, (uint8_t*)regs->ecx, regs->edx);
+        // vfs::g_vfs.write(regs->ebx, (uint8_t*)regs->ecx, regs->edx);
     } else {
-        log::error("syscall", "Unknown system call 0x%x", regs->eax);
+        log::error("syscall", "Unknown system call 0x%x", int_no);
     }
     return true;
 }

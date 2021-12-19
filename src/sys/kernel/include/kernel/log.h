@@ -24,6 +24,10 @@ class log {
     static void error(const char* category, const char* fmt, ...);
     static void critical(const char* category, const char* fmt, ...);
 
+    static void status_log(const char* msg, unsigned char color = 0x0A);
+
+    static bool will_log(unsigned int prio) { return get().log_priority <= prio; }
+
     unsigned char colorFore    = 0xF;
     unsigned char colorBack    = 0x00;
     unsigned int  log_priority = 0;
@@ -35,6 +39,8 @@ class log {
     void                  write_buffer(char c);     ///< Writes to the buffer
     void                  console_print(char c);
     unsigned int          console_device_index = 0;
+
+    void status_log_int(const char* msg, unsigned char color = 0x0E);
 
    private:
     static unsigned char log_print_common(const char* category, unsigned char color);

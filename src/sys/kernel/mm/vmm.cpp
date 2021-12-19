@@ -20,10 +20,10 @@ virt_addr_t* virt_mm::mmap(virt_addr_t virt, size_t length, int protection, int 
     for (size_t i = 0; i < length; i += 0x1000) {
         if ((flags & VMM_FLAG_POPULATE) != 0) {
             phys_addr_t physpage = kernel::g_pmm.alloc_single(PMM_REGION_RAM);
-            //kernel::log::trace("vmm", "mmap: 0x%08x->0x%08x\n", physpage, aligned_vaddr + i);
+            // kernel::log::trace("vmm", "mmap: 0x%08x->0x%08x\n", physpage, aligned_vaddr + i);
             if (!vas_current->map(physpage, aligned_vaddr + i, protection, flags)) { panic("Unable to map page"); }
         } else {
-            //log::trace("vmm", "mmap: 0x%08x (on demand)\n", aligned_vaddr + i);
+            // log::trace("vmm", "mmap: 0x%08x (on demand)\n", aligned_vaddr + i);
             if (!vas_current->map(0x0, aligned_vaddr + i, protection, flags)) { panic("Unable to map page"); }
         }
     }
@@ -39,7 +39,7 @@ virt_addr_t* virt_mm::mmap_direct(virt_addr_t virt, phys_addr_t phys, int protec
 
     vas_current->map(phys, virt, protection, flags);
     g_pmm.mark_used(phys);
-    //log::trace("vmm", "mmap: 0x%08x->0x%08x\n", phys, aligned_vaddr);
+    // log::trace("vmm", "mmap: 0x%08x->0x%08x\n", phys, aligned_vaddr);
     return (virt_addr_t*)aligned_vaddr;
 }
 

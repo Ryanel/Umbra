@@ -1,5 +1,5 @@
-#include <kernel/tasks/elf.h>
 #include <kernel/log.h>
+#include <kernel/tasks/elf.h>
 
 bool kernel::elf_file::valid() const {
     if (m_header == nullptr) { return false; }

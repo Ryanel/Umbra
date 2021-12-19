@@ -9,11 +9,17 @@ typedef struct alignas(8) gdt_entry_struct {
     uint8_t  access;       // Access flags, determine what ring this segment can be used in.
     uint8_t  granularity;  //
     uint8_t  base_high;    // The last 8 bits of the base.
+
+#ifdef ARCH_X86_64
+    uint32_t base_upper;
+    uint32_t base_reserved;
+#endif
+
 } __attribute__((packed)) gdt_entry_t;
 
 typedef struct alignas(8) gdt_ptr_struct {
-    uint16_t limit;  // The upper 16 bits of all selector limits.
-    uint32_t base;   // The address of the first gdt_entry_t struct.
+    uint16_t  limit;  // The upper 16 bits of all selector limits.
+    uintptr_t base;   // The address of the first gdt_entry_t struct.
 } __attribute__((packed)) gdt_ptr_t;
 
 typedef volatile struct alignas(8) strtss {
@@ -56,7 +62,7 @@ class gdt {
    public:
     tss_struct_t tss;
     void         init();
-    void         gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
+    void         gdt_set_gate(int32_t num, uintptr_t base, uintptr_t limit, uint8_t access, uint8_t gran);
     void         set_kernel_stack(uint32_t esp) { tss.esp0 = esp; }
 };
 

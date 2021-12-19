@@ -11,7 +11,6 @@ config = {
     'build_directory': "build",
     'sysroot': "sysroot",
     'target': 'i686',
-    'build_loader': False,
     'cancel_on_fail': True,
     'buildtool': 'make',
     'debugger': 'ddd'
@@ -29,6 +28,7 @@ def main() -> int:
     parser.add_argument("-r","--run", help="Run an image, if possible", action="store_true")
     parser.add_argument("--sysroot", help="Sets the sysroot directory")
     parser.add_argument("--target", help="Sets the target processor to build for")
+    parser.add_argument("--no-debugger", help="Does not launch a debugger", action="store_true")
     args = parser.parse_args()
 
     # Create the build environment
@@ -44,6 +44,7 @@ def main() -> int:
 
     # This is not preserved on load
     config['debugging'] = args.debug or False
+    config['no-debugger'] = args.no_debugger or False
     config['run_on_completion'] = args.run or False
 
     if args.module == 'config':
@@ -117,20 +118,11 @@ def mod_configure():
 
     print('[configure] Configuring the build directory for target "' + config['target'] + '"')
 
-    if config['build_loader']:
-        helper_make_directory(config['build_directory'] + '/temp/boot/')
-        subprocess.run(cmake_config + [  '-S', './src/boot/', '-B', f"{config['build_directory']}/temp/boot"], stdout=sys.stdout)
-    
     helper_make_directory(config['build_directory'] + '/temp/')
     subprocess.run(cmake_config + ['-S', './src/', '-B', f"{config['build_directory']}/temp"], stdout=sys.stdout)
-    
+
 def mod_build():
     global config
-    if config['build_loader']:
-        boot_dir = os.path.abspath(config['build_directory'] + '/temp/boot')
-        subprocess.run([config['buildtool']], stdout=sys.stdout, cwd=boot_dir)
-        subprocess.run([config['buildtool'], 'install'], stdout=sys.stdout, cwd=boot_dir)
-
     src_dir = os.path.abspath(config['build_directory'] + '/temp/')
     compile_results = subprocess.run([config['buildtool']], stdout=sys.stdout, cwd=src_dir)
 
@@ -155,19 +147,16 @@ def mod_run():
 
 def mod_debug():
     global config
-    subprocess.Popen([config['debugger']])
+    if (not config['no-debugger']):
+        subprocess.Popen([config['debugger']])
 
     if (config['target'] == 'i686'):
         subprocess.run(['./nyx/scripts/x86-run-debug.sh'], shell=True, stdout=sys.stdout)
     elif (config['target'] == 'x86_64'):
         subprocess.run(['./nyx/scripts/x86_64-run-debug.sh'], shell=True, stdout=sys.stdout)
-    
 
 def mod_clean():
     global config
-    if config['build_loader']:
-        boot_dir = os.path.abspath(config['build_directory'] + '/temp/boot')
-        subprocess.run([config['buildtool'], 'clean'], stdout=sys.stdout, cwd=boot_dir)
 
     src_dir = os.path.abspath(config['build_directory'] + '/temp/')
     subprocess.run([config['buildtool'], 'clean'], stdout=sys.stdout, cwd=src_dir)

@@ -38,22 +38,44 @@ void serial_text_console::write(char c, unsigned char fore, unsigned char back) 
         last_fore = fore;
     }
 
-    if (c == '\n') { write_char('\r'); }
+    if (c == '\n') {
+        write_char('\r');
+        m_y++;
+        m_x = 0;
+    }
 
     write_char(c);
+    m_x++;
 }
 
 void serial_text_console::write_char(char c) {
     while (is_transmit_empty() == 0) {}
-
     outb(com1, c);
 }
 
 int serial_text_console::width() { return 80; }
 int serial_text_console::height() { return 25; }
 
-bool serial_text_console::supports_cursor_position() { return false; }
-void serial_text_console::setX(int x) { this->m_x = x; }
+bool serial_text_console::supports_cursor_position() { return true; }
+void serial_text_console::setX(int x) {
+    int difference = x - this->m_x;
+
+    if (x == 0) {
+        write_char('\r');
+    } else if (difference < 0) {
+        while (difference != 0) {
+            write_char('\b');
+            difference++;
+        }
+    } else if (difference > 0) {
+        while (difference != 0) {
+            write_char(' ');
+            difference--;
+        }
+    }
+
+    this->m_x = x;
+}
 void serial_text_console::setY(int y) { this->m_y = y; }
 int  serial_text_console::getX() { return m_x; }
 int  serial_text_console::getY() { return m_y; }

@@ -12,9 +12,9 @@ namespace mm {
 
 class buddy_bitmap {
    public:
-    int          granularity = 0;
+    int    granularity = 0;
     size_t size() const { return (granularity + 1) * 0x1000; }
-    bitmap       backing;
+    bitmap backing;
 
     void init(uintptr_t max_address) {
         size_t needed_ram = (max_address / size() / 8) + 1;

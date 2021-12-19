@@ -123,7 +123,7 @@ class handle_registry {
 
     // Transfer
     uint32_t transfer(handle_registry* r, handle* hnd) {
-        m_handles.erase(std::find(m_handles.begin(), m_handles.end(),hnd));
+        m_handles.erase(std::find(m_handles.begin(), m_handles.end(), hnd));
         hnd->m_id = 0;
         return r->recieve_transfer(hnd);
     }

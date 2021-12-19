@@ -1,12 +1,16 @@
 #include <kernel/log.h>
 #include <kernel/panic.h>
 #include <kernel/time.h>
+#include <kernel/util/spinlock.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 // This is THE kernel logger. Only one should be created.
 kernel::log  kernel_logger;
 kernel::log& kernel::log::get() { return kernel_logger; }
+
+kernel::util::spinlock kernel_log_lock;
 
 extern "C" void kernel_c_shim_print_char_to_log(char c) { kernel_logger.write(c); }
 extern "C" void kernel_c_shim_print_string_to_log(char* s) { kernel_logger.write(s); }
@@ -81,8 +85,30 @@ unsigned char kernel::log::log_print_common(const char* category, unsigned char 
     return oldFore;
 }
 
+void kernel::log::status_log(const char* msg, unsigned char color) { get().status_log_int(msg, color); }
+
+void kernel::log::status_log_int(const char* msg, unsigned char color) {
+    flush();
+
+    unsigned char oldFore = kernel_logger.colorFore;
+    int           dest_x  = strlen(msg) + 2;
+
+    for (size_t i = 0; i < console_device_index; i++) { console[i]->setX(console[i]->width() - dest_x - 1); }
+
+    kernel_logger.colorFore = 0xF;
+    write("[");
+    kernel_logger.colorFore = color;
+    write(msg);
+    kernel_logger.colorFore = 0xF;
+    write("]");
+    kernel_logger.colorFore = oldFore;
+    write("\n");
+    flush();
+}
+
 #define LOG_BODY(LNAME, LCOLOR, LPRIO)                                    \
     void kernel::log::LNAME(const char* category, const char* fmt, ...) { \
+        kernel_log_lock.acquire();                                        \
         if (LPRIO <= kernel_logger.log_priority) { return; }              \
         unsigned char oldFore = log_print_common(category, LCOLOR);       \
         va_list       arg;                                                \
@@ -90,6 +116,7 @@ unsigned char kernel::log::log_print_common(const char* category, unsigned char 
         vprintf(fmt, arg);                                                \
         va_end(arg);                                                      \
         kernel_logger.colorFore = oldFore;                                \
+        kernel_log_lock.release();                                        \
     }
 
 LOG_BODY(trace, 0x8, 1);

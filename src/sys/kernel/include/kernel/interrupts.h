@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel/regs.h>
+#include <kernel/types.h>
 
 void interrupts_disable();
 void interrupts_enable();
@@ -16,13 +17,13 @@ class interrupt_handler {
 class interrupts {
    public:
     static void init();
-    static void handler_register(int handler, interrupt_handler* hnd);
-    static void handler_unregister(int handler);
-    static bool dispatch(int handler, register_frame_t* regs);
+    static void handler_register(uintptr_t handler, interrupt_handler* hnd);
+    static void handler_unregister(uintptr_t handler);
+    static bool dispatch(uintptr_t handler, register_frame_t* regs);
 
    private:
-    static int                page_faults_total;
-    static int                interrupts_total;
+    static size_t             page_faults_total;
+    static size_t             interrupts_total;
     static interrupt_handler* handlers[256];
 };
 };  // namespace kernel
