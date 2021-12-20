@@ -15,7 +15,7 @@ from graphlib import TopologicalSorter
 from nyx.package import *
 
 # What Nyx will do:
-# 1. Build a graph of all .nyx files in the src directory
+# 1. Build a graph of all repo files in the src directory
 # 2. Fetch source files (if needed)
 # 3. Patch source files (if requested)
 # 4. Configure
@@ -40,8 +40,8 @@ def read_packages(repo_json):
     for x in repo_json['packages']:
         pkg_json = repo_json['packages'][x]
         pkg = NyxPackage(x)
-        pkg.nice_name       = pkg_json["name"] or x
-        pkg.architecture    = pkg_json["architecture"] or "all"
+        pkg.friendly_name   = pkg_json["name"] or x
+        pkg.architecture    = pkg_json.get("architecture", "all")
         pkg.version         = pkg_json.get("version", "dev")
         pkg.acquisition     = pkg_json.get("acquisition", "local")
         pkg.src_path        = pkg_json.get("src_path", "")
@@ -65,7 +65,6 @@ def nyx_build(packages, common_environment) -> int:
         dep_graph.add(x, *y.requirements)
 
     compile_order = [*dep_graph.static_order()]
-
 
     packages_to_compile_in_order = []
     for x in compile_order:

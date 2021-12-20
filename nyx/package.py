@@ -24,6 +24,8 @@ class NyxPackage:
 
     def build_dir(self, curtmp):
         if (self.isTool):
+            if (self.acquisition == 'git'):
+                return os.path.abspath(f"{curtmp}/../{self.installroot}/{self.name}")
             return os.path.abspath(f"{curtmp}/../{self.installroot}")
         return os.path.abspath(f"{curtmp}build/{self.name}-{self.version}")
 
@@ -41,19 +43,33 @@ class NyxPackage:
 
     def fetch(self, config) -> bool:
         tmp_dir = self.build_dir(config["build_root"])
-        self.util_createpath(tmp_dir)
         if (self.acquisition == 'local'):
+            self.util_createpath(tmp_dir)
             shutil.copytree(config["source_root"] + self.src_path, tmp_dir, dirs_exist_ok=True)
             return True
         elif (self.acquisition == 'git'):
             # Git clone into this directory
-            if os.path.isdir(os.path.abspath(f"{tmp_dir}/{self.name}/")):
+            print(os.path.abspath(f"{tmp_dir}"))
+            parent = tmp_dir
+            if (self.isTool):
+                parent = os.path.abspath(f"{config['build_root']}/../{self.installroot}/")
+            if os.path.isdir(os.path.abspath(tmp_dir)):
                 return True
-            status = subprocess.run(['git', 'clone', self.src_path, f'--branch={self.git_branch}','--depth=1', f'{self.name}'], shell=False, cwd=tmp_dir)
-            return status.returncode != 0
+            status = subprocess.run(['git', 'clone', self.src_path, f'--branch={self.git_branch}','--depth=1', f'{self.name}'], shell=False, cwd=parent)
+            return status.returncode == 0
         return False
 
     def patch(self, config) -> bool:
+        tmp_dir = self.build_dir(config["build_root"])
+        if len(self.patches) > 0:
+            for patch in self.patches:
+                print(f"[nyx]: Applying patch {patch} to {tmp_dir}")
+
+                with open(os.path.abspath(patch), "rb") as f:
+                    patch_data = f.read()
+
+                process = subprocess.Popen(['patch', '-ruN', '-d', '.'], shell=False, cwd=tmp_dir, stdin=subprocess.PIPE)
+                process.communicate(input=patch_data)
         return True
 
     def configure(self, config, common_enviroment) -> bool:

@@ -5,7 +5,6 @@
     "sysroot": "build/sysroot/",
     "build_root": "build/temp/",
     "package_root": "build/packages/",
-
     "env": {
       "CC": "x86_64-elf-gcc",
       "CXX": "x86_64-elf-g++",
@@ -52,10 +51,26 @@
       "acquisition": "git",
       "src_path": "https://github.com/limine-bootloader/limine.git",
       "git_branch": "v2.0-branch-binary",
-      "installroot": "boot/limine",
-      "build_steps": [ "make -C boot/limine" ],
-      "requirements": [],
-      "package_steps": []
+      "installroot": "limine",
+      "build_steps": [
+        "make"
+      ]
+    },
+    "apps/test_program": {
+      "name": "test_program",
+      "src_path": "/apps/test_program",
+      "version": "dev",
+      "install_root": "/apps/",
+      "build_steps": [
+        "make"
+      ],
+      "package_steps": [
+        "make install"
+      ],
+      "requirements": [
+        "sys/libc",
+        "sys/kernel"
+      ]
     }
   }
 }

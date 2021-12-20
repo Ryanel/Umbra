@@ -18,4 +18,4 @@ xorriso -as mkisofs -b limine-cd.bin \
         -efi-boot-part --efi-boot-image --protective-msdos-label \
         sysroot -o livecd.iso 2> /dev/null
 
-./tools/limine/limine/limine-install livecd.iso 2> /dev/null
+./boot/limine/limine-install livecd.iso 2> /dev/null
