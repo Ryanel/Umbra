@@ -24,7 +24,7 @@ class NyxPackage:
 
     def build_dir(self, curtmp):
         if (self.isTool):
-            return os.path.abspath(f"{curtmp}/../{self.src_path}")
+            return os.path.abspath(f"{curtmp}/../{self.installroot}")
         return os.path.abspath(f"{curtmp}build/{self.name}-{self.version}")
 
     def package_dir(self, curtmp):
@@ -47,10 +47,10 @@ class NyxPackage:
             return True
         elif (self.acquisition == 'git'):
             # Git clone into this directory
-            status = subprocess.run(['git', 'clone', self.git_repository, f'--branch={self.git_branch}','--depth=1'], shell=False, cwd=tmp_dir)
-            if status.returncode != 0:
+            if os.path.isdir(os.path.abspath(f"{tmp_dir}/{self.name}/")):
                 return True
-            return True
+            status = subprocess.run(['git', 'clone', self.src_path, f'--branch={self.git_branch}','--depth=1', f'{self.name}'], shell=False, cwd=tmp_dir)
+            return status.returncode != 0
         return False
 
     def patch(self, config) -> bool:
@@ -65,7 +65,6 @@ class NyxPackage:
 
         for x in self.build_steps:
             splitargs = x.split(' ')
-            print(bdir)
             status = subprocess.run(splitargs, shell=False, cwd=bdir, env=env)
             if status.returncode != 0:
                 return False
@@ -92,14 +91,23 @@ class NyxPackage:
         self.util_createpath(sysroot_dir)
         with zipfile.ZipFile(f"{config['package_root']}/{self.name}-{self.version}.zip","r") as zip_ref:
             zip_ref.extractall(sysroot_dir)
-
         return True
 
     def print_info(self):
         print(f"{self.name}-{self.version} | arch: {self.architecture}")
-        print(f"src: {self.src_path} cached: {self.cached}")
+        if (self.isTool):
+            print("Tool")
+        print(f"path: {self.src_path} source: {self.acquisition}")
+        print(f"install: {self.installroot}")
         print(f"tools: {self.tools}")
         print(f"requirements: {self.requirements}")
+        print(f"patches: {self.patches}")
+        print(f"configuration: {self.configure_steps}")
+        print(f"build: {self.build_steps}")
+        print(f"package_steps: {self.package_steps}")
+        print(f"env: {self.enviroment}")
+
+
 
     def util_createpath(self, path):
         if not os.path.isdir(path):

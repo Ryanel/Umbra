@@ -10,7 +10,7 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
 ALL_SOURCES := ${ROOT_SOURCES} ${ARCH_SOURCES} ${SUBARCH_SOURCES}
 
 ALL_OBJECTS := $(patsubst %.cpp, %.o, $(ALL_SOURCES))
-ALL_OBJECTS :=  $(patsubst %.s, %.o, $(ALL_SOURCES)) 
+ALL_OBJECTS :=  $(patsubst %.s, %.o, $(ALL_OBJECTS)) 
 
 KERNEL_LINKER_FILE := ${NYX_ARCH}/${NYX_TARGET}/linker.ld
 
@@ -24,14 +24,17 @@ CXXFLAGS := ${CXXFLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse
  			-DARCH_${NYX_TARGET} -std=c++17 -I ./include -I ./include/stl/ -I ${SYSROOT}/usr/include/ -ffreestanding -nostdlib -lgcc
 
 %.o: %.s
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+	@echo "[ ASM ]: $<"
+	@$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 %.o: %.cpp
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+	@echo "[ CXX ]: $<"
+	@$(CXX) -c $(CXXFLAGS) -o $@ $<
 
 all: kernel.elf
 kernel.elf: ${ALL_OBJECTS}
-	$(CXX) -T ${KERNEL_LINKER_FILE} -o $@ ${CXXFLAGS} ${ALL_OBJECTS} ${LIBRARIES} ${LDFLAGS}
+	@echo "[ LD  ]: $@"
+	@$(CXX) -T ${KERNEL_LINKER_FILE} -o $@ ${CXXFLAGS} ${ALL_OBJECTS} ${LIBRARIES} ${LDFLAGS}
 
 install:
 	@cp kernel.elf ${INSTALL_DIR}

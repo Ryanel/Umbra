@@ -1,0 +1,61 @@
+{
+  "general": {
+    "project": "Umbra",
+    "source_root": "src/",
+    "sysroot": "build/sysroot/",
+    "build_root": "build/temp/",
+    "package_root": "build/packages/",
+
+    "env": {
+      "CC": "x86_64-elf-gcc",
+      "CXX": "x86_64-elf-g++",
+      "AR": "x86_64-elf-ar",
+      "NYX_ARCH": "x86",
+      "NYX_TARGET": "x86_64",
+      "NYX_TARGET_TRIPLE": "x86_64-elf-umbra"
+    }
+  },
+  "packages": {
+    "sys/libc": {
+      "name": "libc",
+      "architecture": "all",
+      "version": "dev",
+      "src_path": "/lib/c",
+      "install_root": "/",
+      "build_steps": [
+        "make"
+      ],
+      "package_steps": [
+        "make install"
+      ]
+    },
+    "sys/kernel": {
+      "name": "kernel",
+      "architecture": "all",
+      "version": "dev",
+      "src_path": "/sys/kernel/",
+      "install_root": "/sys/",
+      "build_steps": [
+        "make"
+      ],
+      "package_steps": [
+        "make install"
+      ],
+      "requirements": [
+        "sys/libc"
+      ]
+    },
+    "boot/limine": {
+      "name": "limine",
+      "is_tool": "True",
+      "architecture": "x86_64",
+      "acquisition": "git",
+      "src_path": "https://github.com/limine-bootloader/limine.git",
+      "git_branch": "v2.0-branch-binary",
+      "installroot": "boot/limine",
+      "build_steps": [ "make -C boot/limine" ],
+      "requirements": [],
+      "package_steps": []
+    }
+  }
+}

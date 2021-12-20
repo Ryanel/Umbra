@@ -10,6 +10,7 @@ import argparse
 import json
 import shutil
 import json
+from graphlib import TopologicalSorter
 
 from nyx.package import *
 
@@ -27,50 +28,51 @@ from nyx.package import *
 # Packages is where installed packages go.
 
 config = dict()
+repo_json = None
+def read_repo():
+    repo_file = open('repo.json')
+    dat = json.load(repo_file)
+    repo_file.close()
+    return dat
 
-def main() -> int:
+def read_packages(repo_json):
+    all_packages = dict()
+    for x in repo_json['packages']:
+        pkg_json = repo_json['packages'][x]
+        pkg = NyxPackage(x)
+        pkg.nice_name       = pkg_json["name"] or x
+        pkg.architecture    = pkg_json["architecture"] or "all"
+        pkg.version         = pkg_json.get("version", "dev")
+        pkg.acquisition     = pkg_json.get("acquisition", "local")
+        pkg.src_path        = pkg_json.get("src_path", "")
+        pkg.tools           = pkg_json.get("tools", [])
+        pkg.requirements    = pkg_json.get("requirements", [])
+        pkg.patches         = pkg_json.get("patches", [])
+        pkg.configure_steps = pkg_json.get("configure_steps", [])
+        pkg.build_steps     = pkg_json.get("build_steps", [])
+        pkg.package_steps   = pkg_json.get("package_steps", [])
+        pkg.installroot     = pkg_json.get("install_root", "/")
+        pkg.enviroment      = pkg_json.get("enviroment", dict())
+        pkg.isTool          = bool(pkg_json.get("is_tool", False))
+        pkg.git_branch      = pkg_json.get("git_branch", "master")
+        all_packages[x] = pkg
+    return all_packages
 
-    limine = NyxPackage("limine")
-    limine.isTool = True
-    limine.architecture = 'x86_64'
-    limine.src_path = ""
-    limine.acquisition = 'git'
-    limine.git_repository = 'https://github.com/limine-bootloader/limine.git'
-    limine.git_branch = 'v2.0-branch-binary'
-    limine.src_path = "tools/limine"
-    limine.build_steps = [
-        'make -C limine'
-    ]
-    limine.package_steps = []
 
-    libc = NyxPackage("libc")
-    libc.src_path = "lib/c"
-    libc.installroot = "/"
+def nyx_build(packages, common_environment) -> int:
+    dep_graph = TopologicalSorter()
+    for x, y in packages.items():
+        dep_graph.add(x, *y.requirements)
 
-    kernel = NyxPackage("kernel")
-    kernel.src_path = "sys/kernel"
-    kernel.installroot = "/sys/"
+    compile_order = [*dep_graph.static_order()]
 
-    packages_to_compile_in_order = [limine, libc, kernel]
 
-    config["source_root"] = "src/"
-    config["sysroot"] = "build/sysroot/"
-    config["build_root"] = "build/temp/"
-    config["package_root"] = "build/packages/"
-
-    common_enviroment = dict()
-    common_enviroment['PATH'] = os.environ.get("PATH")
-    common_enviroment['CC'] = 'x86_64-elf-gcc'
-    common_enviroment['CXX'] = 'x86_64-elf-g++'
-    common_enviroment['AR'] = 'x86_64-elf-ar'
-    common_enviroment['NYX_ARCH'] = 'x86'
-    common_enviroment['NYX_TARGET'] = 'x86_64'
-    common_enviroment['NYX_TARGET_TRIPLE'] = 'x86_64-elf-umbra'
-    common_enviroment['HOST_CC'] = str(os.environ.get("CC"))
-    common_enviroment['HOST_CPP'] = str(os.environ.get("CPP"))
+    packages_to_compile_in_order = []
+    for x in compile_order:
+        packages_to_compile_in_order.append(packages[x])
 
     for pkg in packages_to_compile_in_order:
-        print(f"Compiling {pkg.name}-{pkg.version}")
+        print(f"[nyx]: Compiling {pkg.name}-{pkg.version}")
         # Fetch
         if (not pkg.fetch(config)):
             print(f"Failed to fetch {pkg.name}!")
@@ -80,23 +82,54 @@ def main() -> int:
             print(f"Failed to patch {pkg.name}!")
             return 1
         # Configure
-        if (not pkg.configure(config, common_enviroment)):
+        if (not pkg.configure(config, common_environment)):
             print(f"Failed to configure {pkg.name}!")
             return 1
         # Build
-        if (not pkg.build(config, common_enviroment)):
+        if (not pkg.build(config, common_environment)):
             print(f"Failed to build {pkg.name}!")
             return 1
         # Package
-        if (not pkg.package(config, common_enviroment)):
+        if (not pkg.package(config, common_environment)):
             print(f"Failed to package {pkg.name}!")
             return 1
         if (not pkg.install(config)):
             print(f"Failed to install {pkg.name}!")
             return 1
+    return 0
 
-    subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
-    subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
+def main() -> int:
+    global config
+    global repo_json
+    # Arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("module", help="The module to execute. Can be clean, build, run")
+    parser.add_argument("-r","--run", help="Run an image, if possible", action="store_true")
+
+    args = parser.parse_args()
+    config['run_on_completion'] = args.run or False
+
+    repo_json = read_repo()
+
+    # Read configuration from the repo.json file
+    common_environment = dict()
+    common_environment['PATH'] = os.environ.get("PATH")
+    common_environment |= repo_json['general']['env']
+    config["source_root"] = repo_json['general']['source_root']
+    config["sysroot"] = repo_json['general']['sysroot']
+    config["build_root"] = repo_json['general']['build_root']
+    config["package_root"] = repo_json['general']['package_root']
+
+    # Read in a list of packages...
+    all_packages = read_packages(repo_json)
+
+    if (args.module == 'build'):
+        if (nyx_build(all_packages, common_environment) == 0) and config['run_on_completion']:
+            subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
+            subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
+    elif (args.module == 'clean'):
+        # Just delete the build directory
+        shutil.rmtree(os.path.abspath(config["build_root"]), ignore_errors=False)
     return 0
 
 # Make this file executable...
