@@ -1,173 +1,104 @@
 #!/usr/bin/env python
 
+# Nyx build coordinator
+# By Ryanel
+
 import os
 import sys
 import subprocess
 import argparse
 import json
 import shutil
+import json
 
-config = {
-    'build_directory': "build",
-    'sysroot': "sysroot",
-    'target': 'i686',
-    'cancel_on_fail': True,
-    'buildtool': 'make',
-    'debugger': 'ddd'
-}
+from nyx.package import *
+
+# What Nyx will do:
+# 1. Build a graph of all .nyx files in the src directory
+# 2. Fetch source files (if needed)
+# 3. Patch source files (if requested)
+# 4. Configure
+# 5. Build to a binary package
+# 6. Install into system root.
+
+# Downloaded files will be in cache
+# Final sysroot is in sysroot
+# Temp is where build files go. It follows the format temp/{dir}/{package-name}-{package-version}/
+# Packages is where installed packages go.
+
+config = dict()
 
 def main() -> int:
-    global build_directory
 
-    # Parse arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument("module", help="The module to execute")
-    parser.add_argument("-v","--verbose", help="Increase output verbosity", action="store_true")
-    parser.add_argument("--build-directory", help="Sets the build directory for this invocation")
-    parser.add_argument("-d","--debug", help="Turn on debugging mode", action="store_true")
-    parser.add_argument("-r","--run", help="Run an image, if possible", action="store_true")
-    parser.add_argument("--sysroot", help="Sets the sysroot directory")
-    parser.add_argument("--target", help="Sets the target processor to build for")
-    parser.add_argument("--no-debugger", help="Does not launch a debugger", action="store_true")
-    args = parser.parse_args()
+    limine = NyxPackage("limine")
+    limine.isTool = True
+    limine.architecture = 'x86_64'
+    limine.src_path = ""
+    limine.acquisition = 'git'
+    limine.git_repository = 'https://github.com/limine-bootloader/limine.git'
+    limine.git_branch = 'v2.0-branch-binary'
+    limine.src_path = "tools/limine"
+    limine.build_steps = [
+        'make -C limine'
+    ]
+    limine.package_steps = []
 
-    # Create the build environment
-    if args.build_directory:
-        config['build_directory'] = args.build_directory
+    libc = NyxPackage("libc")
+    libc.src_path = "lib/c"
+    libc.installroot = "/"
 
-    create_build_directory()
+    kernel = NyxPackage("kernel")
+    kernel.src_path = "sys/kernel"
+    kernel.installroot = "/sys/"
 
-    # Load the saved build enviroment, if we already have one
-    config_load()
-    config_modify(args)
-    config_save()
+    packages_to_compile_in_order = [limine, libc, kernel]
 
-    # This is not preserved on load
-    config['debugging'] = args.debug or False
-    config['no-debugger'] = args.no_debugger or False
-    config['run_on_completion'] = args.run or False
+    config["source_root"] = "src/"
+    config["sysroot"] = "build/sysroot/"
+    config["build_root"] = "build/temp/"
+    config["package_root"] = "build/packages/"
 
-    if args.module == 'config':
-        mod_configure()
-    elif args.module == 'build':
-        mod_build()
-    elif args.module == 'run':
-        mod_run()
-    elif args.module == 'debug':
-        mod_debug()
-    elif args.module == 'clean':
-        mod_clean()
-    elif args.module == 'distclean':
-        mod_distclean()
-    elif args.module == 'all':
-        mod_distclean()
-        create_build_directory()
-        config_save() # Persist configuration even after distclean
-        mod_configure()
-        mod_build()  
+    common_enviroment = dict()
+    common_enviroment['PATH'] = os.environ.get("PATH")
+    common_enviroment['CC'] = 'x86_64-elf-gcc'
+    common_enviroment['CXX'] = 'x86_64-elf-g++'
+    common_enviroment['AR'] = 'x86_64-elf-ar'
+    common_enviroment['NYX_ARCH'] = 'x86'
+    common_enviroment['NYX_TARGET'] = 'x86_64'
+    common_enviroment['NYX_TARGET_TRIPLE'] = 'x86_64-elf-umbra'
+    common_enviroment['HOST_CC'] = str(os.environ.get("CC"))
+    common_enviroment['HOST_CPP'] = str(os.environ.get("CPP"))
 
+    for pkg in packages_to_compile_in_order:
+        print(f"Compiling {pkg.name}-{pkg.version}")
+        # Fetch
+        if (not pkg.fetch(config)):
+            print(f"Failed to fetch {pkg.name}!")
+            return 1
+        # Patch
+        if (not pkg.patch(config)):
+            print(f"Failed to patch {pkg.name}!")
+            return 1
+        # Configure
+        if (not pkg.configure(config, common_enviroment)):
+            print(f"Failed to configure {pkg.name}!")
+            return 1
+        # Build
+        if (not pkg.build(config, common_enviroment)):
+            print(f"Failed to build {pkg.name}!")
+            return 1
+        # Package
+        if (not pkg.package(config, common_enviroment)):
+            print(f"Failed to package {pkg.name}!")
+            return 1
+        if (not pkg.install(config)):
+            print(f"Failed to install {pkg.name}!")
+            return 1
+
+    subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
+    subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
     return 0
 
-def create_build_directory():
-    global config
-    dir = config['build_directory']
-    try:
-        os.mkdir(dir)
-        print('[configure] Created build directory: ' + dir)
-    except FileExistsError as error:
-        return
-
-def helper_make_directory(dir):
-    try:
-        os.makedirs(dir)
-    except FileExistsError as error:
-        return
-
-# Modules
-
-def config_load():
-    global config
-    build_dir = config['build_directory']
-
-    try:
-        with open(build_dir + '/nyx.json', 'r') as convert_file:
-            data = json.load(convert_file)
-            config = data
-    except FileNotFoundError as error:
-        return
-
-def config_modify(args):
-    global config
-    if args.sysroot:
-        config['sysroot'] = args.sysroot
-    if args.target:
-        config['target'] = args.target
-
-def config_save():
-    global config
-    build_dir = config['build_directory']
-    with open(build_dir + '/nyx.json', 'w') as convert_file:
-        convert_file.write(json.dumps(config))
-
-def mod_configure():
-    global config
-    toolchain_file = 'nyx/targets/' + config['target'] + '.cmake'
-    toolchain_abs_path = os.path.abspath(toolchain_file)
-    system_root = os.path.abspath(config['build_directory'] +  '/' + config['sysroot'])
-    cmake_config = ['cmake', f'-DCMAKE_TOOLCHAIN_FILE={toolchain_abs_path}', f'-DCMAKE_SYSROOT={system_root}', f'-DCMAKE_STAGING_PREFIX={system_root}']
-
-    print('[configure] Configuring the build directory for target "' + config['target'] + '"')
-
-    helper_make_directory(config['build_directory'] + '/temp/')
-    subprocess.run(cmake_config + ['-S', './src/', '-B', f"{config['build_directory']}/temp"], stdout=sys.stdout)
-
-def mod_build():
-    global config
-    src_dir = os.path.abspath(config['build_directory'] + '/temp/')
-    compile_results = subprocess.run([config['buildtool']], stdout=sys.stdout, cwd=src_dir)
-
-    if config['cancel_on_fail'] and compile_results.returncode > 0:
-        print("Build failed, cancelling future build steps.")
-        exit(1)
-
-    subprocess.run([config['buildtool'], 'install'], stdout=sys.stdout, cwd=src_dir)
-
-    if (config['target'] == 'i686'):
-        subprocess.run(['./nyx/scripts/x86-create-iso.sh'], shell=True, stdout=sys.stdout)
-    elif (config['target'] == 'x86_64'):
-        subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
-    if config['run_on_completion']:
-        mod_run()
-
-def mod_run():
-    if config['debugging']:
-        mod_debug()
-    else:
-        subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
-
-def mod_debug():
-    global config
-    if (not config['no-debugger']):
-        subprocess.Popen([config['debugger']])
-
-    if (config['target'] == 'i686'):
-        subprocess.run(['./nyx/scripts/x86-run-debug.sh'], shell=True, stdout=sys.stdout)
-    elif (config['target'] == 'x86_64'):
-        subprocess.run(['./nyx/scripts/x86_64-run-debug.sh'], shell=True, stdout=sys.stdout)
-
-def mod_clean():
-    global config
-
-    src_dir = os.path.abspath(config['build_directory'] + '/temp/')
-    subprocess.run([config['buildtool'], 'clean'], stdout=sys.stdout, cwd=src_dir)
-
-    system_root = os.path.abspath(config['build_directory'] +  '/' + config['sysroot'])
-    shutil.rmtree(system_root, ignore_errors=False)
- 
-def mod_distclean():
-    global config
-    build_dir = os.path.abspath(config['build_directory'])
-    shutil.rmtree(build_dir, ignore_errors=False)
- 
+# Make this file executable...
 if __name__ == '__main__':
     sys.exit(main())

@@ -1,6 +1,9 @@
 build/
+build_old
+
 .vscode/
 .gdbinit
+__pycache__
 
 *.o
 *.a
