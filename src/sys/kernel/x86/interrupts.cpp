@@ -32,7 +32,7 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
 
 #else
 
-    kernel::log::error("error", "rip: 0x%08x int:%02x err:%08x rflags:%08x\n", regs->rip, regs->int_no, regs->err_code,
+    kernel::log::error("error", "rip: 0x%16p int:%02x err:%08x rflags:%08x\n", regs->rip, regs->int_no, regs->err_code,
                        regs->eflags);
     kernel::log::error("error", "rax:%08x rbx:%08x rcx:%08x rdx:%08x\n", regs->rax, regs->rbx, regs->rcx, regs->rdx);
     kernel::log::error("error", "rbp:%08x rsp:%08x rbp:%08x rbp:%08x\n", regs->rdi, regs->rsi, regs->rbp, regs->rbp);

@@ -80,6 +80,7 @@ class terminal_delegate : public vfs_delegate {
 
 /// The main kernel function.
 void kernel_main() {
+    /*
     // Initialise the full heap
     log::debug("heap", "Setup SLAB heap allocator\n");
     g_heap.init(true);
@@ -120,6 +121,7 @@ void kernel_main() {
 
     log::get().flush();
     scheduler::unlock();  // Start scheduling processes
+    */
 
     while (true) { asm("hlt"); }
 }

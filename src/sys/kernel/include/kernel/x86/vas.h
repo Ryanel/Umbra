@@ -1,74 +1,61 @@
 #pragma once
 
+#include <kernel/types.h>
+
 #define VAS_PRESENT       0x1
 #define VAS_WRITABLE      0x2
 #define VAS_USER          0x4
+#define VAS_HUGE_PAGE     (1 << 7)
 #define VAS_DEMAND_MAPPED (1 << 9)
 
-typedef struct paging_page {
-    union {
-        struct {
-            unsigned int present : 1;
-            unsigned int write : 1;
-            unsigned int user : 1;
-            unsigned int write_through : 1;
-            unsigned int cache_disable : 1;
-            unsigned int accessed : 1;
-            unsigned int dirty : 1;
-            unsigned int page_attribute_table : 1;
-            unsigned int available : 3;
-            unsigned int address : 20;
-        };
-        uint32_t raw;
-    };
-} page_t;
+#ifdef ARCH_X86
 
-typedef struct directory_entry {
-    union {
-        struct {
-            unsigned int present : 1;
-            unsigned int write : 1;
-            unsigned int user : 1;
-            unsigned int write_through : 1;
-            unsigned int cache_disable : 1;
-            unsigned int accessed : 1;
-            unsigned int avalable_2 : 1;
-            unsigned int page_size : 1;
-            unsigned int available : 4;
-            unsigned int address : 20;
-        };
-        uint32_t raw;
-    };
-} page_directory_entry_t;
+#error Unimplemented
+
+#else
+// 64-bit
+#define NUM_PAGES_IN_DIR 512
+typedef uint64_t page_t;
+typedef uint64_t vas_entry_t;
+#endif
 
 typedef struct page_table {
-    page_t entries[1024];
-} page_table_t;
+    page_t entries[NUM_PAGES_IN_DIR];
+} pml1_t;
 
 typedef struct page_directory_raw {
-    page_directory_entry_t entries[1024];
-} page_directory_raw_t;
+    vas_entry_t entries[NUM_PAGES_IN_DIR];
+} pml2_t;
+
+typedef page_directory_raw pml_t;
 
 namespace kernel {
 /// A class that represents a virtual address space
 class vas {
    public:
-    vas() {}
-    vas(virt_addr_t virt, virt_addr_t phys) : directory((page_directory_raw_t*)virt), directory_addr(phys) {}
-
+    vas(virt_addr_t virt, phys_addr_t phys) : directory((pml_t*)virt), directory_addr(phys) {}
     vas*        clone();
     bool        map(phys_addr_t phys, virt_addr_t virt, uint32_t prot, int flags);
     bool        unmap(virt_addr_t addr);
     phys_addr_t physical_addr() const { return directory_addr; }
     inline void tlb_flush_single(unsigned long addr) { asm volatile("invlpg (%0)" ::"r"(addr) : "memory"); }
-    void        set_table_physical(int index, uintptr_t address) { pt_virt[index] = address; }
-    page_t      get_page(uintptr_t address);
-    bool        has_table(uintptr_t address);
-    bool        create_table(uintptr_t address);
+    // void        set_table_physical(int index, uintptr_t address) { pt_virt[index] = address; }
+    page_t get_page(uintptr_t address);
+    bool   has_table(uintptr_t address);
+    bool   create_table(uintptr_t address);
 
    private:
-    page_directory_raw_t* directory;
-    phys_addr_t           directory_addr;
-    virt_addr_t           pt_virt[1024];
+    pml_t*      directory;
+    phys_addr_t directory_addr;
+
+    struct table_info {
+        bool   large_page;
+        int    level;
+        int    idx;
+        int    next_idx;
+        pml_t* ptr;
+    };
+
+    table_info get_table(virt_addr_t addr, bool create, unsigned int desiredLevel = 1);
 };
 }  // namespace kernel
