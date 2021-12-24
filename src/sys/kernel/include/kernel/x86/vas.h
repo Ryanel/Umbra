@@ -33,16 +33,16 @@ namespace kernel {
 /// A class that represents a virtual address space
 class vas {
    public:
+    vas() {}
     vas(virt_addr_t virt, phys_addr_t phys) : directory((pml_t*)virt), directory_addr(phys) {}
     vas*        clone();
     bool        map(phys_addr_t phys, virt_addr_t virt, uint32_t prot, int flags);
     bool        unmap(virt_addr_t addr);
     phys_addr_t physical_addr() const { return directory_addr; }
     inline void tlb_flush_single(unsigned long addr) { asm volatile("invlpg (%0)" ::"r"(addr) : "memory"); }
-    // void        set_table_physical(int index, uintptr_t address) { pt_virt[index] = address; }
-    page_t get_page(uintptr_t address);
-    bool   has_table(uintptr_t address);
-    bool   create_table(uintptr_t address);
+    page_t      get_page(uintptr_t address);
+    bool        has_table(uintptr_t address);
+    bool        create_table(uintptr_t address);
 
    private:
     pml_t*      directory;

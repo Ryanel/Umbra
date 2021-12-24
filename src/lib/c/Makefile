@@ -1,6 +1,8 @@
 SRC=$(wildcard stdio/*.c) $(wildcard stdlib/*.c) $(wildcard string/*.c)
 OBJS = $(patsubst %.c, %.o, $(SRC)) # list of object files
 
+CFLAGS := -O0 -ggdb3
+
 all: libc_kernel.a
 
 %.o: %.c

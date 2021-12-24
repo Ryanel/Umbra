@@ -5,9 +5,12 @@
 #include <kernel/hal/fb_text_console.h>
 #include <kernel/hal/sw_framebuffer.h>
 #include <kernel/log.h>
+#include <kernel/mm/heap.h>
 #include <kernel/mm/memory.h>
 #include <kernel/mm/pmm.h>
+#include <kernel/mm/vmm.h>
 #include <kernel/time.h>
+#include <kernel/x86/pager.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -101,6 +104,8 @@ void boot_init_log(struct stivale2_struct* svs) {
     kernel::log::status_log("Done", 0xA);
 }
 
+vas kernel_vas;
+
 void boot_init_memory(struct stivale2_struct* svs) {
     uint64_t max_ram_addr = 0;
 
@@ -116,7 +121,9 @@ void boot_init_memory(struct stivale2_struct* svs) {
     assert(kbas_tag != nullptr);
 
     // Find the kernel's place in memory
-    kernel::hhdm_set_virtbase(hhdm_tag->addr);
+    kernel::hhdm_set_vbase(hhdm_tag->addr);
+    kernel::hhdm_set_kern_pbase(kbas_tag->physical_base_address);
+    kernel::hhdm_set_kern_vbase(kbas_tag->virtual_base_address);
 
     // Start accounting physical memory.
     kernel::g_pmm.init();
@@ -140,16 +147,17 @@ void boot_init_memory(struct stivale2_struct* svs) {
 
     pml_t* pml4 = (pml_t*)(hhdm_tag->addr + g_pmm.alloc_single(0));
     memset(pml4, sizeof(pml_t), 0);
-    vas current_vas((virt_addr_t)pml4, kernel::virt_to_phys_addr((virt_addr_t)pml4));
+    kernel_vas = vas((virt_addr_t)pml4, kernel::virt_to_phys_addr((virt_addr_t)pml4));
 
     // Map the HHDM
     size_t base = hhdm_tag->addr;
     size_t step = 0x200000;
     size_t max  = max_ram_addr;
-    for (size_t i = 0; i < (max / step); i++) { current_vas.map((step * i), base + (step * i), 0x03, VAS_HUGE_PAGE); }
+    for (size_t i = 0; i < (max / step); i++) { kernel_vas.map((step * i), base + (step * i), 0x03, VAS_HUGE_PAGE); }
 
     // Map the kernel into the page table.
 
+    uint64_t last_kernel_vaddr = 0;
     for (size_t i = 0; i < pmr_tag->entries; i++) {
         auto& pmr = pmr_tag->pmrs[i];
 
@@ -161,23 +169,29 @@ void boot_init_memory(struct stivale2_struct* svs) {
             if (pmr.permissions && STIVALE2_PMR_READABLE) { perm |= 0x1; }
             if (pmr.permissions && STIVALE2_PMR_WRITABLE) { perm |= 0x2; }
 
-            current_vas.map(paddr, offset, perm, 0);
-        }
-    }
-
-    for (unsigned int i = 0; i < mmap_tag->entries; i++) {
-        auto& map = mmap_tag->memmap[i];
-        if (map.type == 0x1002) {
-            for (size_t i = 0; i < map.length; i += 0x1000) {
-                current_vas.map(map.base + i, (virt_addr_t)(con_fb.framebuffer.m_buffer) + i, 0x03, 0);
-            }
+            kernel_vas.map(paddr, offset, perm, 0);
+            last_kernel_vaddr = std::max(last_kernel_vaddr, offset);
         }
     }
 
     // Map the Framebuffer, if needed.
-    kernel::g_pmm.print_statistics();
-    set_page_table(current_vas.physical_addr());
+    for (unsigned int i = 0; i < mmap_tag->entries; i++) {
+        auto& map = mmap_tag->memmap[i];
+        if (map.type == 0x1002) {
+            for (size_t i = 0; i < map.length; i += 0x1000) {
+                kernel_vas.map(map.base + i, (virt_addr_t)(con_fb.framebuffer.m_buffer) + i, 0x03, 0);
+            }
+        }
+    }
+
+    g_cpu_data[0].current_vas = &kernel_vas;
+    set_page_table(g_cpu_data[0].current_vas->physical_addr());
+
+    // VMM is now ready. Initialise the heap.
+    g_heap.init(false, last_kernel_vaddr);
 }
+
+void kernel_main();
 
 // The following will be our kernel's entry point.
 extern "C" void _start(struct stivale2_struct* stivale2_struct) {
@@ -194,7 +208,7 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
         kernel::log::info("smp", "%d cores detected\n", smp_tag->cpu_count);
         for (size_t i = 0; i < smp_tag->cpu_count; i++) {
             g_cpu_data[i].lapic_id = smp_tag->smp_info[i].lapic_id;
-            g_cpu_data[i].id = smp_tag->smp_info[i].processor_id;
+            g_cpu_data[i].id       = smp_tag->smp_info[i].processor_id;
         }
     }
 
@@ -207,7 +221,9 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
     // Initialise the memory
     boot_init_memory(stivale2_struct);
 
+    kernel::x86_pager pager;
+    kernel::interrupts::handler_register(14, &pager);  // Handle paging
     // We're done, just hang...
-    kernel::log::warn("kernel", "Finished\n");
+    kernel_main();
     for (;;) { asm("hlt"); }
 }

@@ -126,6 +126,8 @@ def main() -> int:
         if (nyx_build(all_packages, common_environment) == 0) and config['run_on_completion']:
             subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
             subprocess.run(['./nyx/scripts/x86-run.sh'], shell=True, stdout=sys.stdout)
+    elif (args.module == 'debug'):
+        subprocess.run(['./nyx/scripts/x86_64-run-debug.sh'], shell=True, stdout=sys.stdout)
     elif (args.module == 'clean'):
         # Just delete the build directory
         shutil.rmtree(os.path.abspath(config["build_root"]), ignore_errors=False)

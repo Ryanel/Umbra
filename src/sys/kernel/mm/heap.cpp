@@ -3,6 +3,7 @@
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
+#include <kernel/mm/memory.h>
 
 kheap g_heap;
 
@@ -22,22 +23,22 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
         return (virt_addr_t)slab_alloc.alloc(sz, flags, nullptr);
     } else {
         // Align if requested
-        if (((flags & KHEAP_PAGEALIGN) != 0) && ((early_placement & 0xFFFFF000) != early_placement)) {
-            early_placement &= 0xFFFFF000;
+        if (((flags & KHEAP_PAGEALIGN) != 0) && ((early_placement & 0xFFFFFFFFFFFFF000) != early_placement)) {
+            early_placement &= 0xFFFFFFFFFFFFF000;
             early_placement += 0x1000;
         }
 
         auto newAddr = early_placement;
-        auto phys    = newAddr - 0xC0000000;
+        auto phys    = kernel::virt_to_phys_addr(newAddr);
 
         if ((flags & KHEAP_PHYSADDR) != 0 && paddr != nullptr) { *paddr = phys; }
 
         // okay, we need to make sure this is mapped...
         if (!kernel::g_pmm.used(phys)) {
             // It's not, map it...
-            for (size_t i = 0; i < sz; i += 0x1000) {
-                kernel::log::trace("kheap", "grew a page @ 0x%08x\n", phys + i);
-                kernel::g_vmm.mmap_direct(early_placement + i, phys + i, VMM_PROT_WRITE, 0);
+            for (uintptr_t i = 0; i < sz; i += 0x1000) {
+                kernel::log::trace("kheap", "grew a page @ 0x%016p\n", phys + i);
+                kernel::g_vmm.mmap_direct(early_placement + i, phys + i, VMM_PROT_WRITE, VMM_FLAG_POPULATE);
             }
         }
 
@@ -60,13 +61,13 @@ void kheap::free(virt_addr_t addr) {
 void kheap::init(bool full, uintptr_t placement_addr) {
     this->m_full = full;
     if (full) {
-        early_placement &= 0xFFFFF000;
+        early_placement &= 0xFFFFFFFFFFFFF000;
         early_placement += 0x1000;
         slab_alloc.init(early_placement, 0x100000);  // TODO: Define a max heap size!
     } else {
         early_placement = placement_addr;
-        if (early_placement & 0xFFFFF000) {
-            early_placement &= 0xFFFFF000;
+        if (early_placement & 0xFFFFFFFFFFFFF000) {
+            early_placement &= 0xFFFFFFFFFFFFF000;
             early_placement += 0x1000;
         }
     }

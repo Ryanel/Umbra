@@ -79,7 +79,7 @@ void fb_text_console::write(char c, unsigned char fore, unsigned char back) {
 
 void fb_text_console::draw_char(int xpos, int ypos, char c, unsigned char fore, unsigned char back) {
     unsigned int glyph_index = c - 32;
-    if (c < 32) { return; }
+    if (c <= 32) { return; }
 
     unsigned int screen_x = xpos * font_width;
     unsigned int screen_y = ypos * font_height;

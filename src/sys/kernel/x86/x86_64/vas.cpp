@@ -18,24 +18,34 @@
 namespace kernel {
 
 bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t proto, int flags) {
-    if (flags && VAS_HUGE_PAGE != 0) {
-        vas::table_info info             = get_table(virt, true, 2);
-        info.ptr->entries[info.next_idx] = phys | proto | VAS_HUGE_PAGE;
+    if ((flags & VMM_FLAG_POPULATE) != 0) {
+        proto |= VAS_PRESENT;
+    } else {
+        proto |= VAS_DEMAND_MAPPED;
+    }
+
+    if ((flags & VAS_HUGE_PAGE) != 0) {
+        vas::table_info info        = get_table(virt, true, 2);
+        info.ptr->entries[info.idx] = phys | proto | VAS_HUGE_PAGE;
         return true;
     }
 
-    //log::debug("map", "0x%016p -> 0x%016p\n", phys, virt);
+    vas::table_info info = get_table(virt, true, 1);
 
-    vas::table_info info = get_table(virt, true);
-
-    info.ptr->entries[info.next_idx] = phys | proto;
+    info.ptr->entries[info.idx] = phys | proto;
+    tlb_flush_single(virt);
     return true;
 }
 bool   vas::unmap(virt_addr_t virt) { return true; }
-page_t vas::get_page(uintptr_t virt) { return 0; }
-bool   vas::has_table(uintptr_t virt) { return false; }
-vas*   vas::clone() { return nullptr; }
-bool   vas::create_table(uintptr_t vaddr) { return false; }
+
+page_t vas::get_page(uintptr_t virt) {
+    auto tab = get_table(virt, false);
+    return tab.ptr->entries[tab.idx];
+}
+
+bool vas::has_table(uintptr_t virt) { return false; }
+vas* vas::clone() { return nullptr; }
+bool vas::create_table(uintptr_t vaddr) { return false; }
 
 vas::table_info vas::get_table(virt_addr_t addr, bool create, unsigned int desiredLevel) {
     constexpr size_t max_level = 4;  // We don't support PML5 yet
@@ -49,27 +59,19 @@ vas::table_info vas::get_table(virt_addr_t addr, bool create, unsigned int desir
     indicies[3] = (unsigned long)(addr >> 30) & 511;
     indicies[2] = (unsigned long)(addr >> 21) & 511;
     indicies[1] = (unsigned long)(addr >> 12) & 511;
-    indicies[0] = 0;
 
-    /*
-        kernel::log::debug("pg", "get_table 0x%016p %d:%d:%d:%d\n", addr, indicies[4], indicies[3], indicies[2],
-                           indicies[1]);
-    */
     // Going from PML to PML descending, get the next entry. Creates PMLs if create=true
-    pml_t* current = this->directory;
     assert(directory != nullptr);
 
     table_info info;
-    info.ptr        = current;
-    info.large_page = false;
+    info.ptr = this->directory;
 
     for (size_t current_level = max_level; current_level > desiredLevel; current_level--) {
         size_t cur_idx = indicies[current_level];
-        assert(current != nullptr);
-        // kernel::log::debug("pg", "lv: %d 0x%016p\n", current_level, current);
+        assert(info.ptr != nullptr);
 
-        vas_entry_t next = current->entries[cur_idx];
         info.level       = current_level;
+        vas_entry_t next = info.ptr->entries[cur_idx];
 
         // Now, check if 2MB paging is enabled. If it is, simply return current
         if ((next & (1 << 7)) != 0) {
@@ -83,21 +85,18 @@ vas::table_info vas::get_table(virt_addr_t addr, bool create, unsigned int desir
         if (next == 0 && create) {
             phys_addr_t phys = kernel::g_pmm.alloc_single(0);
             virt_addr_t virt = kernel::phys_to_virt_addr(phys);
-            // kernel::log::debug("pg", "created new page table at: 0x%016p\n", phys);
 
-            current->entries[cur_idx] = phys | 0x03;  // Page tables are always present
-            next                      = current->entries[cur_idx];
+            info.ptr->entries[cur_idx] = phys | 0x03;  // Page tables are always present
+            next                       = info.ptr->entries[cur_idx];
         } else if (next == 0) {  // Don't create, simply return
             info.ptr = nullptr;
             return info;
         }
 
-        current = (pml_t*)kernel::phys_to_virt_addr(next & 0xFFFFFFFFFFFFF000);
+        info.ptr = (pml_t*)kernel::phys_to_virt_addr(next & 0xFFFFFFFFFFFFF000);
     }
 
-    info.ptr      = current;
-    info.next_idx = indicies[info.level - 1];
-    info.idx      = indicies[info.level];
+    info.idx = indicies[info.level - 1];
 
     return info;
 }

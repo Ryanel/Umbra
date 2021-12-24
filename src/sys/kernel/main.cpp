@@ -80,15 +80,16 @@ class terminal_delegate : public vfs_delegate {
 
 /// The main kernel function.
 void kernel_main() {
-    /*
     // Initialise the full heap
     log::debug("heap", "Setup SLAB heap allocator\n");
     g_heap.init(true);
     kernel::g_pmm.print_statistics();
+
     // Setup interrupt handler for system calls
     log::info("kernel", "Setting up System calls\n");
     interrupts::handler_register(0x80, new syscall_handler());
 
+    /*
     // Setup the scheduler
     log::info("kernel", "Initializing the scheduler...\n");
     scheduler::init(g_vmm.vas_current);
@@ -122,6 +123,14 @@ void kernel_main() {
     log::get().flush();
     scheduler::unlock();  // Start scheduling processes
     */
+
+    kernel::g_pmm.print_statistics();
+    g_heap.debug();
+
+    kernel::log::info("main", "Reached end of kernel_main()\n");
+    log::get().flush();
+
+    asm("sti");
 
     while (true) { asm("hlt"); }
 }

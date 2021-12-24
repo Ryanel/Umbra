@@ -16,8 +16,8 @@ KERNEL_LINKER_FILE := ${NYX_ARCH}/${NYX_TARGET}/linker.ld
 
 LIBRARIES := ${SYSROOT}/lib/libc_kernel.a
 
-CFLAGS ?= -Og
-CXXFLAGS ?= -Og
+CFLAGS ?= -Og -ggdb3
+CXXFLAGS ?= ${CFLAGS}
 LDFLAGS ?= -z max-page-size=0x1000
 CXXFLAGS := ${CXXFLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-builtin \
 			-fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib -fstack-protector-strong \

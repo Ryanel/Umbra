@@ -1,3 +1,4 @@
+#include <kernel/cpu.h>
 #include <kernel/interrupts.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
@@ -112,7 +113,7 @@ void scheduler::schedule() {
             auto* next = list_ready.front();
             list_ready.pop_front();
             next->m_slice_ns          = determine_timeslice(next);
-            kernel::g_vmm.vas_current = next->m_owner->m_directory;
+            g_cpu_data[0].current_vas = next->m_owner->m_directory;
             thread_switch(next);
         }
     }

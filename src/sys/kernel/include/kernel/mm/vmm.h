@@ -4,6 +4,7 @@
 #include <kernel/mm/vas.h>
 #include <kernel/types.h>
 #include <stddef.h>
+#include <kernel/cpu.h>
 
 #define VMM_MMAP_READABLE        0x1
 #define VMM_PROT_WRITE           0x2
@@ -30,14 +31,9 @@ class virt_mm {
 
    public:
     // Written for multi-cpu support down the line
-    vas* current_vas() { return vas_current; }
-    vas* vas_current;  // HACK: Only works for singlethreaded CPUs.
+    vas* current_vas() { return g_cpu_data[0].current_vas; }
 };
 
 extern virt_mm g_vmm;
 }  // namespace kernel
 
-// 0x00000000 -> 0xBFFFFFFFF is the User Region. This is where user processes and code goes. 0x0 is never mapped, this
-// prevents null pointer errors. 0xC0000000+ is the kernel region. Anything in the kernel region is mapped verbaitm into
-// every task 0xC0100000  is the kernel code base. 0xC0200000+ is the kernel heap. Any kernel heap allocated objects
-// will be able to go here
