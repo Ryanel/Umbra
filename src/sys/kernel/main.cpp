@@ -83,17 +83,16 @@ void kernel_main() {
     // Initialise the full heap
     log::debug("heap", "Setup SLAB heap allocator\n");
     g_heap.init(true);
-    kernel::g_pmm.print_statistics();
 
     // Setup interrupt handler for system calls
     log::info("kernel", "Setting up System calls\n");
     interrupts::handler_register(0x80, new syscall_handler());
 
-    /*
     // Setup the scheduler
     log::info("kernel", "Initializing the scheduler...\n");
-    scheduler::init(g_vmm.vas_current);
+    scheduler::init(g_cpu_data[0].current_vas);
 
+    /*
     // Create a virtual filesystem.
     log::info("vfs", "Initiailize the virtual filesystem\n");
     vfs::g_vfs.init();
@@ -121,8 +120,8 @@ void kernel_main() {
     kernel::g_pmm.print_statistics();
 
     log::get().flush();
-    scheduler::unlock();  // Start scheduling processes
     */
+   
 
     kernel::g_pmm.print_statistics();
     g_heap.debug();
@@ -132,5 +131,6 @@ void kernel_main() {
 
     asm("sti");
 
+    scheduler::unlock();  // Start scheduling processes
     while (true) { asm("hlt"); }
 }

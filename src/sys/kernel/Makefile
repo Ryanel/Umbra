@@ -23,9 +23,11 @@ CXXFLAGS := ${CXXFLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse
 			-fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib -fstack-protector-strong \
  			-DARCH_${NYX_TARGET} -std=c++17 -I ./include -I ./include/stl/ -I ${SYSROOT}/usr/include/ -ffreestanding -nostdlib -lgcc
 
+ASMFLAGS ?= -g -f elf64 
+
 %.o: %.s
 	@echo "[ ASM ]: $<"
-	@$(CXX) -c $(CXXFLAGS) -o $@ $<
+	@$(ASM) $(ASMFLAGS) -o $@ $<
 
 %.o: %.cpp
 	@echo "[ CXX ]: $<"

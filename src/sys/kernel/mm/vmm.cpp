@@ -72,12 +72,13 @@ virt_addr_t virt_mm::get_virt_addr(virt_addr_t addr, int flags) {
 }
 
 void virt_mm::fulfill_demand_page(virt_addr_t virt) {
+    vas*        current       = current_vas();
     virt_addr_t aligned_vaddr = virt & 0xFFFFFFFFFFFFF000;
-    page_t      pg            = current_vas()->get_page(aligned_vaddr);
-
-    phys_addr_t physpage = kernel::g_pmm.alloc_single(PMM_REGION_RAM);
+    page_t      pg            = current->get_page(aligned_vaddr);
 
     assert((pg & VAS_HUGE_PAGE) == 0 && "Huge page demand mapping not implemented");
 
-    current_vas()->map(physpage, aligned_vaddr, pg & 0b1111111, VMM_FLAG_POPULATE);
+    phys_addr_t physpage = kernel::g_pmm.alloc_single(PMM_REGION_RAM);
+
+    current->map(physpage, aligned_vaddr, pg & 0b1111111, VMM_FLAG_POPULATE);
 }

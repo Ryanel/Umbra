@@ -58,7 +58,7 @@ void scheduler::init(vas* kernel_vas) {
     current_tcb->m_priority    = 0;  // Lowest priority
     current_tcb->m_name        = "idle thread";
 
-    thread_switch(&idle_thread);
+    thread_switch(current_tcb);
 
     // Immediately, we'll spawn the reaper thread
     reaper = new thread(kernel_task, (void*)&thread_reaper, "reaper");
@@ -244,4 +244,11 @@ void scheduler::unlock() {
 
     lock_queues--;
     if (lock_queues == 0) { interrupts_enable(); }
+}
+
+extern "C" void swap_vas(thread* a) {
+    scheduler::debug_print_thread(a);
+    if (a->m_owner != current_task) {
+        kernel::log::debug("thr","Swapping VAS of 0x%016p\n", a);
+    }
 }

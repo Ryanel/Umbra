@@ -11,7 +11,7 @@ namespace tasks {
 
 struct task;
 
-enum class thread_state : uint8_t { dead, ready_to_run = 1, running = 2, blocked, sleeping };
+enum class thread_state : uintptr_t { dead, ready_to_run = 1, running = 2, blocked, sleeping };
 
 /// A thread of execution
 struct thread : public object {

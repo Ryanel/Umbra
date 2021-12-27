@@ -117,10 +117,10 @@ class ref_counted {
         return m_refs == 0;
     }
 
-    uint32_t ref_count() const { return m_refs; }
+    uintptr_t ref_count() const { return m_refs; }
 
    private:
-    uint32_t m_refs = 0;
+    uintptr_t m_refs = 0;
 };
 
 }  // namespace kernel

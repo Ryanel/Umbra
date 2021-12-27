@@ -1,8 +1,7 @@
-.intel_syntax noprefix
-.extern k_exception_handler
-.extern k_irq_handler
+extern k_exception_handler
+extern k_irq_handler
 
-.macro interrupt_save_rframe
+%macro interrupt_save_rframe 0
     push rax
     push rcx
     push rdx
@@ -18,9 +17,9 @@
     push r13
     push r14
     push r15
-.endm
+%endmacro
 
-.macro interrupt_load_rframe
+%macro interrupt_load_rframe 0
     pop r15
     pop r14
     pop r13
@@ -36,52 +35,51 @@
     pop rdx
     pop rcx
     pop rax
-.endm
+%endmacro
 
-.macro isr_handler name, num
-.global \name
-\name:
-    iretq
-    pushq 0x0                    # Error Code
-    pushq \num                   # Int Number
+%macro isr_handler 2
+global %1
+%1:
+    push 0x0                    ; Error Code
+    push %2                     ; Int Number
     jmp isr_common
-.endm
+%endmacro
 
-.macro isr_handler_error name, num
-.global \name
-\name:
-                                # Error Pushed By CPU already
-    pushq \num                   # Int Number
+%macro isr_handler_error 2
+global %1
+%1:
+                                ; Error Pushed By CPU already
+    push %2                     ; Int Number
     jmp isr_common
-.endm
+%endmacro
 
-.macro irq_handler name, num
-.global \name
-\name:
-    pushq 0                      # Error Code
-    pushq \num                   # Int Number
+%macro irq_handler 2
+global %1
+%1:
+    push 0                      ; Error Code
+    push %2                     ; Int Number
     jmp irq_common
-.endm
+%endmacro
 
 isr_common:
     interrupt_save_rframe
-    mov rdi, rsp                # First argument is the register file
-    xor rbp, rbp                # New stack frame
+    mov rdi, rsp                ; First argument is the register file
+    xor rbp, rbp                ; New stack frame
     cld
     call k_exception_handler
     interrupt_load_rframe
-    add rsp, 16                 # Error Code + IRQ number cleanup
-    iretq                       # Return
+    add rsp, 16                 ; Error Code + IRQ number cleanup
+    iretq                       ; Return
 
 irq_common:
     interrupt_save_rframe
-    mov rdi, rsp                # First argument is the register file
-    xor rbp, rbp                # New stack frame
+    mov rdi, rsp                ; First argument is the register file
+    xor rbp, rbp                ; New stack frame
     cld
     call k_irq_handler
     interrupt_load_rframe
-    add rsp, 16                 # Error Code + IRQ number cleanup
-    iretq                       # Return
+    add rsp, 16                 ; Error Code + IRQ number cleanup
+    iretq                       ; Return
 
 isr_handler         interrupt_isr0,  0
 isr_handler         interrupt_isr1,  1

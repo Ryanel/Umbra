@@ -1,11 +1,10 @@
-.intel_syntax noprefix
-.extern after_gdt
-.global setupGDT
+global after_gdt
+global setupGDT
 
 setupGDT:
     lgdt    [rdi]
 
-    # Set segement registers
+    ; Set segement registers
     push    rax
     mov     ax,     0x10
     mov     ss,     ax
@@ -14,62 +13,61 @@ setupGDT:
     mov     fs,     ax
     mov     gs,     ax
 
-    # Swap code segment
-    movabs  rax, offset after_gdt
-    pushq   0x08            # New CS
-    push    rax             # "Return location"
-    retfq                   # Swap!
+    ; Swap code segment
+    mov     rax,    after_gdt
+    push    0x08                    ; New CS
+    push    rax                     ; "Return location"
+    retfq                           ; Swap!
 
-.global after_gdt
 after_gdt:
     pop rax
     ret
 
-# GDT.
-.section .rodata
-.align 16
+; GDT.
+section .rodata
+align 16
 gdt64:
-    .null:                          # The null descriptor.
-    .word 0xFFFF                    # Limit (low).
-    .word 0                         # Base (low).
-    .byte 0                         # Base (middle)
-    .byte 0                         # Access.
-    .byte 1                         # Granularity.
-    .byte 0                         # Base (high).
+.null:                           ; The null descriptor.
+    dw 0xFFFF                    ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 0                         ; Access.
+    db 1                         ; Granularity.
+    db 0                         ; Base (high).
 
-    .kcode:                         # The code descriptor.
-    .word 0                         # Limit (low).
-    .word 0                         # Base (low).
-    .byte 0                         # Base (middle)
-    .byte 0b10011010                # Access (exec/read).
-    .byte 0b10101111                # Granularity, 64 bits flag, limit19:16.
-    .byte 0                         # Base (high).
+.kcode:                          ; The code descriptor.
+    dw 0                         ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 0b10011010                ; Access (exec/read).
+    db 0b10101111                ; Granularity, 64 bits flag, limit19:16.
+    db 0                         ; Base (high).
 
-    .kdata:                         # The data descriptor.
-    .word 0                         # Limit (low).
-    .word 0                         # Base (low).
-    .byte 0                         # Base (middle)
-    .byte 0b10010010                # Access (read/write).
-    .byte 0b00000000                # Granularity.
-    .byte 0                         # Base (high).
+.kdata:                          ; The data descriptor.
+    dw 0                         ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 0b10010010                ; Access (read/write).
+    db 0b00000000                ; Granularity.
+    db 0                         ; Base (high).
 
-    .ucode:                         # The code descriptor.
-    .word 0                         # Limit (low).
-    .word 0                         # Base (low).
-    .byte 0                         # Base (middle)
-    .byte 0b11111010                # Access (exec/read).
-    .byte 0b10101111                # Granularity, 64 bits flag, limit19:16.
-    .byte 0                         # Base (high).
+.ucode:                          ; The code descriptor.
+    dw 0                         ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 0b11111010                ; Access (exec/read).
+    db 0b10101111                ; Granularity, 64 bits flag, limit19:16.
+    db 0                         ; Base (high).
 
-    .udata:                         # The data descriptor.
-    .word 0                         # Limit (low).
-    .word 0                         # Base (low).
-    .byte 0                         # Base (middle)
-    .byte 0b11110010                # Access (read/write).
-    .byte 0b00000000                # Granularity.
-    .byte 0                         # Base (high).
+.udata:                          ; The data descriptor.
+    dw 0                         ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 0b11110010                ; Access (read/write).
+    db 0b00000000                ; Granularity.
+    db 0                         ; Base (high).
 
-.global gdt64_pointer
+global gdt64_pointer
 gdt64_pointer:
-    .word gdt64_pointer - gdt64 - 1
-    .quad gdt64
+    dw $ - gdt64 - 1
+    dq gdt64
