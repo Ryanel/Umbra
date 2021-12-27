@@ -10,7 +10,7 @@
       "CXX": "x86_64-elf-g++",
       "AR": "x86_64-elf-ar",
       "ASM": "nasm",
-      "ASMFLAGS": "-f elf64 -g",
+      "ASMFLAGS": "-f elf64 -F dwarf -g",
       "NYX_ARCH": "x86",
       "NYX_TARGET": "x86_64",
       "NYX_TARGET_TRIPLE": "x86_64-elf-umbra"
