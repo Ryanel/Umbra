@@ -1,41 +1,7 @@
+%include "x86/x86_64/regs.asminc"
+
 extern k_exception_handler
 extern k_irq_handler
-
-%macro interrupt_save_rframe 0
-    push rax
-    push rcx
-    push rdx
-    push rbx
-    push rbp
-    push rsi
-    push rdi
-    push r8
-    push r9
-    push r10
-    push r11
-    push r12
-    push r13
-    push r14
-    push r15
-%endmacro
-
-%macro interrupt_load_rframe 0
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdi
-    pop rsi
-    pop rbp
-    pop rbx
-    pop rdx
-    pop rcx
-    pop rax
-%endmacro
 
 %macro isr_handler 2
 global %1
@@ -62,22 +28,22 @@ global %1
 %endmacro
 
 isr_common:
-    interrupt_save_rframe
+    rframe_save
     mov rdi, rsp                ; First argument is the register file
     xor rbp, rbp                ; New stack frame
     cld
     call k_exception_handler
-    interrupt_load_rframe
+    rframe_load
     add rsp, 16                 ; Error Code + IRQ number cleanup
     iretq                       ; Return
 
 irq_common:
-    interrupt_save_rframe
+    rframe_save
     mov rdi, rsp                ; First argument is the register file
     xor rbp, rbp                ; New stack frame
     cld
     call k_irq_handler
-    interrupt_load_rframe
+    rframe_load
     add rsp, 16                 ; Error Code + IRQ number cleanup
     iretq                       ; Return
 

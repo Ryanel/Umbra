@@ -1,52 +1,44 @@
+%include "x86/x86_64/regs.asminc"
+
 extern current_tcb
 extern current_task
 extern set_kernel_stack
 
-PTR_SIZE EQU 8
-OBJ_OFFSET EQU (PTR_SIZE * 4)
-
-TCB_STACK_OFF  EQU (OBJ_OFFSET + ( PTR_SIZE * 0))
-TCB_TASK_OFF   EQU (OBJ_OFFSET + ( PTR_SIZE * 2))
-TCB_STATUS_OFF EQU (OBJ_OFFSET + ( PTR_SIZE * 3))
-TASK_VAS_OFF   EQU (OBJ_OFFSET + ( PTR_SIZE * 0))
+TCB_STACK_OFF  EQU 24
+TCB_TASK_OFF   EQU 40
+TCB_STATUS_OFF EQU 48
+TASK_VAS_OFF   EQU 24
 
 global thread_switch
 extern swap_vas
 
+; void thread_switch(thread* next)
+; rdi = next
 thread_switch:
     ; rdi = Address of New TCB 
-    ; Save registers (Sys-5 ABI)
-    push rbx
-    push rsp
-    push rbp
-    push r12
-    push r13
-    push r14
-    push r15
+    rframe_save
 
     ; Current thread = New thread
-    mov      rbx, [current_tcb]                     ; rbx = Address of Previous TCB
-    mov      [rbx + TCB_STACK_OFF], rsp             ; Save previous stack
+    mov       rbx, [current_tcb]                      ; rbx = Address of Previous TCB
+    mov       [rbx + TCB_STACK_OFF], rsp              ; Save previous stack
 
-    mov      [current_tcb], rdi                     ; Current_tcb = new TCB
-    mov      rsp, [rdi + TCB_STACK_OFF]             ; Load RSP for next task's kernel stack from the new TCB
-    mov qword [rdi + TCB_STATUS_OFF], 2             ; Set state to "running"
-
-    ; rdi = Address of new TCB
+    mov       [current_tcb], rdi                      ; Current_tcb = new TCB
+    mov       rsp, [rdi + TCB_STACK_OFF]              ; Load RSP for next task's kernel stack from the new TCB
+    mov qword [rdi + TCB_STATUS_OFF], 2               ; Set state to "running"
 
     ; Swap VAS
-    ;mov      rbx, [r12 + TASK_VAS_OFF]              ; Load phys addr of VAS from task
-    ;mov      cr3, rbx                               ; Set the active page table to the VAS!
-    ;mov      [current_task], r12                    ; Set the new active task in the scheduler
+    mov     r12, [rdi + TCB_TASK_OFF]                 ; Load thread task ptr
+    mov     r13, [current_task]                       ; Load current task ptr
+    cmp     r12, r13                                  ; Compare
+    je      .switch_vas_done                          ; No need to swap VAS...
 
+    mov       rbx, [r12 + TASK_VAS_OFF]               ; Load phys addr of VAS from task
+    mov       cr3, rbx                                ; Set the active page table to the VAS!
+    mov       [current_task], r12                     ; Set the new active task in the scheduler
+
+.switch_vas_done:
     ; Restore registers (Sys-V ABI)
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rbp
-    pop rsp
-    pop rbx
+    rframe_load
     ret
 
 global set_page_table

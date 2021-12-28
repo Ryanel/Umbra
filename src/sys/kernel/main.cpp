@@ -129,8 +129,6 @@ void kernel_main() {
     kernel::log::info("main", "Reached end of kernel_main()\n");
     log::get().flush();
 
-    asm("sti");
-
     scheduler::unlock();  // Start scheduling processes
     while (true) { asm("hlt"); }
 }
