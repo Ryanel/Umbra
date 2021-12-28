@@ -23,11 +23,12 @@
       "version": "dev",
       "src_path": "/lib/c",
       "install_root": "/",
+      "acquisition": "local_copy",
       "build_steps": [
         "make"
       ],
       "package_steps": [
-        "make install"
+        
       ]
     },
     "sys/kernel": {
@@ -36,6 +37,7 @@
       "version": "dev",
       "src_path": "/sys/kernel/",
       "install_root": "/sys/",
+      "acquisition": "local",
       "build_steps": [
         "make"
       ],
@@ -63,6 +65,7 @@
       "src_path": "/apps/test_program",
       "version": "dev",
       "install_root": "/apps/",
+      "acquisition": "local_copy",
       "build_steps": [
         "make"
       ],

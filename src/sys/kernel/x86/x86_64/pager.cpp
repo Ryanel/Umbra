@@ -13,7 +13,7 @@ bool kernel::x86_pager::handle_interrupt(register_frame_t* regs) {
     if (!present && write) {
         bool demand_paging = (kernel::g_vmm.current_vas()->get_page(faulting_address) & VAS_DEMAND_MAPPED) != 0;
         if (demand_paging) {
-            kernel::log::trace("pager", "Fufilling demand paging: 0x%16p\n", faulting_address);
+            //kernel::log::trace("pager", "Fufilling demand paging: 0x%16p\n", faulting_address);
             kernel::g_vmm.fulfill_demand_page(faulting_address);
             return true;
         }

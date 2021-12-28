@@ -8,7 +8,7 @@ class NyxPackage:
     def __init__(self, name):
         self.name = name
         self.version = 'dev'
-        self.acquisition = "local" # Local, git, or http...
+        self.acquisition = "local_copy" # Local, git, or http...
         self.cached = True
         self.src_path = "lib/test/"
         self.architecture = "all"
@@ -21,6 +21,12 @@ class NyxPackage:
         self.installroot = '/lib/'
         self.enviroment = dict()
         self.isTool = False
+
+    def src_dir(self, config):
+        if (self.acquisition == 'local'):
+            return config["source_root"] + self.src_path
+        else:
+            return self.build_dir(config["build_root"])
 
     def build_dir(self, curtmp):
         if (self.isTool):
@@ -38,14 +44,19 @@ class NyxPackage:
         env |= self.enviroment
         env['INSTALL_DIR'] = self.package_dir(config["build_root"])
         env['SYSROOT'] = os.path.abspath(config["sysroot"])
+        env['BUILD_DIR'] = self.build_dir(config["build_root"])
 
         return env
 
     def fetch(self, config) -> bool:
         tmp_dir = self.build_dir(config["build_root"])
-        if (self.acquisition == 'local'):
+        if (self.acquisition == 'local_copy'):
             self.util_createpath(tmp_dir)
             shutil.copytree(config["source_root"] + self.src_path, tmp_dir, dirs_exist_ok=True)
+            return True
+        elif (self.acquisition == 'local'):
+            # Out of source builds here
+            self.util_createpath(tmp_dir)
             return True
         elif (self.acquisition == 'git'):
             # Git clone into this directory
@@ -81,7 +92,9 @@ class NyxPackage:
 
         for x in self.build_steps:
             splitargs = x.split(' ')
-            status = subprocess.run(splitargs, shell=False, cwd=bdir, env=env)
+            cwd = self.src_dir(config)
+
+            status = subprocess.run(splitargs, shell=False, cwd=cwd, env=env)
             if status.returncode != 0:
                 return False
         return True
@@ -94,7 +107,8 @@ class NyxPackage:
 
         for x in self.package_steps:
             splitargs = x.split(' ')
-            status = subprocess.run(splitargs, shell=False, cwd=self.build_dir(config["build_root"]), env=env)
+            cwd = self.src_dir(config)
+            status = subprocess.run(splitargs, shell=False, cwd=cwd, env=env)
             if status.returncode != 0:
                 return False
 
