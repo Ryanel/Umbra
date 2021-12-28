@@ -5,6 +5,7 @@
     "sysroot": "build/sysroot/",
     "build_root": "build/temp/",
     "package_root": "build/packages/",
+    "initrd_root": "build/initrd",
     "env": {
       "CC": "x86_64-elf-gcc",
       "CXX": "x86_64-elf-g++",
@@ -14,7 +15,9 @@
       "NYX_ARCH": "x86",
       "NYX_TARGET": "x86_64",
       "NYX_TARGET_TRIPLE": "x86_64-elf-umbra"
-    }
+    },
+    "run_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown",
+    "debug_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown -S -s"
   },
   "packages": {
     "sys/libc": {
@@ -28,7 +31,7 @@
         "make"
       ],
       "package_steps": [
-        
+        "make install"
       ]
     },
     "sys/kernel": {
@@ -73,8 +76,7 @@
         "make install"
       ],
       "requirements": [
-        "sys/libc",
-        "sys/kernel"
+        "sys/libc"
       ]
     }
   }

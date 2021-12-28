@@ -9,7 +9,7 @@ class NyxPackage:
         self.name = name
         self.version = 'dev'
         self.acquisition = "local_copy" # Local, git, or http...
-        self.cached = True
+        self.cached = False
         self.src_path = "lib/test/"
         self.architecture = "all"
         self.tools = []
@@ -21,6 +21,27 @@ class NyxPackage:
         self.installroot = '/lib/'
         self.enviroment = dict()
         self.isTool = False
+
+    def loadFromJson(self, pkg_json, config):
+        self.friendly_name   = pkg_json["name"] or self.name
+        self.architecture    = pkg_json.get("architecture", "all")
+        self.version         = pkg_json.get("version", "dev")
+        self.acquisition     = pkg_json.get("acquisition", "local")
+        self.src_path        = pkg_json.get("src_path", "")
+        self.tools           = pkg_json.get("tools", [])
+        self.requirements    = pkg_json.get("requirements", [])
+        self.patches         = pkg_json.get("patches", [])
+        self.configure_steps = pkg_json.get("configure_steps", [])
+        self.build_steps     = pkg_json.get("build_steps", [])
+        self.package_steps   = pkg_json.get("package_steps", [])
+        self.installroot     = pkg_json.get("install_root", "/")
+        self.enviroment      = pkg_json.get("enviroment", dict())
+        self.isTool          = bool(pkg_json.get("is_tool", False))
+        self.git_branch      = pkg_json.get("git_branch", "master")
+        self.cached          = os.path.exists(self.pkg_path(config))
+
+    def pkg_path(self, config):
+        return f"{config['package_root']}/{self.name}-{self.version}.zip";
 
     def src_dir(self, config):
         if (self.acquisition == 'local'):
@@ -119,7 +140,7 @@ class NyxPackage:
     def install(self, config) -> bool:
         sysroot_dir = os.path.abspath(f"{config['sysroot']}/{self.installroot}")
         self.util_createpath(sysroot_dir)
-        with zipfile.ZipFile(f"{config['package_root']}/{self.name}-{self.version}.zip","r") as zip_ref:
+        with zipfile.ZipFile(self.pkg_path(config),"r") as zip_ref:
             zip_ref.extractall(sysroot_dir)
         return True
 
