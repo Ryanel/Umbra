@@ -13,6 +13,7 @@
 #include <kernel/x86/pager.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <kernel/panic.h>
 
 #include <algorithm>
 // x86
@@ -218,11 +219,25 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
     kernel::time::system_timer = &timer_pit;
     g_idt.enable_interrupts();
 
+    // Modules
+    auto* mod_tag = (stivale2_struct_tag_modules*)stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_MODULES_ID);
+    assert(mod_tag != nullptr);
+
+    if (mod_tag->module_count <= 0) {
+        log::critical("kernel", "An initial ramdisk must be loaded with the kernel. The kernel will not boot.\n");
+     
+        panic("No initrd loaded");
+    }
+    kernel::boot::boot_file initrd;
+    initrd.name  = "initrd";
+    initrd.size  = mod_tag->modules[0].end - mod_tag->modules[0].begin;
+    initrd.vaddr = mod_tag->modules[0].begin;
+    kernel::boot::g_bootfiles.add(initrd);
+
     // Initialise the memory
     boot_init_memory(stivale2_struct);
+    kernel::interrupts::handler_register(14, new kernel::x86_pager());  // Handle paging
 
-    kernel::x86_pager pager;
-    kernel::interrupts::handler_register(14, &pager);  // Handle paging
     // We're done, just hang...
     kernel_main();
     for (;;) { asm("hlt"); }
