@@ -35,7 +35,7 @@ namespace vfs {
 
 void initrd_provider::init() {
     // First, get the initrd
-    initrd_data = &kernel::boot::g_bootfiles.files[1];  // TODO: A proper search
+    initrd_data = &kernel::boot::g_bootfiles.files[0];  // TODO: A proper search
     auto* root  = kernel::vfs::g_vfs.get_root();        // The initial ramdisk directly overlays ontop of the root.
 
     // Now, comb throug the USTAR formatted initrd.

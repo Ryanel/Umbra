@@ -1,4 +1,4 @@
-ROOT_SOURCES := $(wildcard *.cpp) $(wildcard log/*.cpp) $(wildcard mm/*.cpp) $(wildcard tasks/*.cpp) $(wildcard vfs/*.cpp)
+ROOT_SOURCES := $(wildcard *.cpp) $(wildcard log/*.cpp) $(wildcard mm/*.cpp) $(wildcard tasks/*.cpp) $(wildcard vfs/*.cpp) $(wildcard debug/*.cpp)
 ARCH_SOURCES := $(wildcard ${NYX_ARCH}/*.cpp) $(wildcard ${NYX_ARCH}/drivers/*.cpp)
 SUBARCH_SOURCES := $(wildcard ${NYX_ARCH}/${NYX_TARGET}/*.cpp) $(wildcard ${NYX_ARCH}/${NYX_TARGET}/*.s)
 
@@ -20,7 +20,7 @@ KERNEL_LINKER_FILE := ${NYX_ARCH}/${NYX_TARGET}/linker.ld
 
 LIBRARIES := ${SYSROOT}/lib/libc_kernel.a
 
-CFLAGS ?= -Og -ggdb3
+CFLAGS ?= -Og -ggdb3 -fno-omit-frame-pointer
 CXXFLAGS ?= ${CFLAGS}
 LDFLAGS ?= -z max-page-size=0x1000
 CXXFLAGS := ${CXXFLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-builtin \
@@ -40,6 +40,13 @@ all: ${BUILD_DIR}/kernel.elf
 ${BUILD_DIR}/kernel.elf: ${ALL_OBJECTS}
 	@echo "[ LD  ]: $@"
 	@$(CXX) -T ${KERNEL_LINKER_FILE} -MMD -MP -o $@ ${CXXFLAGS} ${ALL_OBJECTS} ${LIBRARIES} ${LDFLAGS}
+
+symbols:
+	@mkdir -p ${INSTALL_DIR}
+	@echo "Generating Symbol Table (${BUILD_DIR} to ${INSTALL_DIR}"
+	@nm ${BUILD_DIR}/kernel.elf | grep " T " > ${BUILD_DIR}/kernel.sym
+	@python3 create-symbols.py ${BUILD_DIR}
+	@cp ${BUILD_DIR}/syms.bin ${INSTALL_DIR}/syms.bin
 
 install:
 	@cp ${BUILD_DIR}/kernel.elf ${INSTALL_DIR}

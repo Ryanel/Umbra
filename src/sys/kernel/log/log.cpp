@@ -80,7 +80,7 @@ unsigned char kernel::log::log_print_common(const char* category, unsigned char 
     uint32_t boot_secs      = (uint32_t)(boot_ms / 1000);
     uint32_t boot_hundreths = (uint32_t)(boot_ms % 1000);
 
-    printf("%4d.%03d | %10s : ", boot_secs, boot_hundreths, category);
+    printf("%4d.%03d | %s: ", boot_secs, boot_hundreths, category);
 
     return oldFore;
 }

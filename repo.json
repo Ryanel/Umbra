@@ -42,7 +42,8 @@
       "install_root": "/sys/",
       "acquisition": "local",
       "build_steps": [
-        "make"
+        "make",
+        "make symbols"
       ],
       "package_steps": [
         "make install"

@@ -2,6 +2,7 @@
 #include <kernel/boot/boot_file.h>
 #include <kernel/boot/stivale2.h>
 #include <kernel/cpu.h>
+#include <kernel/debug/symbol-file.h>
 #include <kernel/hal/fb_text_console.h>
 #include <kernel/hal/sw_framebuffer.h>
 #include <kernel/log.h>
@@ -9,11 +10,11 @@
 #include <kernel/mm/memory.h>
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
+#include <kernel/panic.h>
 #include <kernel/time.h>
 #include <kernel/x86/pager.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <kernel/panic.h>
 
 #include <algorithm>
 // x86
@@ -34,6 +35,8 @@ kernel::device::serial_text_console con_serial;
 kernel::device::fb_text_console     con_fb;
 kernel::device::vga_text_console    con_vga;
 x86_idt                             g_idt;
+pit_timer                           timer_pit;
+vas                                 kernel_vas;
 
 void            init_global_constructors();
 extern "C" void set_page_table(uint64_t ptr);
@@ -105,8 +108,6 @@ void boot_init_log(struct stivale2_struct* svs) {
     kernel::log::status_log("Done", 0xA);
 }
 
-vas kernel_vas;
-
 void boot_init_memory(struct stivale2_struct* svs) {
     uint64_t max_ram_addr = 0;
 
@@ -115,7 +116,7 @@ void boot_init_memory(struct stivale2_struct* svs) {
     auto* pmr_tag  = (stivale2_struct_tag_pmrs*)stivale2_get_tag(svs, STIVALE2_STRUCT_TAG_PMRS_ID);
     auto* kbas_tag =
         (stivale2_struct_tag_kernel_base_address*)stivale2_get_tag(svs, STIVALE2_STRUCT_TAG_KERNEL_BASE_ADDRESS_ID);
-
+    auto* mod_tag = (stivale2_struct_tag_modules*)stivale2_get_tag(svs, STIVALE2_STRUCT_TAG_MODULES_ID);
     assert(hhdm_tag != nullptr);
     assert(mmap_tag != nullptr);
     assert(pmr_tag != nullptr);
@@ -157,7 +158,6 @@ void boot_init_memory(struct stivale2_struct* svs) {
     for (size_t i = 0; i < (max / step); i++) { kernel_vas.map((step * i), base + (step * i), 0x03, VAS_HUGE_PAGE); }
 
     // Map the kernel into the page table.
-
     uint64_t last_kernel_vaddr = 0;
     for (size_t i = 0; i < pmr_tag->entries; i++) {
         auto& pmr = pmr_tag->pmrs[i];
@@ -175,12 +175,36 @@ void boot_init_memory(struct stivale2_struct* svs) {
         }
     }
 
-    // Map the Framebuffer, if needed.
+    // Map the Framebuffer and any modules, if needed.
     for (unsigned int i = 0; i < mmap_tag->entries; i++) {
         auto& map = mmap_tag->memmap[i];
         if (map.type == 0x1002) {
             for (size_t i = 0; i < map.length; i += 0x1000) {
                 kernel_vas.map(map.base + i, (virt_addr_t)(con_fb.framebuffer.m_buffer) + i, 0x03, 0);
+            }
+        }
+
+        // Map Modules
+        if (map.type == 0x1001) {
+            for (size_t j = 0; j < mod_tag->module_count; j++) {
+                auto& mod = mod_tag->modules[j];
+
+                if (kernel::phys_to_virt_addr(map.base) == mod.begin) {
+                    kernel::boot::boot_file file;
+                    if (strcmp("symbols", (const char*)&mod.string) == 0) {
+                        file.type = 0x0;
+                    } else {
+                        file.type = 0x1;
+                    }
+                    file.size  = mod.end - mod.begin;
+                    file.vaddr = mod.begin;
+                    kernel::boot::g_bootfiles.add(file);
+
+                    for (size_t k = 0; k < map.length; k += 0x1000) {
+                        kernel_vas.map(map.base + k, mod.begin + k, 0x03, 0);
+                        last_kernel_vaddr = std::max(last_kernel_vaddr, mod.begin + k);
+                    }
+                }
             }
         }
     }
@@ -214,7 +238,6 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
     }
 
     // Interrupts
-    pit_timer timer_pit;
     timer_pit.init();
     kernel::time::system_timer = &timer_pit;
     g_idt.enable_interrupts();
@@ -225,18 +248,14 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
 
     if (mod_tag->module_count <= 0) {
         log::critical("kernel", "An initial ramdisk must be loaded with the kernel. The kernel will not boot.\n");
-     
         panic("No initrd loaded");
     }
-    kernel::boot::boot_file initrd;
-    initrd.name  = "initrd";
-    initrd.size  = mod_tag->modules[0].end - mod_tag->modules[0].begin;
-    initrd.vaddr = mod_tag->modules[0].begin;
-    kernel::boot::g_bootfiles.add(initrd);
 
     // Initialise the memory
     boot_init_memory(stivale2_struct);
     kernel::interrupts::handler_register(14, new kernel::x86_pager());  // Handle paging
+
+    kernel::debug::g_symbol_server.init();
 
     // We're done, just hang...
     kernel_main();

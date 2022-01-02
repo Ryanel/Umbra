@@ -6,7 +6,7 @@
 namespace kernel {
 namespace boot {
 struct boot_file {
-    char const* name;
+    uintptr_t type; // 0x0 = initrd, 0x1 = symbols
     virt_addr_t vaddr;
     phys_addr_t paddr;
     size_t      size;

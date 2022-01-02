@@ -13,7 +13,10 @@ void interrupts_disable() { asm("cli"); }
 void interrupts_enable() { asm("sti"); }
 void interrupts_after_thread() { outb(0x20, 0x20); }
 
+uint64_t interrupt_stack_ptr = 0;
+
 extern "C" void k_exception_handler(register_frame_t* regs) {
+    interrupt_stack_ptr = regs->rbp;
     if (kernel::interrupts::dispatch(regs->int_no, regs)) {
         // We've handled and returned from this exception. Let the PIT know and we'll return to the process
         if (regs->int_no >= 40) { outb(0xA0, 0x20); }
@@ -31,12 +34,14 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
     kernel::log::error("error", "ebp:%08x esp:%08x esi:%08x edi:%08x\n", regs->edi, regs->esi, regs->esp, regs->ebp);
 
 #else
-
     kernel::log::error("error", "rip: 0x%016p int:%02x err:%08x rflags:%08x\n", regs->rip, regs->int_no, regs->err_code,
                        regs->eflags);
-    kernel::log::error("error", "rax:%016p rbx:%016p rcx:%016p rdx:%016p\n", regs->rax, regs->rbx, regs->rcx, regs->rdx);
-    kernel::log::error("error", "rdi:%016p rsi:%016p rbp:%016p\n", regs->rdi, regs->rsi, regs->rbp);
+    kernel::log::error("error", "rax:%016p rbx:%016p rcx:%016p rdx:%016p\n", regs->rax, regs->rbx, regs->rcx,
+                       regs->rdx);
+    kernel::log::error("error", "r8:%016p r9:%016p r10:%016p r11:%016p\n", regs->r8, regs->r9, regs->r10);
+    kernel::log::error("error", "r12:%016p r13:%016p r14:%016p r15:%016p\n", regs->r8, regs->r9, regs->r10);
 
+    kernel::log::error("error", "rdi:%016p rsi:%016p rbp:%016p\n", regs->rdi, regs->rsi, regs->rbp);
 #endif
     panic("Unhandled exception");
 }

@@ -4,6 +4,7 @@
 #include <kernel/mm/memory.h>
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
+#include <kernel/panic.h>
 #include <kernel/x86/vas.h>
 #include <string.h>
 
@@ -36,7 +37,7 @@ bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t proto, int flags) {
     tlb_flush_single(virt);
     return true;
 }
-bool   vas::unmap(virt_addr_t virt) { return true; }
+bool vas::unmap(virt_addr_t virt) { return true; }
 
 page_t vas::get_page(uintptr_t virt) {
     auto tab = get_table(virt, false);
@@ -44,7 +45,46 @@ page_t vas::get_page(uintptr_t virt) {
 }
 
 bool vas::has_table(uintptr_t virt) { return false; }
-vas* vas::clone() { return nullptr; }
+vas* vas::clone() {
+    // Allocate the page directory metadata structure from the heap
+    auto pd_meta = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
+    vas* dir     = (vas*)pd_meta;
+
+    // Now, allocate the actual page directory read by the CPU
+    phys_addr_t pd_phys;
+    auto        pd_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
+    memset((void*)pd_virt, 0, 0x1000);
+
+    // Setup the meta directory
+    dir->directory      = (pml_t*)pd_virt;
+    dir->directory_addr = pd_phys;
+
+    kernel::log::debug("pg", "Cloning page directory 0x%08x to 0x%08x\n", this->directory_addr, dir->directory_addr);
+
+    // Now, fill in the page table
+    // bool               cow                = false;  // Clone pages as copy on write. COW is disabled for kernel pages
+    bool               kernel_only        = true;  // Clone only the kernel
+    unsigned const int kernel_start_index = 256;
+    unsigned int       start_index        = kernel_only ? kernel_start_index : 0;
+
+    // Map entries
+    for (size_t i = start_index; i < 512; i++) {
+        bool link = false;
+        // Don't worry aboyut empty entries
+        if (this->directory->entries[i] == 0) { continue; }
+
+        // Link everything above this point
+        if (i >= kernel_start_index) { link = true; }
+
+        if (link) {
+            dir->directory->entries[i] = this->directory->entries[i];
+        } else {
+            panic("Todo, write copying for page tables");
+        }
+    }
+
+    return dir;
+}
 bool vas::create_table(uintptr_t vaddr) { return false; }
 
 vas::table_info vas::get_table(virt_addr_t addr, bool create, unsigned int desiredLevel) {
