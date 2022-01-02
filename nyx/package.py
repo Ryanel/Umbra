@@ -9,6 +9,7 @@ class NyxPackage:
         self.name = name
         self.version = 'dev'
         self.acquisition = "local_copy" # Local, git, or http...
+        self.destination = "disk" # Disk or Initrd
         self.cached = False
         self.src_path = "lib/test/"
         self.architecture = "all"
@@ -35,6 +36,7 @@ class NyxPackage:
         self.build_steps     = pkg_json.get("build_steps", [])
         self.package_steps   = pkg_json.get("package_steps", [])
         self.installroot     = pkg_json.get("install_root", "/")
+        self.destination     = pkg_json.get("destination", "local")
         self.enviroment      = pkg_json.get("enviroment", dict())
         self.isTool          = bool(pkg_json.get("is_tool", False))
         self.git_branch      = pkg_json.get("git_branch", "master")
@@ -139,6 +141,10 @@ class NyxPackage:
 
     def install(self, config) -> bool:
         sysroot_dir = os.path.abspath(f"{config['sysroot']}/{self.installroot}")
+
+        if (self.destination == 'initrd'):
+            sysroot_dir = os.path.abspath(f"{config['initrd_root']}/{self.installroot}")
+
         self.util_createpath(sysroot_dir)
         with zipfile.ZipFile(self.pkg_path(config),"r") as zip_ref:
             zip_ref.extractall(sysroot_dir)

@@ -43,6 +43,7 @@ def main() -> int:
     config["sysroot"] = repo_json['general']['sysroot']
     config["build_root"] = repo_json['general']['build_root']
     config["package_root"] = repo_json['general']['package_root']
+    config["initrd_root"] = repo_json['general']['initrd_root']
 
     # Read in a list of packages...
     engine = BuildEngine(repo_json, config, args)

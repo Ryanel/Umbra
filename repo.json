@@ -5,7 +5,7 @@
     "sysroot": "build/sysroot/",
     "build_root": "build/temp/",
     "package_root": "build/packages/",
-    "initrd_root": "build/initrd",
+    "initrd_root": "build/initrd/",
     "env": {
       "CC": "x86_64-elf-gcc",
       "CXX": "x86_64-elf-g++",
@@ -69,6 +69,7 @@
       "src_path": "/apps/test_program",
       "version": "dev",
       "install_root": "/apps/",
+      "destination": "initrd",
       "acquisition": "local_copy",
       "build_steps": [
         "make"
