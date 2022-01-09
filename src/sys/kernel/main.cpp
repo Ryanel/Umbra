@@ -42,7 +42,7 @@ void test_thread() {
     auto term = vfs::g_vfs.open_file("/dev/console", 0);
 
     // Parse as an ELF
-    auto test_exe = elf_file(buf);
+    auto test_exe = elf64_file(buf);
 
     assert(test_exe.valid() == true);
     log::info("elfloader", "Mapping PHs\n");
@@ -110,9 +110,8 @@ void kernel_main() {
     auto* task_hnd = new handle(make_ref(new task(cloned->physical_addr(), 1, "test_program")), 1, 0xFFFFFFFF, 1);
     task_hnd->as<task>()->m_directory = cloned;
 
-    // auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test main", (void*)&test_thread);
     {
-        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test", (void*)&dummy_thread);
+        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test", (void*)&test_thread);
         scheduler::enqueue(thread_hnd->as<thread>().get());
     }
     {

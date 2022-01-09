@@ -4,11 +4,11 @@ msg: .ascii "Hello, from a loaded program!\n\0"
 
 _start:
     # Write the buffer with write()
-    mov $1, %eax
-    mov $1, %ebx
-    mov $(msg), %ecx
-    mov $31, %edx
+    mov $1, %rax
+    mov $1, %rbx
+    mov $(msg), %rcx
+    mov $31, %rdx
     int $0x80
     # Terminate this application.
-    mov $0, %eax
+    mov $0, %rax
     int $0x80

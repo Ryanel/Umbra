@@ -37,7 +37,12 @@ bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t proto, int flags) {
     tlb_flush_single(virt);
     return true;
 }
-bool vas::unmap(virt_addr_t virt) { return true; }
+bool vas::unmap(virt_addr_t virt) { 
+    vas::table_info info = get_table(virt, true, 1);
+    info.ptr->entries[info.idx] = 0;
+    tlb_flush_single(virt);
+    return true;
+}
 
 page_t vas::get_page(uintptr_t virt) {
     auto tab = get_table(virt, false);
