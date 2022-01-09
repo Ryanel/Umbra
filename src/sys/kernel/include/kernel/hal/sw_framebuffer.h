@@ -27,7 +27,9 @@ class sw_framebuffer {
     }
 
     inline void putpixel(unsigned int x, unsigned int y, unsigned char r, unsigned char g, unsigned char b) {
-        uint8_t* pixaddr = m_buffer + (y * m_pitch) + (x * 3);
+        const uintptr_t step = m_bpp / 8;
+
+        uint8_t* pixaddr = m_buffer + (y * m_pitch) + (x * step);
 
         if (m_format == fb_format::rgb) {
             pixaddr[0] = r;

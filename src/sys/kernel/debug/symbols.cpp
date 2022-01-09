@@ -9,17 +9,23 @@ namespace debug {
 symbol_server g_symbol_server;
 
 void symbol_server::init() {
+    bool found = false;
     for (size_t i = 0; i < kernel::boot::g_bootfiles.numfiles; i++) {
         auto& file = kernel::boot::g_bootfiles.files[i];
         if (file.type != 0) { continue; }
-        kernel::log::info("symserver", "using file %d\n", i);
         start_addr = file.vaddr;
+        found      = true;
         break;
+    }
+
+    if (!found) {
+        log::warn("symserver", "No debug symbols loaded.\n");
+        return;
     }
 
     num_symbols = ((symbol_header*)start_addr)->num_symbols;
 
-    log::info("symserver", "symbols: %l\n", num_symbols);
+    log::info("symserver", "Loaded %l symbols.\n", num_symbols);
 
     initialised = true;
 }
