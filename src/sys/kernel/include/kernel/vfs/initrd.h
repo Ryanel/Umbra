@@ -24,8 +24,8 @@ class initrd_provider : public vfs_delegate {
 
    private:
     struct fdata {
-        unsigned int location;
-        fdata(unsigned int loc) : location(loc) {}
+        uintptr_t location;
+        fdata(uintptr_t loc) : location(loc) {}
     };
 };
 

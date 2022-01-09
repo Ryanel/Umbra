@@ -1,6 +1,6 @@
 #include <kernel/tasks/scheduler.h>
 #include <kernel/time.h>
-
+#include <stdio.h>
 using namespace kernel;
 
 // Data

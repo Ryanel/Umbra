@@ -180,6 +180,7 @@ void scheduler::terminate(thread* t) {
     if (t == nullptr) { t = current_tcb; }
     t->set_state(thread_state::dead);
     list_dead.push_back(t);
+    kernel::log::trace("sched", "Killing thread %d\n", t->m_id);
     unblock(reaper, 1);  // If the reaper is blocked, unblock it!
     schedule();
     // Thread ends here...
@@ -188,7 +189,7 @@ void scheduler::terminate(thread* t) {
 void scheduler::yield(thread* t) {
     critical_section cs;
     if (t == nullptr) { t = current_tcb; }
-    t->m_slice_ns = determine_timeslice(t);
+    t->m_slice_ns = 0;
     schedule();
 }
 
@@ -234,6 +235,12 @@ void scheduler::lock() {
 
 void scheduler::unlock() {
     lock_prevent_scheduling--;
+    assert(lock_prevent_scheduling >= 0 && "scheduler::unlock lock_prevent_scheduling is below 0!");
+
+    lock_queues--;
+    assert(lock_queues >= 0 && "scheduler::unlock lock_queues is below 0!");
+
+    if (lock_queues == 0) { interrupts_enable(); }
 
     if (lock_prevent_scheduling == 0) {
         if (task_switch_delayed) {
@@ -241,14 +248,9 @@ void scheduler::unlock() {
             schedule();
         }
     }
-
-    lock_queues--;
-    if (lock_queues == 0) { interrupts_enable(); }
 }
 
 extern "C" void swap_vas(thread* a) {
     scheduler::debug_print_thread(a);
-    if (a->m_owner != current_task) {
-        kernel::log::debug("thr","Swapping VAS of 0x%016p\n", a);
-    }
+    if (a->m_owner != current_task) { kernel::log::debug("thr", "Swapping VAS of 0x%016p\n", a); }
 }

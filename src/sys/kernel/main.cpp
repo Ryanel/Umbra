@@ -27,10 +27,11 @@ void test_thread() {
     const char* fpath = "/apps/test_program";
     // Load file
     auto fd = g_vfs.open_file(fpath, 0);
+    g_vfs.debug(g_vfs.get_root());
 
-    if (fd == -1) { 
+    if (fd == -1) {
         log::error("test_thread", "Unable to find %s\n", fpath);
-        scheduler::terminate(nullptr); 
+        scheduler::terminate(nullptr);
     }
     auto  size = g_vfs.fstat(fd).size;
     auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
@@ -109,8 +110,15 @@ void kernel_main() {
     auto* task_hnd = new handle(make_ref(new task(cloned->physical_addr(), 1, "test_program")), 1, 0xFFFFFFFF, 1);
     task_hnd->as<task>()->m_directory = cloned;
 
-    auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test main", (void*)&test_thread);
-    scheduler::enqueue(thread_hnd->as<thread>().get());
+    // auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test main", (void*)&test_thread);
+    {
+        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test", (void*)&dummy_thread);
+        scheduler::enqueue(thread_hnd->as<thread>().get());
+    }
+    {
+        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test2", (void*)&dummy_thread);
+        scheduler::enqueue(thread_hnd->as<thread>().get());
+    }
 
     // Create the console
     auto* dev_dir = vfs::g_vfs.find("/dev/");

@@ -121,11 +121,13 @@ size_t virtual_filesystem::read(file_id_t fdid, uint8_t* buf, size_t count) {
 
     auto* node = fd->m_node;
 
+
     if (count > node->size) { count = node->size; }
     if (count == 0) { return 0; }
-    if (buf == nullptr) { return -1; }
 
-    if (node->delegate == nullptr) { return -1; }
+    assert(buf != nullptr);
+    assert(node != nullptr);
+    assert(node->delegate != nullptr);
 
     return node->delegate->read(node, 0, count, buf);
 }
@@ -156,6 +158,26 @@ file_stats virtual_filesystem::fstat(file_id_t fdid) {
     stats.size = fd->m_node->size;
 
     return stats;
+}
+
+void virtual_filesystem::debug(vfs_node* node, int depth) {
+    if (depth > 40) { return; }
+
+    int padding = 11;
+
+    for (int i = 0; i < depth + padding; i++) { kernel::log::get().write(' '); }
+
+    const char* ftype = "dir";
+    switch (node->type) {
+        case vfs::vfs_type::file: ftype = "file"; break;
+        case vfs::vfs_type::directory: ftype = "dir"; break;
+        case vfs::vfs_type::device: ftype = "device"; break;
+        default: break;
+    }
+
+    printf("%s (%s, sz: %d)\n", node->name(), ftype, node->size);
+
+    for (auto&& i : node->children) { debug(i, depth + 1); }
 }
 
 }  // namespace vfs

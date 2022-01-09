@@ -6,6 +6,7 @@
 #include <kernel/panic.h>
 #include <kernel/tasks/critical_section.h>
 #include <stdlib.h>
+#include <string.h>
 
 using namespace kernel;
 using namespace kernel::tasks;
@@ -133,16 +134,10 @@ void slab::init(uintptr_t start, uint32_t sz) {
     m_size    = sz;
     m_entries = 0;
 
-    // Determine how many pages to allocate here.
-    m_pages      = get_pages(sz);
-    m_maxEntries = (uint16_t)((PAGE_SIZE * m_pages) / m_size);
-
-    // vmm: Map the used pages here
-    g_vmm.mmap(m_start, PAGE_SIZE * m_pages, VMM_PROT_WRITE, 0);
-
-    // Determine how many entires we can have
-    log::trace("slab", "Creating new slab @ 0x%016p with size %d, and %d entries in %d pages\n", start, sz, m_maxEntries,
-               m_pages);
+    m_pages      = get_pages(sz);                                 // Determine the number of pages
+    m_maxEntries = (uint16_t)((PAGE_SIZE * m_pages) / m_size);    // Determine the # of entries
+    g_vmm.mmap(m_start, PAGE_SIZE * m_pages, VMM_PROT_WRITE, 0);  // Map the used pages
+    memset((void*)m_start, 0, PAGE_SIZE * m_pages);               // Clear the entry area
 
     // Populate the slabs free list
     m_free_list       = (slab_entry*)m_start;
@@ -184,6 +179,6 @@ bool slab::free(uintptr_t address) {
 }
 
 void slab::debug() {
-    log::debug("slab", "%016p: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries,
+    log::debug("slab", "0x%016p: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries,
                m_pages);
 }

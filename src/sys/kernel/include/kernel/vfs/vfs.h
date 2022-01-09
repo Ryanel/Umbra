@@ -29,6 +29,8 @@ class virtual_filesystem {
 
     file_descriptor* taskfd_to_fd(file_id_t);
 
+    void debug(vfs_node* node, int depth=0);
+
    private:
     vfs_node*                   m_root;
     std::list<file_descriptor*> open_files;

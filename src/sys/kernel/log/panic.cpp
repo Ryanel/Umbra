@@ -13,7 +13,7 @@ struct stackframe {
 extern uint64_t interrupt_stack_ptr;
 
 void panic(const char* s) {
-    const int maxFrames = 5;
+    const int maxFrames = 15;
     kernel::tasks::scheduler::lock();
     kernel::log::critical("panic", "%s\n", s);
     kernel::log::critical("panic", "Stack Trace:\n");

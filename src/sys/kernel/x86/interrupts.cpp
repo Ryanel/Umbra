@@ -16,13 +16,14 @@ void interrupts_after_thread() { outb(0x20, 0x20); }
 uint64_t interrupt_stack_ptr = 0;
 
 extern "C" void k_exception_handler(register_frame_t* regs) {
-    interrupt_stack_ptr = regs->rbp;
     if (kernel::interrupts::dispatch(regs->int_no, regs)) {
         // We've handled and returned from this exception. Let the PIT know and we'll return to the process
         if (regs->int_no >= 40) { outb(0xA0, 0x20); }
         outb(0x20, 0x20);
         return;
     }
+
+    interrupt_stack_ptr = regs->rbp;
 
 #ifdef ARCH_X86
 
@@ -56,6 +57,7 @@ void x86_idt::init() {
     idtptr.base  = (uintptr_t)&idt[0];
 
     constexpr int descriptor = 0x08;
+    interrupt_stack_ptr = 0;
 
     memset(&idt, 0, sizeof(idt_entry_t) * 256);
     set_gate(0, (uintptr_t)interrupt_isr0, descriptor, 0x8E);

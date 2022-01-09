@@ -1,4 +1,5 @@
 #include <kernel/boot/boot_file.h>
+#include <kernel/panic.h>
 #include <kernel/vfs/initrd.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
@@ -28,15 +29,22 @@ struct ustar_header {
     char const linked_file[100];
     char const ustar[6];
     char const ustar_ver[2];
-};
+} __attribute__((packed));
 
 namespace kernel {
 namespace vfs {
 
 void initrd_provider::init() {
     // First, get the initrd
-    initrd_data = &kernel::boot::g_bootfiles.files[0];  // TODO: A proper search
-    auto* root  = kernel::vfs::g_vfs.get_root();        // The initial ramdisk directly overlays ontop of the root.
+    for (size_t i = 0; i < kernel::boot::g_bootfiles.numfiles; i++) {
+        auto& file = kernel::boot::g_bootfiles.files[i];
+        if (file.type != 1) { continue; }
+        kernel::log::info("initrd", "using file %d\n", i);
+        initrd_data = &kernel::boot::g_bootfiles.files[i];
+        break;
+    }
+
+    auto* root = kernel::vfs::g_vfs.get_root();  // The initial ramdisk directly overlays ontop of the root.
 
     // Now, comb throug the USTAR formatted initrd.
     virt_addr_t ptr = initrd_data->vaddr;
@@ -46,9 +54,10 @@ void initrd_provider::init() {
 
         // Create the node
         size_t sz              = oct2bin((unsigned char*)header->size_octal, 11);
-        auto*  node            = new vfs_node(root, this, vfs_type::file, sz);
+        auto*  node            = new vfs_node(nullptr, this, vfs_type::file, sz);
         auto*  dat             = new fdata((virt_addr_t)header + 512);
         node->delegate_storage = (void*)dat;
+        node->parent           = root;
 
         // Set the type
         switch (header->type) {
@@ -88,14 +97,20 @@ void initrd_provider::init() {
 }
 
 int initrd_provider::read(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
-    if (node == nullptr) { return 1; }
     if (node->type != vfs_type::file) { return 2; }
-    if ((offset + size) > node->size) { return 3; }
+    if ((offset + size) > node->size) { return -1; }
 
-    fdata*   dat       = (fdata*)node->delegate_storage;
+    assert(buffer != nullptr);
+    assert(node != nullptr);
+
+    fdata* dat = (fdata*)node->delegate_storage;
+    assert(dat != nullptr);
+
     uint8_t* file_data = (uint8_t*)(dat->location);
+    assert(file_data != nullptr);
 
     for (size_t i = 0; i < size; i++) { buffer[i] = file_data[offset + i]; }
+
     return 0;
 }
 
