@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 namespace std {
 
@@ -18,12 +19,12 @@ class list {
     };
 
    private:
-    uint32_t m_size;
-    node*    m_head;
-    node*    m_tail;
+    node*  m_head;
+    node*  m_tail;
+    size_t m_size;
 
    public:
-    list() : m_size(0), m_head(nullptr), m_tail(nullptr) {}
+    list() : m_head(nullptr), m_tail(nullptr), m_size(0) {}
 
     // Iterators
     struct iterator {
@@ -126,21 +127,19 @@ class list {
         node* before = pos.m_ptr->m_prev;
         node* after  = pos.m_ptr->m_next;
 
-        if (before && after) {
+        if (before != nullptr && after != nullptr) {
             before->m_next = after;
             after->m_prev  = before;
             return iterator(after);
-        } else if (before && !after) {
+        } else if (before != nullptr && after == nullptr) {
             // Last element
             pop_back();
             return iterator(nullptr);
-        } else if (!before && after) {
-            // First element
+        } else {
+            // First element / only
             pop_front();
             return iterator(m_head);
         }
-
-        return iterator(nullptr);
     }
 
     bool   empty() const { return m_head == nullptr; }

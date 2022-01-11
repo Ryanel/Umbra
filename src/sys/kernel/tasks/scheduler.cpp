@@ -36,7 +36,15 @@ std::list<thread*> scheduler::list_blocked;
 
 void thread_reaper() {
     kernel::log::info("reaper", "Reaper online!\n");
-    while (true) { scheduler::block(nullptr, 1); }
+    while (true) {
+        auto dead_itr = scheduler::list_dead.begin();
+        while (dead_itr != scheduler::list_dead.end()) {
+            auto* t  = *dead_itr;
+            kernel::log::trace("reaper", "Reaped %s\n", t->m_name.value_or("unknown thread"));
+            dead_itr = scheduler::list_dead.erase(dead_itr);
+        }
+        scheduler::block(nullptr, 1);
+    }
 }
 
 void scheduler::init(vas* kernel_vas) {
@@ -107,7 +115,7 @@ void scheduler::schedule() {
             if (current_tcb->ready()) {
                 current_tcb->m_state = thread_state::ready_to_run;
                 list_ready.push_back(current_tcb);
-                current_tcb->m_slice_ns = 0;
+                current_tcb->m_slice_ns = determine_timeslice(current_tcb);
             }
 
             auto* next = list_ready.front();
@@ -120,7 +128,7 @@ void scheduler::schedule() {
 }
 
 uint64_t scheduler::determine_timeslice(thread* t) {
-    if (t->m_priority == 0) { return 10000; }
+    if (t->m_priority == 0) { return 0; }
     return 50000000;
 }
 
@@ -210,9 +218,9 @@ void scheduler::unblock(thread* t, int reason) {
     if (t->ready()) { return; }
 
     // Search for the thread to unblock...
-    auto itr = std::find(list_sleeping.begin(), list_sleeping.end(), t);
+    auto itr = std::find(list_blocked.begin(), list_blocked.end(), t);
 
-    if (itr != list_sleeping.end()) {
+    if (itr != list_blocked.end()) {
         list_blocked.erase(itr);
         t->set_state(thread_state::ready_to_run, determine_timeslice(t));
         list_ready.push_back(t);

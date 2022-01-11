@@ -2,7 +2,7 @@
 
 #define KERNEL_VERSION "dev"
 
-#define DEVICE_BUILD_BOARD "x86"
+#define DEVICE_BUILD_BOARD "x86-64"
 
 #define KERNEL_ASSERT_ENABLED
 #define ASSERT_HANDLE_TYPE

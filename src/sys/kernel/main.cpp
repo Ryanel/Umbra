@@ -14,6 +14,7 @@
 #include <kernel/time.h>
 #include <kernel/vfs/initrd.h>
 #include <kernel/vfs/vfs.h>
+#include <kernel/x86/ps2keyboard.h>
 #include <stdio.h>
 
 typedef void startfn(void);
@@ -64,9 +65,48 @@ void test_thread() {
 
 void dummy_thread() {
     int counter = 0;
-    while (counter < 5000) {
+    while (counter < 50) {
         counter++;
         scheduler::yield(nullptr);
+    }
+}
+
+void thr_kdebugger() {
+    // keyboard
+    vfs_node* kb = kernel::vfs::g_vfs.find("/dev/keyboard");
+
+    while (true) {
+        bool             input_submitted = false;
+        constexpr size_t buf_size        = 64;
+        unsigned char    input[buf_size];
+        unsigned char    buffer[buf_size];
+
+        memset(&buffer, 0, buf_size);
+        memset(&input, 0, buf_size);
+
+        printf("(kbdg) >");
+
+        while (!input_submitted) {
+            int result = kb->delegate->read(kb, 0, 1, (unsigned char*)&buffer);
+            if (result > 0) {
+                printf("%c", kernel::hal::vk_to_ascii(buffer[0]));
+            } else {
+                scheduler::yield(nullptr);
+            }
+
+            if (kernel::hal::vk_to_ascii(buffer[0]) == '\n') { input_submitted = true; }
+            if (kernel::hal::vk_to_ascii(buffer[0]) == 't') {
+                input_submitted = true;
+                printf("\n");
+                scheduler::debug();
+            }
+
+            if (kernel::hal::vk_to_ascii(buffer[0]) == 'f') {
+                input_submitted = true;
+                printf("\n");
+                g_vfs.debug(g_vfs.get_root());
+            }
+        }
     }
 }
 
@@ -79,6 +119,28 @@ class terminal_delegate : public vfs_delegate {
         return 0;
     }
     char const* delegate_name() { return "terminal delegate"; }
+};
+
+class keyboard_delegate : public vfs_delegate {
+   public:
+    keyboard_delegate(kernel::hal::keyboard* kb) : m_kb(kb) {}
+    int read(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
+        int elements_copied = 0;
+        while (elements_copied < size && m_kb->event_buffer.size() > 0) {
+            auto evnt = m_kb->event_buffer.top();
+            if (evnt.pressed) {
+                buffer[offset + elements_copied] = evnt.keycode;
+                elements_copied++;
+            }
+            m_kb->event_buffer.pop();
+        }
+        return elements_copied;
+    }
+    int         write(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
+    char const* delegate_name() { return "keyboard delegate"; }
+
+   private:
+    kernel::hal::keyboard* m_kb;
 };
 
 /// The main kernel function.
@@ -118,11 +180,21 @@ void kernel_main() {
         auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test2", (void*)&dummy_thread);
         scheduler::enqueue(thread_hnd->as<thread>().get());
     }
+    {
+        auto* thread_hnd = scheduler::kernel_task->spawn_local_thread("debugger", (void*)&thr_kdebugger);
+        scheduler::enqueue(thread_hnd->as<thread>().get());
+    }
 
     // Create the console
     auto* dev_dir = vfs::g_vfs.find("/dev/");
     auto* term    = new vfs::vfs_node(dev_dir, new terminal_delegate(), vfs::vfs_type::device, 0);
     term->set_name("console");
+
+    auto* kb = new kernel::driver::ps2keyboard();
+    kb->init();
+
+    auto* kbd = new vfs::vfs_node(dev_dir, new keyboard_delegate(kb), vfs::vfs_type::device, 0);
+    kbd->set_name("keyboard");
 
     kernel::g_pmm.print_statistics();
     g_heap.debug();
