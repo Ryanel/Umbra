@@ -38,6 +38,14 @@ struct thread : public object {
         setup(bootstrap_fn);
     }
 
+    thread(task* owner, void* bootstrap_fn, uintptr_t arg0, std::optional<const char*> name = std::nullopt) {
+        init_properties();
+        m_owner = owner;
+        m_state = thread_state::ready_to_run;
+        m_name  = name;
+        setup(bootstrap_fn, arg0);
+    }
+
     void init_properties() {
         m_k_stack_current = 0;
         m_k_stack_top     = 0;
@@ -49,7 +57,7 @@ struct thread : public object {
         m_priority        = 128;
     }
 
-    void setup(void* bootstrap_fn);
+    void setup(void* bootstrap_fn, uintptr_t arg0 = 0);
 
     void set_state(thread_state state, uint64_t timeslice_left = 0) {
         m_state    = state;

@@ -11,14 +11,14 @@ extern "C" uint32_t* stack_top;
 
 uint32_t next_thread_id = 0;
 
-void thread_setup_function(void (*fn)(void)) {
+void thread_setup_function(void (*fn)(uintptr_t arg0), uintptr_t arg0) {
     interrupts_enable();
     interrupts_after_thread();
-    (*fn)();
+    (*fn)(arg0);
     kernel::tasks::scheduler::terminate(nullptr);
 }
 
-void thread::setup(void* bootstrap_fn) {
+void thread::setup(void* bootstrap_fn, uintptr_t arg0) {
     m_k_stack_top     = g_heap.alloc(0x1000, 0);
     m_k_stack_current = m_k_stack_top;
     m_id              = ++next_thread_id;
@@ -43,16 +43,16 @@ void thread::setup(void* bootstrap_fn) {
     *--stack_ptr      = 0;                                  // RDX
     *--stack_ptr      = 0;                                  // RBX
     *--stack_ptr      = 0;                                  // RBP
-    *--stack_ptr      = 0;                                  // RSI
+    *--stack_ptr      = arg0;                               // RSI
     *--stack_ptr      = (uintptr_t)bootstrap_fn;            // RDI (Return address as param to setup function)
     *--stack_ptr      = 0;                                  // R8
     *--stack_ptr      = 0;                                  // R9
     *--stack_ptr      = 0;                                  // R10
     *--stack_ptr      = 0;                                  // R11
-    *--stack_ptr      = 0;                                 // R12
-    *--stack_ptr      = 0;                                 // R13
-    *--stack_ptr      = 0;                                 // R14
-    *--stack_ptr      = 0;                                 // R15
+    *--stack_ptr      = 0;                                  // R12
+    *--stack_ptr      = 0;                                  // R13
+    *--stack_ptr      = 0;                                  // R14
+    *--stack_ptr      = 0;                                  // R15
     #endif
     m_k_stack_current = (uintptr_t)stack_ptr;
 }

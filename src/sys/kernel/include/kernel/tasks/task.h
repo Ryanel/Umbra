@@ -36,7 +36,7 @@ class task : public object {
     uint32_t                        next_fd_id = 0;
 
     KOBJECT_CLASS_ID(1, "task");
-    
+
     task(uintptr_t vas = 0, uint32_t id = 0, const char* name = nullptr)
         : m_vas(vas), m_task_id(id), m_task_name(name) {
         this->m_task_id   = id;
@@ -47,6 +47,11 @@ class task : public object {
 
     handle* spawn_local_thread(std::optional<const char*> name, void* bootstrap) {
         return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, name)), m_task_id, 0xFFFFFFFF, 1);
+    }
+
+    handle* spawn_local_thread(std::optional<const char*> name, void* bootstrap, uintptr_t arg0) {
+        return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, arg0, name)), m_task_id, 0xFFFFFFFF,
+                                      1);
     }
 };
 

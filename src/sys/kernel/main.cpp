@@ -6,7 +6,7 @@
 #include <kernel/mm/vmm.h>
 #include <kernel/object.h>
 #include <kernel/panic.h>
-#include <kernel/tasks/elf.h>
+#include <kernel/tasks/elfloader.h>
 #include <kernel/tasks/scheduler.h>
 #include <kernel/tasks/syscall.h>
 #include <kernel/tasks/task.h>
@@ -17,98 +17,9 @@
 #include <kernel/x86/ps2keyboard.h>
 #include <stdio.h>
 
-typedef void startfn(void);
-
 using namespace kernel;
 using namespace kernel::vfs;
 using namespace kernel::tasks;
-
-void test_thread() {
-    // The job of this thread is to load and execute the test executable
-    const char* fpath = "/apps/test_program";
-    // Load file
-    auto fd = g_vfs.open_file(fpath, 0);
-    g_vfs.debug(g_vfs.get_root());
-
-    if (fd == -1) {
-        log::error("test_thread", "Unable to find %s\n", fpath);
-        scheduler::terminate(nullptr);
-    }
-    auto  size = g_vfs.fstat(fd).size;
-    auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
-                                                                    // not make unnessisary slabs.
-    vfs::g_vfs.read(fd, buf, size);
-
-    // Open a console for the program
-    auto term = vfs::g_vfs.open_file("/dev/console", 0);
-
-    // Parse as an ELF
-    auto test_exe = elf64_file(buf);
-
-    assert(test_exe.valid() == true);
-    log::info("elfloader", "Mapping PHs\n");
-    for (unsigned int i = 0; i < test_exe.prog_num(); i++) {
-        auto* sec = test_exe.prog_header(i);
-        // Load
-        if (sec->p_type == 0x1) {
-            g_vmm.mmap(sec->p_vaddr, sec->p_memsz, VMM_PROT_USER | VMM_PROT_WRITE, VMM_FLAG_POPULATE);
-            memset((void*)sec->p_vaddr, 0, sec->p_memsz);
-            memcpy((void*)sec->p_vaddr, (void*)((uintptr_t)test_exe.m_header + sec->p_offset), sec->p_filesz);
-        }
-    }
-
-    // At this point, the program is ready to be executed. Call it.
-    log::info("elfloader", "Launching %s\n", fpath);
-    startfn* fn = (startfn*)(test_exe.m_header->e_entry);
-    fn();
-}
-
-void dummy_thread() {
-    int counter = 0;
-    while (counter < 50) {
-        counter++;
-        scheduler::yield(nullptr);
-    }
-}
-
-void thr_kdebugger() {
-    // keyboard
-    vfs_node* kb = kernel::vfs::g_vfs.find("/dev/keyboard");
-
-    while (true) {
-        bool             input_submitted = false;
-        constexpr size_t buf_size        = 64;
-        unsigned char    input[buf_size];
-        unsigned char    buffer[buf_size];
-
-        memset(&buffer, 0, buf_size);
-        memset(&input, 0, buf_size);
-
-        printf("(kbdg) >");
-
-        while (!input_submitted) {
-            int result = kb->delegate->read(kb, 0, 1, (unsigned char*)&buffer);
-            if (result > 0) {
-                printf("%c", kernel::hal::vk_to_ascii(buffer[0]));
-            } else {
-                scheduler::yield(nullptr);
-            }
-
-            if (kernel::hal::vk_to_ascii(buffer[0]) == '\n') { input_submitted = true; }
-            if (kernel::hal::vk_to_ascii(buffer[0]) == 't') {
-                input_submitted = true;
-                printf("\n");
-                scheduler::debug();
-            }
-
-            if (kernel::hal::vk_to_ascii(buffer[0]) == 'f') {
-                input_submitted = true;
-                printf("\n");
-                g_vfs.debug(g_vfs.get_root());
-            }
-        }
-    }
-}
 
 class terminal_delegate : public vfs_delegate {
    public:
@@ -173,15 +84,8 @@ void kernel_main() {
     task_hnd->as<task>()->m_directory = cloned;
 
     {
-        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test", (void*)&test_thread);
-        scheduler::enqueue(thread_hnd->as<thread>().get());
-    }
-    {
-        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test2", (void*)&dummy_thread);
-        scheduler::enqueue(thread_hnd->as<thread>().get());
-    }
-    {
-        auto* thread_hnd = scheduler::kernel_task->spawn_local_thread("debugger", (void*)&thr_kdebugger);
+        auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test", (void*)&kernel::tasks::elf_loader::load_elf,
+                                                                    (uintptr_t)"/apps/test_program");
         scheduler::enqueue(thread_hnd->as<thread>().get());
     }
 
@@ -195,9 +99,6 @@ void kernel_main() {
 
     auto* kbd = new vfs::vfs_node(dev_dir, new keyboard_delegate(kb), vfs::vfs_type::device, 0);
     kbd->set_name("keyboard");
-
-    kernel::g_pmm.print_statistics();
-    g_heap.debug();
 
     kernel::log::info("main", "Reached end of kernel_main()\n");
     log::get().flush();
