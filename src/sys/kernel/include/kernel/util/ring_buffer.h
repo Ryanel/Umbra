@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 
 namespace kernel {
@@ -9,6 +11,8 @@ class ring_buffer {
    public:
     explicit ring_buffer(size_t capacity = 100)
         : m_array(new T[capacity]), m_capacity(capacity), m_head(1), m_tail(0), m_size(0) {}
+    explicit ring_buffer(T* array, size_t capacity)
+        : m_array(array), m_capacity(capacity), m_head(1), m_tail(0), m_size(0) {}
     ~ring_buffer() { delete m_array; }
 
     void push_back(const T& new_value) {
@@ -37,6 +41,19 @@ class ring_buffer {
     bool   empty() const { return m_size == 0; }
     size_t size() const { return m_size; }
     size_t capacity() const { return m_capacity; }
+
+    T& operator[](size_t n) {
+        assert(n < m_size);
+        size_t idx = m_head + n;
+        if (idx >= m_capacity) { idx -= m_capacity; }
+        return m_array[idx];
+    }
+    const T& operator[](size_t n) const {
+        assert(n < m_size);
+        size_t idx = m_head + n;
+        if (idx >= m_capacity) { idx -= m_capacity; }
+        return m_array[idx];
+    }
 
    private:
     T*     m_array;

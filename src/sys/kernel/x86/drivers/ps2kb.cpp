@@ -2,6 +2,7 @@
 #include <kernel/x86/ports.h>
 #include <kernel/x86/ps2keyboard.h>
 #include <stdio.h>
+#include <kernel/hal/terminal.h>
 
 unsigned int scan_table[128] = {
     VK_INVALID,                                                        // Error
@@ -59,6 +60,12 @@ bool ps2keyboard::handle_interrupt(register_frame_t* regs) {
 
     keyboard_set(scan_table[charcode], !is_break);
     event_buffer.push_back(kb_event{scan_table[charcode], !is_break});
+
+    // View Log
+    if (scan_table[charcode] == VK_ESC) {
+        kernel::log::get().m_terminal->set_output(kernel::log::get().console[1]);
+        kernel::log::get().m_terminal->refresh();
+    }
 
     this->extended_e0 = false;  // Reset state
     return true;

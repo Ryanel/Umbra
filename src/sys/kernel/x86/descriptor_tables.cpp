@@ -45,15 +45,13 @@ void kernel::x86::gdt::init() {
     tss.iomap_base                             = sizeof(tss_struct_t);
 
 #else
-    kernel::log::debug("x86", "Installing GDT");
+    kernel::log::debug("x86", "Installing GDT\n");
     setupGDT((uintptr_t)&gdt64_pointer);
-    if (kernel::log::will_log(1)) { kernel::log::status_log("Done"); }
     return;
 #endif
 
-    kernel::log::debug("x86", "Installing GDT");
+    kernel::log::debug("x86", "Installing GDT\n");
     setupGDT((uintptr_t)&gdt_ptr);
-    if (kernel::log::will_log(1)) { kernel::log::status_log("Done"); }
 }
 
 extern "C" void set_kernel_stack(uint32_t stk) { kernel::x86::g_gdt.set_kernel_stack(stk); }

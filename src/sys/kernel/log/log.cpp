@@ -1,5 +1,7 @@
+#include <kernel/hal/terminal.h>
 #include <kernel/log.h>
 #include <kernel/panic.h>
+#include <kernel/text_console.h>
 #include <kernel/time.h>
 #include <kernel/util/spinlock.h>
 #include <stdarg.h>
@@ -15,29 +17,31 @@ kernel::util::spinlock kernel_log_lock;
 extern "C" void kernel_c_shim_print_char_to_log(char c) { kernel_logger.write(c); }
 extern "C" void kernel_c_shim_print_string_to_log(char* s) { kernel_logger.write(s); }
 
+char kernel_log_buffer[LOG_TERM_BUFFER];
+
+kernel::hal::terminal log_term(0, 0, 0, 0);
+
 void kernel::log::init(device::text_console* device) {
     if (console_device_index >= LOG_DEVICE_MAX) { panic("Attempting to initalise too many log devices!"); }
     console[console_device_index] = device;
     console_device_index++;
 
-    colorBack         = 0;
-    colorFore         = 15;
-    log_priority      = 0;
-    shouldBuffer      = false;
-    flush_on_newlines = true;
-
     device->init();
     device->clear(colorBack);
 }
 
-void kernel::log::write(char c) {
-    // If we have buffering enabled, write to the buffer.
-    if (shouldBuffer) {
-        write_buffer(c);
-    } else {
-        console_print(c);
-    }
+void kernel::log::setup() {
+    colorBack    = 0;
+    colorFore    = 15;
+    log_priority = 0;
+
+    log_term   = kernel::hal::terminal(80, 25, (char*)&kernel_log_buffer, LOG_TERM_BUFFER);
+    m_terminal = &log_term;
+
+    m_terminal->set_output(console[0]);
 }
+
+void kernel::log::write(char c) { m_terminal->write_char(c); }
 
 void kernel::log::write(const char* s) {
     // Do not attempt to write anything if there is no console!
@@ -47,34 +51,9 @@ void kernel::log::write(const char* s) {
     for (; (*s) != '\0'; s++) { write(*s); }
 }
 
-void kernel::log::write_buffer(char c) {
-    buffer[buffer_index++] = c;
-
-    if (buffer_index >= (LOG_BUFFER_MAX - 1) || (c == '\n' && flush_on_newlines)) { flush(); }
-}
-
-void kernel::log::console_print(char c) {
-    for (size_t i = 0; i < console_device_index; i++) { console[i]->write(c, colorFore, colorBack); }
-}
-
-void kernel::log::flush() {
-    if (buffer_index == 0) { return; }
-
-    // Hardening: Prevent potential overflow if buffer_index is messed with and brought outside it's intended range.
-    if (buffer_index > (LOG_BUFFER_MAX - 1)) { buffer_index = (LOG_BUFFER_MAX - 1); }
-
-    // Flush any buffers to the screen
-    for (unsigned int i = 0; i < buffer_index; i++) {
-        console_print(buffer[i]);
-        buffer[i] = 0;
-    }
-
-    buffer_index = 0;
-}
-
 unsigned char kernel::log::log_print_common(const char* category, unsigned char color) {
     unsigned char oldFore   = kernel_logger.colorFore;
-    kernel_logger.colorFore = color;
+    write_color(color);
 
     uint64_t boot_ms        = kernel::time::boot_time_ns() / (uint64_t)1000000;
     uint32_t boot_secs      = (uint32_t)(boot_ms / 1000);
@@ -85,25 +64,18 @@ unsigned char kernel::log::log_print_common(const char* category, unsigned char 
     return oldFore;
 }
 
-void kernel::log::status_log(const char* msg, unsigned char color) { get().status_log_int(msg, color); }
+void kernel::log::write_color(char fore) {
+    log& l = get();
+    l.write(0x1B);
+    l.write('[');
+    l.write('3');
+    l.write('0' + (fore % 8));
 
-void kernel::log::status_log_int(const char* msg, unsigned char color) {
-    flush();
-
-    unsigned char oldFore = kernel_logger.colorFore;
-    int           dest_x  = strlen(msg) + 2;
-
-    for (size_t i = 0; i < console_device_index; i++) { console[i]->setX(console[i]->width() - dest_x - 1); }
-
-    kernel_logger.colorFore = 0xF;
-    write("[");
-    kernel_logger.colorFore = color;
-    write(msg);
-    kernel_logger.colorFore = 0xF;
-    write("]");
-    kernel_logger.colorFore = oldFore;
-    write("\n");
-    flush();
+    if (fore > 0x7) {
+        l.write(';');
+        l.write('1');
+    }
+    l.write('m');
 }
 
 #define LOG_BODY(LNAME, LCOLOR, LPRIO)                                    \
@@ -115,7 +87,7 @@ void kernel::log::status_log_int(const char* msg, unsigned char color) {
         va_start(arg, fmt);                                               \
         vprintf(fmt, arg);                                                \
         va_end(arg);                                                      \
-        kernel_logger.colorFore = oldFore;                                \
+        write_color(oldFore);                                \
         kernel_log_lock.release();                                        \
     }
 

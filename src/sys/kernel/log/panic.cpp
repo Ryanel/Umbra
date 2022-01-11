@@ -43,7 +43,6 @@ void panic(const char* s) {
         }
     }
 
-    kernel::log::get().flush();
 
     // TODO: Shut down all processors.
     while (true) {

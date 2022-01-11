@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <kernel/hal/terminal.h>
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/mm/pmm.h>
@@ -20,39 +21,6 @@
 using namespace kernel;
 using namespace kernel::vfs;
 using namespace kernel::tasks;
-
-class terminal_delegate : public vfs_delegate {
-   public:
-    terminal_delegate() {}
-    int read(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
-    int write(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
-        for (size_t i = 0; i < size; i++) { log::get().write(buffer[i]); }
-        return 0;
-    }
-    char const* delegate_name() { return "terminal delegate"; }
-};
-
-class keyboard_delegate : public vfs_delegate {
-   public:
-    keyboard_delegate(kernel::hal::keyboard* kb) : m_kb(kb) {}
-    int read(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
-        int elements_copied = 0;
-        while (elements_copied < size && m_kb->event_buffer.size() > 0) {
-            auto evnt = m_kb->event_buffer.top();
-            if (evnt.pressed) {
-                buffer[offset + elements_copied] = evnt.keycode;
-                elements_copied++;
-            }
-            m_kb->event_buffer.pop();
-        }
-        return elements_copied;
-    }
-    int         write(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
-    char const* delegate_name() { return "keyboard delegate"; }
-
-   private:
-    kernel::hal::keyboard* m_kb;
-};
 
 /// The main kernel function.
 void kernel_main() {
@@ -85,24 +53,21 @@ void kernel_main() {
 
     {
         auto* thread_hnd = task_hnd->as<task>()->spawn_local_thread("test", (void*)&kernel::tasks::elf_loader::load_elf,
-                                                                    (uintptr_t)"/apps/test_program");
+                                                                    (uintptr_t) "/apps/test_program");
         scheduler::enqueue(thread_hnd->as<thread>().get());
     }
 
     // Create the console
-    auto* dev_dir = vfs::g_vfs.find("/dev/");
-    auto* term    = new vfs::vfs_node(dev_dir, new terminal_delegate(), vfs::vfs_type::device, 0);
-    term->set_name("console");
+    auto* testterm = new hal::terminal(80, 25, 4000);
+    testterm->set_output(kernel::log::get().console[1]);
 
-    auto* kb = new kernel::driver::ps2keyboard();
-    kb->init();
-
-    auto* kbd = new vfs::vfs_node(dev_dir, new keyboard_delegate(kb), vfs::vfs_type::device, 0);
-    kbd->set_name("keyboard");
+    auto* dev_dir = g_vfs.find("/dev/");
+    auto* term    = new vfs_node(dev_dir, testterm, vfs_type::device, 0, "console");
+    auto* kbd     = new vfs_node(dev_dir, new driver::ps2keyboard(), vfs_type::device, 0, "keyboard");
 
     kernel::log::info("main", "Reached end of kernel_main()\n");
-    log::get().flush();
 
     scheduler::unlock();  // Start scheduling processes
+    testterm->refresh();
     while (true) { asm("hlt"); }
 }

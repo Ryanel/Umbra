@@ -1,20 +1,28 @@
 #pragma once
 
-#include <kernel/text_console.h>
-#define LOG_BUFFER_MAX 80
-#define LOG_DEVICE_MAX 5
+#define LOG_BUFFER_MAX  80
+#define LOG_DEVICE_MAX  5
+#define LOG_TERM_BUFFER 8192
+// Forward declarations
+namespace kernel {
+namespace hal {
+class terminal;
+}
+namespace device {
+class text_console;
+}
+}  // namespace kernel
+
 namespace kernel {
 
 /// The logging driver. The kernel calls into this class to get log output on the screen, and this redirects to the
 /// appropreate devices.
 class log {
    public:
-    bool        shouldBuffer      = true;            ///< Should the log buffer output before sending it?
-    bool        flush_on_newlines = true;            ///< Should we flush the buffer on newlines?
     void        init(device::text_console* device);  ///< Initialize the log with device as the logging console device
+    void        setup();                             ///< Initialises the log proper.
     void        write(char c);                       ///< Write a character to the log. May flush.
     void        write(const char* s);                ///< Write a string to the log. May flush mid string.
-    void        flush();                             ///< Flushes the buffer (if enabled) to the output console
     static log& get();                               ///< Gets the log
 
     static void trace(const char* category, const char* fmt, ...);
@@ -24,23 +32,22 @@ class log {
     static void error(const char* category, const char* fmt, ...);
     static void critical(const char* category, const char* fmt, ...);
 
-    static void status_log(const char* msg, unsigned char color = 0x0A);
-
     static bool will_log(unsigned int prio) { return get().log_priority <= prio; }
 
     unsigned char colorFore    = 0xF;
     unsigned char colorBack    = 0x00;
     unsigned int  log_priority = 0;
 
-   private:
-    device::text_console* console[LOG_DEVICE_MAX];  ///< The console backends used for logging.
-    char                  buffer[LOG_BUFFER_MAX];   ///< The buffer that holds unsent text
-    unsigned int          buffer_index;             ///< The current character of the buffer
-    void                  write_buffer(char c);     ///< Writes to the buffer
-    void                  console_print(char c);
-    unsigned int          console_device_index = 0;
+    static void write_color(char fg);
 
-    void status_log_int(const char* msg, unsigned char color = 0x0E);
+    device::text_console* console[LOG_DEVICE_MAX];  ///< The console backends used for logging.
+    hal::terminal*        m_terminal;
+
+   private:
+    char         buffer[LOG_BUFFER_MAX];  ///< The buffer that holds unsent text
+    unsigned int buffer_index;            ///< The current character of the buffer
+    void         write_buffer(char c);    ///< Writes to the buffer
+    unsigned int console_device_index = 0;
 
    private:
     static unsigned char log_print_common(const char* category, unsigned char color);

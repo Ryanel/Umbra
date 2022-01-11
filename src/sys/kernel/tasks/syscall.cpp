@@ -13,10 +13,8 @@ bool syscall_handler::handle_interrupt(register_frame_t* regs) {
     int int_no = regs->rax;
 #endif
     if (int_no == 0x00) {
-        log::trace("syscall", "exit()\n");
         scheduler::terminate(nullptr);
     } else if (int_no == 0x01) {
-        log::trace("syscall", "write()\n");
         vfs::g_vfs.write(regs->rax, (uint8_t*)regs->rcx, regs->rdx);
     } else {
         log::error("syscall", "Unknown system call 0x%x", int_no);

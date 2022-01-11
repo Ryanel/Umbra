@@ -80,7 +80,7 @@ void kernel_print_version() { kernel::log::info("kernel", "Umbra v. %s on x86_64
 void boot_init_log(struct stivale2_struct* svs) {
     auto& log = kernel::log::get();
     log.init(&con_serial);
-    log.shouldBuffer = false;  // Disable buffering for now
+    log.setup();
 
     kernel::log::debug("kernel", "Kernel is alive!\n");
 
@@ -104,8 +104,7 @@ void boot_init_log(struct stivale2_struct* svs) {
         log.init(&con_vga);
     }
 
-    kernel::log::debug("kernel", "Log initialsing");
-    kernel::log::status_log("Done", 0xA);
+    kernel::log::debug("kernel", "Log initialsing\n");
 }
 
 void boot_init_memory(struct stivale2_struct* svs) {

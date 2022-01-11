@@ -1,4 +1,4 @@
-ROOT_SOURCES := $(wildcard *.cpp) $(wildcard log/*.cpp) $(wildcard mm/*.cpp) $(wildcard tasks/*.cpp) $(wildcard vfs/*.cpp) $(wildcard debug/*.cpp)
+ROOT_SOURCES := $(wildcard *.cpp) $(wildcard debug/*.cpp) $(wildcard hal/*.cpp) $(wildcard log/*.cpp) $(wildcard mm/*.cpp) $(wildcard tasks/*.cpp) $(wildcard vfs/*.cpp) 
 ARCH_SOURCES := $(wildcard ${NYX_ARCH}/*.cpp) $(wildcard ${NYX_ARCH}/drivers/*.cpp)
 SUBARCH_SOURCES := $(wildcard ${NYX_ARCH}/${NYX_TARGET}/*.cpp) $(wildcard ${NYX_ARCH}/${NYX_TARGET}/*.s)
 

@@ -128,9 +128,8 @@ void x86_idt::init() {
 
     set_gate(0x80, (uintptr_t)interrupt_syscall, descriptor, 0x8E);
 
-    kernel::log::debug("x86", "Installing IDT");
+    kernel::log::debug("x86", "Installing IDT\n");
     __asm__ volatile("lidt %0" : : "m"(idtptr));  // load the new IDT
-    if (kernel::log::will_log(1)) { kernel::log::status_log("Done"); }
     kernel::interrupts::init();
 }
 

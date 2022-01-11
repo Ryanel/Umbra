@@ -8,6 +8,7 @@ namespace driver {
 
 class ps2keyboard : public interrupt_handler, public hal::keyboard {
    public:
+    ps2keyboard() { init(); }
     void init();
     bool handle_interrupt(register_frame_t* regs);
 

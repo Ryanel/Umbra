@@ -39,9 +39,10 @@ struct vfs_node {
     vfs_type             type;
 
     vfs_node() {}
-    vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz)
+    vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz, const char* name = nullptr)
         : delegate(delegate), parent(p), size(sz), type(type) {
         if (p != nullptr) { p->add_child(this); }
+        if (name != nullptr) { set_name(name); }
     }
 
     vfs_node(const vfs_node& n) {
