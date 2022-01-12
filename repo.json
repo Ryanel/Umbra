@@ -20,11 +20,11 @@
     "debug_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown -S -s"
   },
   "packages": {
-    "sys/libc": {
-      "name": "libc",
+    "sys/libk": {
+      "name": "libk",
       "architecture": "all",
       "version": "dev",
-      "src_path": "/lib/c",
+      "src_path": "/sys/klibc",
       "install_root": "/",
       "acquisition": "local_copy",
       "build_steps": [
@@ -49,7 +49,7 @@
         "make install"
       ],
       "requirements": [
-        "sys/libc"
+        "sys/libk"
       ]
     },
     "boot/limine": {
@@ -78,7 +78,7 @@
         "make install"
       ],
       "requirements": [
-        "sys/libc"
+        "sys/libk"
       ]
     }
   }

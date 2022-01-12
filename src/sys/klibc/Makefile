@@ -3,20 +3,20 @@ OBJS = $(patsubst %.c, %.o, $(SRC)) # list of object files
 
 CFLAGS := -O0 -ggdb3
 
-all: libc_kernel.a
+all: lib_kernel.a
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) -I include -ffreestanding -nostdlib -Wall -D__is_libk -o $@ $<
 
-libc_kernel.a: $(OBJS)
-	${AR} rcs -o libc_kernel.a ${OBJS}
+lib_kernel.a: $(OBJS)
+	${AR} rcs -o lib_kernel.a ${OBJS}
 
 clean:
 
-install: install_headers
-	@mkdir -p ${INSTALL_DIR}/lib/
-	@cp libc_kernel.a ${INSTALL_DIR}/lib/libc_kernel.a
+install:
+	@mkdir -p ${INSTALL_DIR}/sys/
+	@cp lib_kernel.a ${INSTALL_DIR}/sys/lib_kernel.a
 
 install_headers:
-	@mkdir -p ${INSTALL_DIR}/usr/include
-	@cp -R include/* ${INSTALL_DIR}/usr/include/
+	@mkdir -p ${INSTALL_DIR}/sys/include
+	@cp -R include/* ${INSTALL_DIR}/sys/include/

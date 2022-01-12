@@ -18,14 +18,14 @@ DEPFILES    := $(patsubst %.o,%.d,$(ALL_OBJECTS))
 
 KERNEL_LINKER_FILE := ${NYX_ARCH}/${NYX_TARGET}/linker.ld
 
-LIBRARIES := ${SYSROOT}/lib/libc_kernel.a
+LIBRARIES := ${SYSROOT}/sys/lib_kernel.a
 
 CFLAGS ?= -Og -ggdb3 -fno-omit-frame-pointer
 CXXFLAGS ?= ${CFLAGS}
 LDFLAGS ?= -z max-page-size=0x1000
 CXXFLAGS := ${CXXFLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-builtin \
 			-fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib -fstack-protector-strong \
- 			-DARCH_${NYX_TARGET} -std=c++17 -I ./include -I ./include/stl/ -I ${SYSROOT}/usr/include/ -ffreestanding -nostdlib -lgcc
+ 			-DARCH_${NYX_TARGET} -std=c++17 -I ./include -I ./include/stl/ -I ../klibc/include/ -ffreestanding -nostdlib -lgcc
 
 ASMFLAGS ?= -g -f elf64
 
