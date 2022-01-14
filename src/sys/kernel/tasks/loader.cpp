@@ -13,6 +13,7 @@ using namespace kernel::vfs;
 using namespace kernel::tasks;
 
 typedef void startfn(void);
+extern "C" void enter_usermode(uintptr_t ptr, uintptr_t stack);
 
 void kernel::tasks::elf_loader::load_elf(const char * fpath) {
     // Load file
@@ -50,4 +51,8 @@ void kernel::tasks::elf_loader::load_elf(const char * fpath) {
     log::info("elfloader", "Launching %s\n", fpath);
     startfn* fn = (startfn*)(test_exe.m_header->e_entry);
     fn();
+
+    //virt_addr_t stack = (virt_addr_t)g_vmm.mmap(0xf0000000, 0x4000, VMM_PROT_WRITE | VMM_PROT_USER, VMM_FLAG_POPULATE);
+    //log::info("elfloader", "Entry: 0x%016p, stack: 0x%016p\n", test_exe.m_header->e_entry, stack);
+    //enter_usermode(test_exe.m_header->e_entry, stack);
 }

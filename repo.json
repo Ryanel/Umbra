@@ -17,7 +17,7 @@
       "NYX_TARGET": "x86_64",
       "NYX_TARGET_TRIPLE": "x86_64-elf-umbra"
     },
-    "run_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown",
+    "run_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown -d int",
     "debug_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown -S -s"
   },
   "packages": {

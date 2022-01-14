@@ -1,9 +1,9 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
+#include <kernel/mm/memory.h>
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
-#include <kernel/mm/memory.h>
 
 kheap g_heap;
 
@@ -63,7 +63,7 @@ void kheap::init(bool full, uintptr_t placement_addr) {
     if (full) {
         early_placement &= 0xFFFFFFFFFFFFF000;
         early_placement += 0x1000;
-        slab_alloc.init(early_placement, 0x100000);  // TODO: Define a max heap size!
+        slab_alloc.init(early_placement, 0x200000);  // TODO: Define a max heap size!
     } else {
         early_placement = placement_addr;
         if (early_placement & 0xFFFFFFFFFFFFF000) {

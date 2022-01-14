@@ -45,3 +45,13 @@ global set_page_table
 set_page_table:
     mov cr3, rdi
     ret
+
+
+global enter_usermode
+enter_usermode:
+    push 0x23
+    push rsi
+    pushfq
+    push 0x1B
+    push rdi
+    iretq

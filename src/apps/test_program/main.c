@@ -5,5 +5,6 @@
 
 int main() {
     printf("Test program written in C for the Umbra Operating System, using the Umbra libc!\n");
+    while (1) {}
     return 0;
 }

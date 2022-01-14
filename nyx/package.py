@@ -62,15 +62,16 @@ class NyxPackage:
     def computed_enviroment(self, common, config):
         env = dict()
         env |= common
-        env['DESTDIR'] = self.package_dir(config["build_root"])
-        env['INSTALL_DIR'] = self.package_dir(config["build_root"])
+        env['INSTALL_DIR'] = os.path.abspath(self.package_dir(config["build_root"]))
         env['SYSROOT'] = os.path.abspath(config["sysroot"])
-        env['BUILD_DIR'] = self.build_dir(config["build_root"])
+        env['BUILD_DIR'] = os.path.abspath(self.build_dir(config["build_root"]))
 
         if (self.isTool):
             env['CC'] = 'gcc' # Native
             env['CXX'] = 'g++'# Native
             env['AR'] = 'ar'  # Native
+        else:
+            env['DESTDIR'] = os.path.abspath(self.package_dir(config["build_root"]))
 
         env['PATH'] = os.path.abspath(config['tool_root']) + "/host-tools/bin" + ":" + env['PATH']
         env |= self.enviroment

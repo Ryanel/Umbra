@@ -2,71 +2,45 @@
 
 #include <stdint.h>
 
-typedef struct alignas(8) gdt_entry_struct {
-    uint16_t limit_low;    // The lower 16 bits of the limit.
-    uint16_t base_low;     // The lower 16 bits of the base.
-    uint8_t  base_middle;  // The next 8 bits of the base.
-    uint8_t  access;       // Access flags, determine what ring this segment can be used in.
-    uint8_t  granularity;  //
-    uint8_t  base_high;    // The last 8 bits of the base.
-
-#ifdef ARCH_X86_64
-    uint32_t base_upper;
-    uint32_t base_reserved;
-#endif
-
-} __attribute__((packed)) gdt_entry_t;
-
-typedef struct alignas(8) gdt_ptr_struct {
-    uint16_t  limit;  // The upper 16 bits of all selector limits.
-    uintptr_t base;   // The address of the first gdt_entry_t struct.
-} __attribute__((packed)) gdt_ptr_t;
-
-typedef volatile struct alignas(8) strtss {
-    uint32_t prev_tss;
-    uint32_t esp0;
-    uint32_t ss0;
-    uint32_t esp1;
-    uint32_t ss1;
-    uint32_t esp2;
-    uint32_t ss2;
-    uint32_t cr3;
-    uint32_t eip;
-    uint32_t eflags;
-    uint32_t eax;
-    uint32_t ecx;
-    uint32_t edx;
-    uint32_t ebx;
-    uint32_t esp;
-    uint32_t ebp;
-    uint32_t esi;
-    uint32_t edi;
-    uint32_t es;
-    uint32_t cs;
-    uint32_t ss;
-    uint32_t ds;
-    uint32_t fs;
-    uint32_t gs;
-    uint32_t ldt;
-    uint16_t trap;
-    uint16_t iomap_base;
-} __attribute__((packed)) tss_struct_t;
-
 namespace kernel {
 namespace x86 {
+struct gdt_entry {
+    uint16_t limit_low;
+    uint16_t base_low;
+    uint8_t  base_middle;
+    uint8_t  access;
+    uint8_t  granularity;
+    uint8_t  base_high;
+} __attribute__((packed));
+struct tss_entry {
+    uint32_t unused0;
+    uint64_t rsp[3];
+    uint64_t unused1;
+    uint64_t ist[7];
+    uint64_t unused2;
+    uint16_t unused3;
+    uint16_t iomap_base;
+} __attribute__((packed));
 
-class gdt {
-    volatile gdt_ptr_t   gdt_ptr;
-    volatile gdt_entry_t gdt_entries[6];
+struct gdt_entry_high {
+    uint32_t base;
+    uint32_t reserved0;
+} __attribute__((packed));
 
-   public:
-    tss_struct_t tss;
-    void         init();
-    void         gdt_set_gate(int32_t num, uintptr_t base, uintptr_t limit, uint8_t access, uint8_t gran);
-    void         set_kernel_stack(uint32_t esp) { tss.esp0 = esp; }
-};
+struct gdt_pointer {
+    uint16_t  limit;
+    uintptr_t base;
+} __attribute__((packed));
 
-extern gdt g_gdt;
+struct gdt {
+    struct gdt_entry      entries[6];
+    struct gdt_entry_high tss_entry;
+    struct gdt_pointer    pointer;
+    struct tss_entry      tss;
+
+    void init(unsigned int core);
+    void install();
+} __attribute__((packed));
 
 }  // namespace x86
 }  // namespace kernel

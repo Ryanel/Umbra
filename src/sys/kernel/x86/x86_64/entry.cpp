@@ -145,7 +145,6 @@ void boot_init_memory(struct stivale2_struct* svs) {
     g_pmm.mark_used(0x0000);
 
     // Now, construct the kernel's page table
-
     pml_t* pml4 = (pml_t*)(hhdm_tag->addr + g_pmm.alloc_single(0));
     memset(pml4, sizeof(pml_t), 0);
     kernel_vas = vas((virt_addr_t)pml4, kernel::virt_to_phys_addr((virt_addr_t)pml4));
@@ -223,20 +222,23 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
     boot_init_log(stivale2_struct);
     kernel_print_version();
 
-    // Initialise basic hardware
-    x86::g_gdt.init();  // Initialise the GDT
-    g_idt.init();       // Initialise the IDT
-
-    auto* smp_tag = (stivale2_struct_tag_smp*)stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_SMP_ID);
+    size_t num_cores = 1;
+    auto*  smp_tag   = (stivale2_struct_tag_smp*)stivale2_get_tag(stivale2_struct, STIVALE2_STRUCT_TAG_SMP_ID);
     if (smp_tag != nullptr) {
-        kernel::log::info("smp", "%d cores detected\n", smp_tag->cpu_count);
-        for (size_t i = 0; i < smp_tag->cpu_count; i++) {
+        num_cores = smp_tag->cpu_count;
+        kernel::log::info("smp", "%d cores detected\n", num_cores);
+        for (size_t i = 0; i < num_cores; i++) {
             g_cpu_data[i].lapic_id = smp_tag->smp_info[i].lapic_id;
             g_cpu_data[i].id       = smp_tag->smp_info[i].processor_id;
         }
     }
 
+    // Initialise basic hardware
+    for (size_t i = 0; i < num_cores; i++) { g_cpu_data[i].gdt.init(i); }
+    g_cpu_data[0].gdt.install();
+
     // Interrupts
+    g_idt.init();       // Initialise the IDT
     timer_pit.init();
     kernel::time::system_timer = &timer_pit;
     g_idt.enable_interrupts();
