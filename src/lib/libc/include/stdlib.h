@@ -8,9 +8,12 @@ extern "C" {
 #endif
 
 void  abort(void);
-int   atexit(void (*)(void));
+
 int   atoi(const char*);
+char* itoa(unsigned long long n, unsigned int base);
+
 void  exit(int status);
+int   atexit(void (*)(void));
 char* getenv(const char*);
 
 void* calloc(size_t, size_t);

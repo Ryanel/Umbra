@@ -4,9 +4,10 @@
 
 #ifdef _SYS_SYSCALL_IDS
 #define SYS_SYSCALL_EXIT 0
+#define SYS_SYSCALL_WRITE 1
 #endif
 
-void _do_syscall(uint64_t id, uint64_t p1, uint64_t p2, uint64_t p3);
+void _do_syscall(unsigned long long id, unsigned long long p1, unsigned long long p2, unsigned long long p3);
 
 #define _SYSCALL(x) _do_syscall(x,0,0,0)
 #define _SYSCALL2(x,y) _do_syscall(x,y,0,0)

@@ -5,3 +5,4 @@ test_program:
 
 install:
 	cp test_program ${DESTDIR}
+	rm test_program
