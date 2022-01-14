@@ -8,9 +8,9 @@ find build/initrd/ -printf "%P\n" -type f -o -type l -o -type d | tar -cf build/
 
 echo "[nyx]: Generating LiveCD ISO..."
 
-cd build/boot/limine/
-cp limine.sys limine-cd.bin limine-eltorito-efi.bin ../../sysroot/
-cd ../../
+cd build/temp/build/boot/limine-dev/
+cp limine.sys limine-cd.bin limine-eltorito-efi.bin ../../../../sysroot/
+cd ../../../../
 
 xorriso -as mkisofs -b limine-cd.bin \
         -no-emul-boot -boot-load-size 4 -boot-info-table \

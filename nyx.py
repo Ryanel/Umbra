@@ -42,6 +42,7 @@ def main() -> int:
     config["source_root"] = repo_json['general']['source_root']
     config["sysroot"] = repo_json['general']['sysroot']
     config["build_root"] = repo_json['general']['build_root']
+    config["tool_root"] = repo_json['general']['tool_root']
     config["package_root"] = repo_json['general']['package_root']
     config["initrd_root"] = repo_json['general']['initrd_root']
 
@@ -58,6 +59,8 @@ def main() -> int:
     if (args.module == 'build'):
         if (engine.build() == 0) and config['run_on_completion']:
             engine.run()
+    elif args.module == 'reinstall':
+        engine.build('reinstall')
     elif (args.module == 'debug'):
         engine.debug()
     elif (args.module == 'clean'):

@@ -2,8 +2,9 @@ import os
 from posixpath import curdir, split
 import shutil
 import subprocess
-import zipfile
+import tarfile
 
+from string import Template
 class NyxPackage:
     def __init__(self, name):
         self.name = name
@@ -17,8 +18,8 @@ class NyxPackage:
         self.requirements = []
         self.patches = []
         self.configure_steps = []
-        self.build_steps = ['make']
-        self.package_steps = ['make install']
+        self.build_steps = []
+        self.package_steps = []
         self.installroot = '/lib/'
         self.enviroment = dict()
         self.isTool = False
@@ -40,10 +41,11 @@ class NyxPackage:
         self.enviroment      = pkg_json.get("enviroment", dict())
         self.isTool          = bool(pkg_json.get("is_tool", False))
         self.git_branch      = pkg_json.get("git_branch", "master")
+        self.git_tag         = pkg_json.get("git_tag", "")
         self.cached          = os.path.exists(self.pkg_path(config))
 
     def pkg_path(self, config):
-        return f"{config['package_root']}/{self.name}-{self.version}.zip";
+        return f"{config['package_root']}{self.name}-{self.version}.tar.gz";
 
     def src_dir(self, config):
         if (self.acquisition == 'local'):
@@ -52,10 +54,6 @@ class NyxPackage:
             return self.build_dir(config["build_root"])
 
     def build_dir(self, curtmp):
-        if (self.isTool):
-            if (self.acquisition == 'git'):
-                return os.path.abspath(f"{curtmp}/../{self.installroot}/{self.name}")
-            return os.path.abspath(f"{curtmp}/../{self.installroot}")
         return os.path.abspath(f"{curtmp}build/{self.name}-{self.version}")
 
     def package_dir(self, curtmp):
@@ -64,15 +62,23 @@ class NyxPackage:
     def computed_enviroment(self, common, config):
         env = dict()
         env |= common
-        env |= self.enviroment
+        env['DESTDIR'] = self.package_dir(config["build_root"])
         env['INSTALL_DIR'] = self.package_dir(config["build_root"])
         env['SYSROOT'] = os.path.abspath(config["sysroot"])
         env['BUILD_DIR'] = self.build_dir(config["build_root"])
 
+        if (self.isTool):
+            env['CC'] = 'gcc' # Native
+            env['CXX'] = 'g++'# Native
+            env['AR'] = 'ar'  # Native
+
+        env['PATH'] = os.path.abspath(config['tool_root']) + "/host-tools/bin" + ":" + env['PATH']
+        env |= self.enviroment
         return env
 
     def fetch(self, config) -> bool:
         tmp_dir = self.build_dir(config["build_root"])
+
         if (self.acquisition == 'local_copy'):
             self.util_createpath(tmp_dir)
             shutil.copytree(config["source_root"] + self.src_path, tmp_dir, dirs_exist_ok=True)
@@ -83,70 +89,60 @@ class NyxPackage:
             return True
         elif (self.acquisition == 'git'):
             # Git clone into this directory
-            print(os.path.abspath(f"{tmp_dir}"))
-            parent = tmp_dir
-            if (self.isTool):
-                parent = os.path.abspath(f"{config['build_root']}/../{self.installroot}/")
             if os.path.isdir(os.path.abspath(tmp_dir)):
                 return True
-            status = subprocess.run(['git', 'clone', self.src_path, f'--branch={self.git_branch}','--depth=1', f'{self.name}'], shell=False, cwd=parent)
-            return status.returncode == 0
+            self.util_createpath(tmp_dir)
+            if (self.git_tag != ""):
+                status = subprocess.run(['git', 'clone', self.src_path, f'--branch={self.git_tag}','--depth=1','.'], shell=False, cwd=tmp_dir)
+                return status.returncode == 0
+            else:
+                status = subprocess.run(['git', 'clone', self.src_path, f'--branch={self.git_branch}','--depth=1','.'], shell=False, cwd=tmp_dir)
+                return status.returncode == 0
         return False
 
     def patch(self, config) -> bool:
-        tmp_dir = self.build_dir(config["build_root"])
+        tmp_dir = os.path.abspath(self.build_dir(config["build_root"]) + "/")
         if len(self.patches) > 0:
             for patch in self.patches:
                 print(f"[nyx]: Applying patch {patch} to {tmp_dir}")
-
                 with open(os.path.abspath(patch), "rb") as f:
                     patch_data = f.read()
-
-                process = subprocess.Popen(['patch', '-ruN', '-d', '.'], shell=False, cwd=tmp_dir, stdin=subprocess.PIPE)
+                process = subprocess.Popen(['patch', '-ruN', '-p1', '-d', '.'], shell=False, cwd=tmp_dir, stdin=subprocess.PIPE)
                 process.communicate(input=patch_data)
         return True
 
     def configure(self, config, common_enviroment) -> bool:
-        return True
+        cwd = self.src_dir(config)
+        return self.execute_commands(common_enviroment, config, self.configure_steps, cwd)
 
     def build(self, config, common_enviroment) -> bool:
-        bdir = self.build_dir(config["build_root"]) +'/'
-        env = self.computed_enviroment(common_enviroment, config)
-
-        for x in self.build_steps:
-            splitargs = x.split(' ')
-            cwd = self.src_dir(config)
-
-            status = subprocess.run(splitargs, shell=False, cwd=cwd, env=env)
-            if status.returncode != 0:
-                return False
-        return True
+        cwd = self.src_dir(config)
+        return self.execute_commands(common_enviroment, config, self.build_steps, cwd)
 
     def package(self, config, common_enviroment) -> bool:
         install_dir = os.path.abspath(self.package_dir(config["build_root"]))
         self.util_createpath(install_dir)
 
-        env = self.computed_enviroment(common_enviroment, config)
-
-        for x in self.package_steps:
-            splitargs = x.split(' ')
-            cwd = self.src_dir(config)
-            status = subprocess.run(splitargs, shell=False, cwd=cwd, env=env)
-            if status.returncode != 0:
-                return False
+        cwd = self.src_dir(config)
+        if not self.execute_commands(common_enviroment, config, self.package_steps, cwd):
+            return False
 
         # Now, package up the files...
-        shutil.make_archive(f"{config['package_root']}/{self.name}-{self.version}", "zip", install_dir)
+        self.util_createpath(self.pkg_path(config) + "/../")
+        with tarfile.open(self.pkg_path(config), "w:gz") as zip_ref:
+            zip_ref.add(install_dir, arcname='', recursive=True)
         return True
 
     def install(self, config) -> bool:
         sysroot_dir = os.path.abspath(f"{config['sysroot']}/{self.installroot}")
 
-        if (self.destination == 'initrd'):
+        if (self.destination == 'tools'):
+            sysroot_dir = os.path.abspath(f"{config['tool_root']}/{self.installroot}")
+        elif (self.destination == 'initrd'):
             sysroot_dir = os.path.abspath(f"{config['initrd_root']}/{self.installroot}")
 
         self.util_createpath(sysroot_dir)
-        with zipfile.ZipFile(self.pkg_path(config),"r") as zip_ref:
+        with tarfile.open(self.pkg_path(config), mode="r") as zip_ref:
             zip_ref.extractall(sysroot_dir)
         return True
 
@@ -164,8 +160,22 @@ class NyxPackage:
         print(f"package_steps: {self.package_steps}")
         print(f"env: {self.enviroment}")
 
+    def execute_commands(self, common_enviroment, config, commands, cwd):
+        bdir = self.build_dir(config["build_root"]) +'/'
+        env = self.computed_enviroment(common_enviroment, config)
 
+        for x in commands:
+            temp_obj = Template(x)
+            prefix = os.path.abspath(self.package_dir(config['build_root']))
+            tool_prefix = os.path.abspath(config['tool_root']) + "/" + self.installroot
+            parsed_steps = temp_obj.substitute(SYSROOT=os.path.abspath(config["sysroot"]), TARGET='x86_64-umbra', PREFIX=prefix,TOOLPREFIX=tool_prefix, THREADS='16')
+            splitargs = [parsed_steps]
+            cwd = self.src_dir(config)
+            status = subprocess.run(splitargs, shell=True, cwd=cwd, env=env)
+            if status.returncode != 0:
+                return False
+        return True
 
     def util_createpath(self, path):
-        if not os.path.isdir(path):
-            os.makedirs(path)
+        if not os.path.isdir(os.path.abspath(path)):
+            os.makedirs(os.path.abspath(path))

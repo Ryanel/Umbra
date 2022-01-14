@@ -1,7 +1,7 @@
 all: test_program
 
 test_program:
-	${CC} -nostdlib -nostartfiles -o test_program main.s
+	@${CC} -o test_program main.c syscall.s
 
 install:
-	cp test_program ${INSTALL_DIR}
+	cp test_program ${DESTDIR}

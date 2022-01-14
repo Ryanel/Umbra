@@ -29,7 +29,7 @@ class BuildEngine:
                     for dpkg_req in self.packages[dpkg].requirements:
                         if dpkg_req == pkg_name:
                             self.packages[dpkg].cached = False
-                            self.uncache(dpkg, self.packages)
+                            self.uncache(dpkg)
 
     def clean(self):
         self.clean_build_root()
@@ -46,7 +46,7 @@ class BuildEngine:
     def debug(self):
         subprocess.run(self.json['general']['debug_command'], shell=True, stdout=sys.stdout)
 
-    def build(self):
+    def build(self, step = ''):
         dep_graph = TopologicalSorter()
         for x, y in self.packages.items():
             dep_graph.add(x, *y.requirements)
@@ -56,6 +56,14 @@ class BuildEngine:
         packages_to_compile_in_order = []
         for x in compile_order:
             packages_to_compile_in_order.append(self.packages[x])
+
+        if step == 'reinstall':
+            for pkg in packages_to_compile_in_order:
+                if (not pkg.install(self.config)):
+                    print(f"Failed to install {pkg.name}!")
+                    return 1
+                print(f"[nyx]: Installing {pkg.name}-{pkg.version}")
+            return 0
 
         for pkg in packages_to_compile_in_order:
             if (pkg.cached):

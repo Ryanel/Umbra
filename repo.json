@@ -6,10 +6,11 @@
     "build_root": "build/temp/",
     "package_root": "build/packages/",
     "initrd_root": "build/initrd/",
+    "tool_root": "build/tools/",
     "env": {
-      "CC": "x86_64-elf-gcc",
-      "CXX": "x86_64-elf-g++",
-      "AR": "x86_64-elf-ar",
+      "CC": "x86_64-umbra-gcc",
+      "CXX": "x86_64-umbra-g++",
+      "AR": "x86_64-umbra-ar",
       "ASM": "nasm",
       "ASMFLAGS": "-f elf64 -F dwarf -g",
       "NYX_ARCH": "x86",
@@ -32,6 +33,92 @@
       ],
       "package_steps": [
         "make install"
+      ],
+      "requirements": [
+        "tool/cross-gcc"
+      ]
+    },
+    "lib/libc": {
+      "name": "libc",
+      "architecture": "all",
+      "version": "dev",
+      "src_path": "/lib/libc",
+      "install_root": "/",
+      "acquisition": "local_copy",
+      "build_steps": [
+        "make"
+      ],
+      "package_steps": [
+        "make install"
+      ],
+      "requirements": [
+        "lib/libc-headers",
+        "tool/cross-gcc"
+      ]
+    },
+    "lib/libc-headers": {
+      "name": "libc-headers",
+      "architecture": "all",
+      "version": "dev",
+      "src_path": "/lib/libc",
+      "install_root": "/",
+      "acquisition": "local_copy",
+      "package_steps": [
+        "make install-headers"
+      ]
+    },
+    "tool/cross-binutils": {
+      "name": "cross-binutils",
+      "architecture": "all",
+      "is_tool": "True",
+      "version": "2.35",
+      "acquisition": "git",
+      "src_path": "git://sourceware.org/git/binutils-gdb.git",
+      "git_branch": "binutils-2_35",
+      "install_root": "host-tools",
+      "destination": "tools",
+      "patches": [
+        "repo/patches/cross-binutils.patch"
+      ],
+      "build_steps": [
+        "bash -c \"cd ld && aclocal\"",
+        "bash -c \"cd ld && automake\"",
+        "bash -c \"mkdir -p ../cross-binutils-build/\"",
+        "cd ../cross-binutils-build && ../cross-binutils-2.35/configure --target=${TARGET} --prefix=${TOOLPREFIX}/ --with-sysroot=${SYSROOT} --disable-werror",
+        "cd ../cross-binutils-build && make -j${THREADS} all-binutils all-gas all-ld"
+      ],
+      "package_steps": [
+        "cd ../cross-binutils-build && make install-binutils install-gas install-ld"
+      ],
+      "requirements": [
+        "lib/libc-headers"
+      ]
+    },
+    "tool/cross-gcc": {
+      "name": "cross-gcc",
+      "architecture": "all",
+      "is_tool": "True",
+      "version": "11.1.0",
+      "acquisition": "git",
+      "src_path": "git://gcc.gnu.org/git/gcc.git",
+      "git_tag": "releases/gcc-11.1.0",
+      "install_root": "host-tools",
+      "destination": "tools",
+      "patches": [
+        "repo/patches/cross-gcc.patch"
+      ],
+      "build_steps": [
+        "bash -c \"cd libstdc++-v3 && autoconf\"",
+        "bash -c \"mkdir -p ../cross-gcc-build/\"",
+        "cd ../cross-gcc-build && ../cross-gcc-11.1.0/configure --target=${TARGET} --prefix=${TOOLPREFIX}/ --with-sysroot=${SYSROOT} --enable-languages=c,c++ --disable-werror",
+        "cd ../cross-gcc-build && make -j${THREADS} all-gcc all-target-libgcc"
+      ],
+      "package_steps": [
+        "cd ../cross-gcc-build && make install-gcc install-target-libgcc"
+      ],
+      "requirements": [
+        "lib/libc-headers",
+        "tool/cross-binutils"
       ]
     },
     "sys/kernel": {
@@ -49,7 +136,8 @@
         "make install"
       ],
       "requirements": [
-        "sys/libk"
+        "sys/libk",
+        "tool/cross-binutils"
       ]
     },
     "boot/limine": {
@@ -78,7 +166,7 @@
         "make install"
       ],
       "requirements": [
-        "sys/libk"
+        "lib/libc"
       ]
     }
   }
