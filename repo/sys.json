@@ -1,0 +1,40 @@
+{
+    "packages": {
+        "sys/kernel": {
+            "name": "kernel",
+            "architecture": "all",
+            "version": "dev",
+            "src_path": "/sys/kernel/",
+            "install_root": "/sys/",
+            "acquisition": "local",
+            "build_steps": [
+                "make",
+                "make symbols"
+            ],
+            "package_steps": [
+                "make install"
+            ],
+            "requirements": [
+                "sys/libk",
+                "tool/cross-binutils"
+            ]
+        },
+        "sys/libk": {
+            "name": "libk",
+            "architecture": "all",
+            "version": "dev",
+            "src_path": "/sys/klibc",
+            "install_root": "/",
+            "acquisition": "local_copy",
+            "build_steps": [
+                "make"
+            ],
+            "package_steps": [
+                "make install"
+            ],
+            "requirements": [
+                "tool/cross-gcc"
+            ]
+        }
+    }
+}

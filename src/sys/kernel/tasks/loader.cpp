@@ -29,9 +29,6 @@ void kernel::tasks::elf_loader::load_elf(const char * fpath) {
                                                                     // not make unnessisary slabs.
     vfs::g_vfs.read(fd, buf, size);
 
-    // Open a console for the program
-    auto term = vfs::g_vfs.open_file("/dev/console", 0);
-
     // Parse as an ELF
     auto test_exe = elf64_file(buf);
 

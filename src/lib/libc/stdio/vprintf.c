@@ -4,14 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define _SYS_SYSCALL_IDS
 #include <sys/syscall.h>
 
-static void vprintf_print_helper(char c) { _do_syscall(SYS_SYSCALL_WRITE, 1, &c, 1); }
-
-static void vprintf_print_helper_string(char* s) { _do_syscall(SYS_SYSCALL_WRITE, 1, s, strlen(s)); }
-static void vprintf_print_helper_string_sz(char* s, size_t sz) { _do_syscall(SYS_SYSCALL_WRITE, 1, s, sz); }
+static void vprintf_print_helper(char c) { fwrite(&c, 1, 1, stdout); }
+static void vprintf_print_helper_string(char* s) { fwrite(s, strlen(s), 1, stdout); }
+static void vprintf_print_helper_string_sz(char* s, size_t sz) { fwrite(s, sz, 1, stdout); }
 
 static void vprintf_print_padding_helper(unsigned int length, char* arg, bool fmt_length_zeropad) {
     if (length != 0) {
@@ -177,8 +174,6 @@ int vprintf(const char* fmt, va_list arg) {
         }
     }
 
-    if (opt_nonformat_sz > 0) {
-        vprintf_print_helper_string_sz(opt_nonformat_str, opt_nonformat_sz);
-    }
+    if (opt_nonformat_sz > 0) { vprintf_print_helper_string_sz(opt_nonformat_str, opt_nonformat_sz); }
     return 0;
 }

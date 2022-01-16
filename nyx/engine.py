@@ -1,6 +1,7 @@
 from posixpath import curdir, split
 from graphlib import TopologicalSorter
 import sys
+import json
 from nyx.package import *
 
 class BuildEngine:
@@ -19,6 +20,14 @@ class BuildEngine:
             pkg = NyxPackage(x)
             pkg.loadFromJson(pkg_json, self.config)
             self.packages[x] = pkg
+        for y in self.json['includes']:
+            with open(y) as repo_file:
+                dat = json.load(repo_file)
+                for x in dat['packages']:
+                    pkg_json = dat['packages'][x]
+                    pkg = NyxPackage(x)
+                    pkg.loadFromJson(pkg_json, self.config)
+                    self.packages[x] = pkg
 
     def uncache(self, pkg_name):
         for pkg in self.packages:

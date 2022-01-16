@@ -68,6 +68,5 @@ void kernel_main() {
     kernel::log::info("main", "Reached end of kernel_main()\n");
 
     scheduler::unlock();  // Start scheduling processes
-    testterm->refresh();
     while (true) { asm("hlt"); }
 }

@@ -1,0 +1,33 @@
+{
+    "packages": {
+        "lib/libc": {
+            "name": "libc",
+            "architecture": "all",
+            "version": "dev",
+            "src_path": "/lib/libc",
+            "install_root": "/",
+            "acquisition": "local_copy",
+            "build_steps": [
+                "make"
+            ],
+            "package_steps": [
+                "make install"
+            ],
+            "requirements": [
+                "lib/libc-headers",
+                "tool/cross-gcc"
+            ]
+        },
+        "lib/libc-headers": {
+            "name": "libc-headers",
+            "architecture": "all",
+            "version": "dev",
+            "src_path": "/lib/libc",
+            "install_root": "/",
+            "acquisition": "local_copy",
+            "package_steps": [
+                "make install-headers"
+            ]
+        }
+    }
+}

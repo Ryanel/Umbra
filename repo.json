@@ -17,141 +17,16 @@
       "NYX_TARGET": "x86_64",
       "NYX_TARGET_TRIPLE": "x86_64-elf-umbra"
     },
-    "run_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown -d int",
+    "run_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown",
     "debug_command": "qemu-system-x86_64 -cdrom build/livecd.iso -serial stdio -m 512 -cpu max -machine type=q35 -vga cirrus -smp 4 -no-reboot -no-shutdown -S -s"
   },
+  "includes": [
+    "repo/tool.json",
+    "repo/sys.json",
+    "repo/lib.json",
+    "repo/boot.json"
+  ],
   "packages": {
-    "sys/libk": {
-      "name": "libk",
-      "architecture": "all",
-      "version": "dev",
-      "src_path": "/sys/klibc",
-      "install_root": "/",
-      "acquisition": "local_copy",
-      "build_steps": [
-        "make"
-      ],
-      "package_steps": [
-        "make install"
-      ],
-      "requirements": [
-        "tool/cross-gcc"
-      ]
-    },
-    "lib/libc": {
-      "name": "libc",
-      "architecture": "all",
-      "version": "dev",
-      "src_path": "/lib/libc",
-      "install_root": "/",
-      "acquisition": "local_copy",
-      "build_steps": [
-        "make"
-      ],
-      "package_steps": [
-        "make install"
-      ],
-      "requirements": [
-        "lib/libc-headers",
-        "tool/cross-gcc"
-      ]
-    },
-    "lib/libc-headers": {
-      "name": "libc-headers",
-      "architecture": "all",
-      "version": "dev",
-      "src_path": "/lib/libc",
-      "install_root": "/",
-      "acquisition": "local_copy",
-      "package_steps": [
-        "make install-headers"
-      ]
-    },
-    "tool/cross-binutils": {
-      "name": "cross-binutils",
-      "architecture": "all",
-      "is_tool": "True",
-      "version": "2.35",
-      "acquisition": "git",
-      "src_path": "git://sourceware.org/git/binutils-gdb.git",
-      "git_branch": "binutils-2_35",
-      "install_root": "host-tools",
-      "destination": "tools",
-      "patches": [
-        "repo/patches/cross-binutils.patch"
-      ],
-      "build_steps": [
-        "bash -c \"cd ld && aclocal\"",
-        "bash -c \"cd ld && automake\"",
-        "bash -c \"mkdir -p ../cross-binutils-build/\"",
-        "cd ../cross-binutils-build && ../cross-binutils-2.35/configure --target=${TARGET} --prefix=${TOOLPREFIX}/ --with-sysroot=${SYSROOT} --disable-werror",
-        "cd ../cross-binutils-build && make -j${THREADS} all-binutils all-gas all-ld"
-      ],
-      "package_steps": [
-        "cd ../cross-binutils-build && make install-binutils install-gas install-ld"
-      ],
-      "requirements": [
-        "lib/libc-headers"
-      ]
-    },
-    "tool/cross-gcc": {
-      "name": "cross-gcc",
-      "architecture": "all",
-      "is_tool": "True",
-      "version": "11.1.0",
-      "acquisition": "git",
-      "src_path": "git://gcc.gnu.org/git/gcc.git",
-      "git_tag": "releases/gcc-11.1.0",
-      "install_root": "host-tools",
-      "destination": "tools",
-      "patches": [
-        "repo/patches/cross-gcc.patch"
-      ],
-      "build_steps": [
-        "bash -c \"cd libstdc++-v3 && autoconf\"",
-        "bash -c \"mkdir -p ../cross-gcc-build/\"",
-        "cd ../cross-gcc-build && ../cross-gcc-11.1.0/configure --target=${TARGET} --prefix=${TOOLPREFIX}/ --with-sysroot=${SYSROOT} --enable-languages=c,c++ --disable-werror",
-        "cd ../cross-gcc-build && make -j${THREADS} all-gcc all-target-libgcc"
-      ],
-      "package_steps": [
-        "cd ../cross-gcc-build && make install-gcc install-target-libgcc"
-      ],
-      "requirements": [
-        "lib/libc-headers",
-        "tool/cross-binutils"
-      ]
-    },
-    "sys/kernel": {
-      "name": "kernel",
-      "architecture": "all",
-      "version": "dev",
-      "src_path": "/sys/kernel/",
-      "install_root": "/sys/",
-      "acquisition": "local",
-      "build_steps": [
-        "make",
-        "make symbols"
-      ],
-      "package_steps": [
-        "make install"
-      ],
-      "requirements": [
-        "sys/libk",
-        "tool/cross-binutils"
-      ]
-    },
-    "boot/limine": {
-      "name": "limine",
-      "is_tool": "True",
-      "architecture": "x86_64",
-      "acquisition": "git",
-      "src_path": "https://github.com/limine-bootloader/limine.git",
-      "git_branch": "v2.0-branch-binary",
-      "installroot": "limine",
-      "build_steps": [
-        "make"
-      ]
-    },
     "apps/test_program": {
       "name": "test_program",
       "src_path": "/apps/test_program",

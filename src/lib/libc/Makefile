@@ -1,4 +1,4 @@
-SRC=init.c $(wildcard stdio/*.c) $(wildcard stdlib/*.c) $(wildcard string/*.c)
+SRC=init.c syscalls.c $(wildcard stdio/*.c) $(wildcard stdlib/*.c) $(wildcard string/*.c)
 CRT=$(wildcard x86_64/*.s)
 
 COMPILE_OBJS = $(patsubst %.c, %.o, $(SRC)) $(patsubst %.s, %.o, $(CRT))
