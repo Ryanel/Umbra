@@ -2,11 +2,12 @@
 #include <kernel/hal/keycodes.h>
 #include <kernel/types.h>
 #include <kernel/util/ring_buffer.h>
+#include <kernel/vfs/delegate.h>
 #include <kernel/vfs/node.h>
 
 namespace kernel {
 namespace hal {
-class keyboard : public vfs::vfs_delegate {
+class keyboard : public vfs::delegate {
    public:
     struct kb_event {
         unsigned int keycode;
@@ -16,12 +17,13 @@ class keyboard : public vfs::vfs_delegate {
     util::ring_buffer<kb_event> event_buffer;
 
     // VFS delegate implementation
-    virtual int read(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
-        int elements_copied = 0;
-        while (elements_copied < size && event_buffer.size() > 0) {
+    virtual size_t read(vfs::node* n, void* buffer, size_t cursor_pos, size_t num_bytes) {
+        int   elements_copied = 0;
+        char* cbuf            = (char*)buffer;
+        while (elements_copied < num_bytes && event_buffer.size() > 0) {
             auto evnt = event_buffer.top();
             if (evnt.pressed) {
-                buffer[offset + elements_copied] = evnt.keycode;
+                cbuf[cursor_pos + elements_copied] = evnt.keycode;
                 elements_copied++;
             }
             event_buffer.pop();
@@ -29,7 +31,7 @@ class keyboard : public vfs::vfs_delegate {
         return elements_copied;
     }
 
-    virtual int write(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
+    virtual size_t write(vfs::node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { return -1; }
 
     virtual char const* delegate_name() { return "ps2/keyboard"; }
 

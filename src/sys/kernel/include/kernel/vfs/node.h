@@ -1,79 +1,37 @@
 #pragma once
 
-#include <kernel/log.h>
-#include <stddef.h>
+#include <kernel/config.h>
+#include <kernel/vfs/types.h>
 #include <stdint.h>
-#include <string.h>
 
-#include <list>
-
-#define VFS_MAX_FILENAME 128
+#include <string_view>
 
 namespace kernel {
 namespace vfs {
 
-class vfs_delegate;
-class vfs_node;
+class filesystem;
+class delegate;
 
-enum class vfs_type : uint8_t { file = 1, directory = 2, device = 3 };
-typedef uint32_t file_id_t;
+/// A node is a in-memory representation of a file stored in a filesystem.
+/// Nodes can be invalidated. Nodes are not forever, and can be deallocated and regenerated.
+struct node {
+    char m_name[128];
 
-struct file_descriptor {
-    vfs_node*        m_node;
-    file_descriptor* m_next;
-    int              flags;
-    file_id_t        m_id;
-};
+    uint64_t    m_inode_no;
+    uint64_t    m_owner;
+    uint64_t    m_mod_time;
+    uint64_t    m_size;
+    filesystem* m_fs;
+    delegate*   m_delegate;
+    void*       m_user_ptr;
+    node_type   m_type;
 
-struct file_stats {
-    size_t size;
-};
+    const char* name() const { return (const char*)&m_name; }
+    void        set_name(std::string_view& name) { copy_name(name); }
+    void        set_name(std::string_view name) { copy_name(name); }
 
-struct vfs_node {
-    char                 name_buffer[VFS_MAX_FILENAME];
-    vfs_delegate*        delegate;
-    vfs_node*            parent;
-    void*                delegate_storage;
-    std::list<vfs_node*> children;
-    size_t               size;
-    vfs_type             type;
-
-    vfs_node() {}
-    vfs_node(vfs_node* p, vfs_delegate* delegate, vfs_type type, size_t sz, const char* name = nullptr)
-        : delegate(delegate), parent(p), size(sz), type(type) {
-        if (p != nullptr) { p->add_child(this); }
-        if (name != nullptr) { set_name(name); }
-    }
-
-    vfs_node(const vfs_node& n) {
-        memcpy(name_buffer, n.name_buffer, VFS_MAX_FILENAME);
-        delegate         = n.delegate;
-        parent           = n.parent;
-        delegate_storage = n.delegate_storage;
-        size             = n.size;
-        type             = n.type;
-        kernel::log::error("node", "Copy\n");
-    }
-
-    char* name() const { return (char*)&name_buffer[0]; }
-    void  set_name(char const* s) {
-        for (size_t cnt = 0; cnt < VFS_MAX_FILENAME; cnt++) {
-            name_buffer[cnt] = s[cnt];
-            if (name_buffer[cnt] == '\0') { return; }
-        }
-    }
-
-    void add_child(vfs_node* node) {
-        node->parent = this;
-        children.push_back(node);
-    }
-};
-
-class vfs_delegate {
-   public:
-    virtual int         read(vfs_node* node, size_t offset, size_t size, uint8_t* buffer)  = 0;
-    virtual int         write(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) = 0;
-    virtual char const* delegate_name()                                                    = 0;
+   private:
+    void copy_name(std::string_view& view);
 };
 
 }  // namespace vfs

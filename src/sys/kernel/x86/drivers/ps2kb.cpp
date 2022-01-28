@@ -1,8 +1,10 @@
+#include <stdio.h>
+
 #include <kernel/hal/keyboard.h>
 #include <kernel/x86/ports.h>
 #include <kernel/x86/ps2keyboard.h>
-#include <stdio.h>
 #include <kernel/hal/terminal.h>
+#include <kernel/log.h>
 
 unsigned int scan_table[128] = {
     VK_INVALID,                                                        // Error

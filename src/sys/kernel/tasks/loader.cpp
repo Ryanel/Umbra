@@ -12,10 +12,10 @@ using namespace kernel;
 using namespace kernel::vfs;
 using namespace kernel::tasks;
 
-typedef void startfn(void);
+typedef void    startfn(void);
 extern "C" void enter_usermode(uintptr_t ptr, uintptr_t stack);
 
-void kernel::tasks::elf_loader::load_elf(const char * fpath) {
+void kernel::tasks::elf_loader::load_elf(const char* fpath) {
     // Load file
     auto fd = g_vfs.open_file(fpath, 0);
 
@@ -24,7 +24,8 @@ void kernel::tasks::elf_loader::load_elf(const char * fpath) {
         scheduler::terminate(nullptr);
     }
 
-    auto  size = g_vfs.fstat(fd).size;
+    // auto  size = g_vfs.fstat(fd).size;
+    auto  size = 16384;
     auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
                                                                     // not make unnessisary slabs.
     vfs::g_vfs.read(fd, buf, size);
@@ -49,7 +50,7 @@ void kernel::tasks::elf_loader::load_elf(const char * fpath) {
     startfn* fn = (startfn*)(test_exe.m_header->e_entry);
     fn();
 
-    //virt_addr_t stack = (virt_addr_t)g_vmm.mmap(0xf0000000, 0x4000, VMM_PROT_WRITE | VMM_PROT_USER, VMM_FLAG_POPULATE);
-    //log::info("elfloader", "Entry: 0x%016p, stack: 0x%016p\n", test_exe.m_header->e_entry, stack);
-    //enter_usermode(test_exe.m_header->e_entry, stack);
+    // virt_addr_t stack = (virt_addr_t)g_vmm.mmap(0xf0000000, 0x4000, VMM_PROT_WRITE | VMM_PROT_USER,
+    // VMM_FLAG_POPULATE); log::info("elfloader", "Entry: 0x%016p, stack: 0x%016p\n", test_exe.m_header->e_entry, stack);
+    // enter_usermode(test_exe.m_header->e_entry, stack);
 }

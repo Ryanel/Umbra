@@ -42,8 +42,9 @@ void kernel_main() {
 
     // Load initial ramdisk
     log::info("vfs", "Loading inital ramdisk from memory\n");
-    auto* initrd = new vfs::initrd_provider();
+    auto* initrd = new vfs::initrd_fs();
     initrd->init();
+    vfs::g_vfs.mount("/", initrd);
 
     // Start some tasks
     log::info("debug", "Starting some test tasks\n");
@@ -59,11 +60,11 @@ void kernel_main() {
 
     // Create the console
     auto* testterm = new hal::terminal(80, 25, 4000);
-    testterm->set_output(kernel::log::get().console[1]);
+    testterm->set_output(kernel::log::get().console[0]);
 
     auto* dev_dir = g_vfs.find("/dev/");
-    auto* term    = new vfs_node(dev_dir, testterm, vfs_type::device, 0, "console");
-    auto* kbd     = new vfs_node(dev_dir, new driver::ps2keyboard(), vfs_type::device, 0, "keyboard");
+    // auto* term    = new vfs_node(dev_dir, testterm, vfs_type::device, 0, "console");
+    // auto* kbd     = new vfs_node(dev_dir, new driver::ps2keyboard(), vfs_type::device, 0, "keyboard");
 
     kernel::log::info("main", "Reached end of kernel_main()\n");
 

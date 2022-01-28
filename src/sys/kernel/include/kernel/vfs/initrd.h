@@ -1,7 +1,8 @@
 #pragma once
 
-#include <kernel/vfs/node.h>
+#include <kernel/vfs/filesystem.h>
 
+#include <list>
 namespace kernel {
 
 // Prototypes
@@ -11,20 +12,27 @@ struct boot_file;
 
 namespace vfs {
 
-class initrd_provider : public vfs_delegate {
+class initrd_fs : public filesystem {
    public:
-    initrd_provider() {}
-    boot::boot_file* initrd_data;
-
     void init();
-    int  read(vfs_node* node, size_t offset, size_t size, uint8_t* buffer);
-    int  write(vfs_node* node, size_t offset, size_t size, uint8_t* buffer);
 
-    char const* delegate_name() { return "initrd"; }
+    virtual std::list<node*> get_children(node* node);
+    virtual node*            get_node(uint64_t inode);
+    virtual node*            get_root();
+    virtual node*            create(node* parent, std::string name);
+    virtual bool             remove(node* n);
+    virtual size_t           read(node* n, void* buffer, size_t cursor_pos, size_t num_bytes);
+    virtual size_t           write(node* n, void* buffer, size_t cursor_pos, size_t num_bytes);
+
+    char const* name() { return "initrd"; }
 
    private:
+    boot::boot_file* initrd_data;
+    std::list<node*> m_nodes;
+    node*            m_root;
     struct fdata {
-        uintptr_t location;
+        uintptr_t        location;
+        std::list<node*> m_children;
         fdata(uintptr_t loc) : location(loc) {}
     };
 };

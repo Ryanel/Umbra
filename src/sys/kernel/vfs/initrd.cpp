@@ -1,8 +1,8 @@
 #include <kernel/boot/boot_file.h>
-#include <kernel/panic.h>
+#include <kernel/log.h>
 #include <kernel/vfs/initrd.h>
+#include <kernel/vfs/path.h>
 #include <kernel/vfs/vfs.h>
-#include <stdio.h>
 
 #include <string>
 
@@ -34,7 +34,7 @@ struct ustar_header {
 namespace kernel {
 namespace vfs {
 
-void initrd_provider::init() {
+void initrd_fs::init() {
     // First, get the initrd
     for (size_t i = 0; i < kernel::boot::g_bootfiles.numfiles; i++) {
         auto& file = kernel::boot::g_bootfiles.files[i];
@@ -44,77 +44,81 @@ void initrd_provider::init() {
         break;
     }
 
-    auto* root = kernel::vfs::g_vfs.get_root();  // The initial ramdisk directly overlays ontop of the root.
-
-    // Now, comb throug the USTAR formatted initrd.
+    // Now, comb through the USTAR formatted initrd.
     virt_addr_t ptr = initrd_data->vaddr;
+
+    uint64_t inode = 2;
+
+    m_root             = new node();
+    m_root->m_inode_no = 1;
+    m_root->m_fs       = this;
+    m_root->m_delegate = nullptr;
+    m_root->m_size     = 0;
+    m_root->m_type     = node_type::directory;
+    m_root->m_user_ptr = new fdata(0);
+
+    m_nodes.push_back(m_root);
+
     while (true) {
         auto* header = (ustar_header*)(ptr);
         if (strcmp("ustar", (char const*)&header->ustar)) { break; }
+        size_t sz  = oct2bin((unsigned char*)header->size_octal, 11);
+        auto*  dat = new fdata((virt_addr_t)header + 512);
 
-        // Create the node
-        size_t sz              = oct2bin((unsigned char*)header->size_octal, 11);
-        auto*  node            = new vfs_node(nullptr, this, vfs_type::file, sz);
-        auto*  dat             = new fdata((virt_addr_t)header + 512);
-        node->delegate_storage = (void*)dat;
-        node->parent           = root;
-
+        node* new_node       = new node();
+        new_node->m_inode_no = inode;
+        new_node->m_fs       = this;
+        new_node->m_delegate = nullptr;
+        new_node->m_size     = sz;
+        new_node->m_user_ptr = (void*)dat;
         // Set the type
         switch (header->type) {
             case '\0':
-            case '0': node->type = vfs_type::file; break;
-            case '5': node->type = vfs_type::directory; break;
+            case '0': new_node->m_type = node_type::file; break;
+            case '5': new_node->m_type = node_type::directory; break;
         }
 
-        // Determine the parent and file name
-        auto filename = std::string((char*)&header->name);
-        while (filename.find('/') != std::string::npos) {
-            size_t delim_pos = filename.find('/');
+        size_t len      = strlen((char*)&header->name);
+        auto   filename = std::string_view((char*)&header->name, len < 100 ? len : 100);
 
-            auto before_delim = filename.substr(0, delim_pos);
+        kernel::vfs::path pth(filename);
+        size_t            tokens = pth.tokens();
 
-            // This means we have hit the last in a directory entry. Cut the last / off and go.
-            if (delim_pos == (filename.size() - 1)) {
-                filename = before_delim;
-                break;
+        filename = pth.get_index(tokens - 1);
+        strncpy(new_node->m_name, filename.data(), filename.size());
+        // Recursively find the node...
+        node* parent = m_root;
+        for (size_t i = 0; i < (tokens - 1); i++) {
+            fdata* pfdata = ((fdata*)parent->m_user_ptr);
+            // Search for the name...
+            for (auto&& x : pfdata->m_children) {
+                if (pth.get_index(i).compare(x->name()) == 0) { parent = x; }
             }
-
-            // Nope, find the parent.
-            for (auto&& i : node->parent->children) {
-                if (strcmp(i->name(), before_delim.data()) == 0) {
-                    node->parent = i;
-                    break;
-                }
-            }
-
-            filename = filename.substr(delim_pos + 1);
         }
 
-        memcpy(&node->name_buffer, filename.data(), 100);  // Copy the name
-        node->parent->add_child(node);                     // Add this node to the VFS properly
-        ptr += (((node->size + 511) / 512) + 1) * 512;     // Skip to the next file metadata block
+        ((fdata*)parent->m_user_ptr)->m_children.push_back(new_node);
+
+        m_nodes.push_back(new_node);
+
+        ptr += (((sz + 511) / 512) + 1) * 512;  // Skip to the next file metadata block
     }
 }
 
-int initrd_provider::read(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
-    if (node->type != vfs_type::file) { return 2; }
-    if ((offset + size) > node->size) { return -1; }
+std::list<vfs::node*> initrd_fs::get_children(node* n) { return ((fdata*)n->m_user_ptr)->m_children; }
 
-    assert(buffer != nullptr);
-    assert(node != nullptr);
+node* initrd_fs::get_node(uint64_t inode) {
+    for (auto&& i : m_nodes) {
+        if (i->m_inode_no == inode) { return i; }
+    }
 
-    fdata* dat = (fdata*)node->delegate_storage;
-    assert(dat != nullptr);
-
-    uint8_t* file_data = (uint8_t*)(dat->location);
-    assert(file_data != nullptr);
-
-    for (size_t i = 0; i < size; i++) { buffer[i] = file_data[offset + i]; }
-
-    return 0;
+    return nullptr;
 }
 
-int initrd_provider::write(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
+node*  initrd_fs::get_root() { return m_root; }
+node*  initrd_fs::create(node* parent, std::string name) { return nullptr; }
+bool   initrd_fs::remove(node* n) { return false; }
+size_t initrd_fs::read(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { return -1; }
+size_t initrd_fs::write(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { return -1; }
 
 }  // namespace vfs
 }  // namespace kernel

@@ -2,15 +2,15 @@
 
 #include <kernel/text_console.h>
 #include <kernel/util/ring_buffer.h>
-#include <kernel/vfs/node.h>
+#include <kernel/vfs/delegate.h>
 
 namespace kernel {
 namespace hal {
 
-class terminal : public vfs::vfs_delegate {
+class terminal : public vfs::delegate {
    public:
     device::text_console*   m_text_out;
-    vfs::vfs_node*          m_in;
+    vfs::node*              m_in;
     bool                    m_graphical = false;
     size_t                  m_width;
     size_t                  m_height;
@@ -121,13 +121,15 @@ class terminal : public vfs::vfs_delegate {
     }
 
     // VFS delegate implementation
-    virtual int read(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
-    virtual int write(vfs::vfs_node* node, size_t offset, size_t size, uint8_t* buffer) {
+    virtual size_t read(vfs::node* node, void* buffer, size_t offset, size_t size) { return -1; }
+    virtual size_t write(vfs::node* node, void* buffer, size_t offset, size_t size) {
         assert(buffer != nullptr);
         assert(size >= 0);
         assert(offset < size);
 
-        for (size_t i = 0; i < size; i++) { write_char(buffer[i]); }
+        const char* buffer_char = (const char*)buffer;
+
+        for (size_t i = 0; i < size; i++) { write_char(buffer_char[i]); }
         return -1;
     }
 

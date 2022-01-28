@@ -1,6 +1,8 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/tasks/scheduler.h>
+#include <kernel/vfs/filesystem.h>
+#include <kernel/vfs/node.h>
 #include <kernel/vfs/vfs.h>
 #include <stdio.h>
 
@@ -15,98 +17,103 @@ namespace vfs {
 
 virtual_filesystem g_vfs;
 
-/// The null delegate implements no file operations.
-class null_delegate : public vfs_delegate {
-   public:
-    null_delegate() {}
-    int         read(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
-    int         write(vfs_node* node, size_t offset, size_t size, uint8_t* buffer) { return -1; }
-    char const* delegate_name() { return "null delegate"; }
-};
+void virtual_filesystem::init() {}
 
-void virtual_filesystem::init() {
-    auto* vfs_root = new vfs_node(nullptr, new null_delegate(), vfs_type::directory, 0);
-    vfs_root->set_name("/");
-    m_root = vfs_root;
+bool virtual_filesystem::mount(std::string_view path, filesystem* fs) {
+    for (auto&& i : m_mountpoints) {
+        if (path.compare(i.m_path.data()) == 0) { return false; }
+    }
 
-    auto* dev = new vfs_node(m_root, new null_delegate(), vfs_type::directory, 0);
-    dev->set_name("dev");
+    mountpoint mp;
+    mp.m_fs   = fs;
+    mp.m_path = std::string(path);
+    m_mountpoints.push_back(mp);
+    return true;
 }
 
-vfs_node* virtual_filesystem::find(std::string_view path, int flags) {
-    auto* directory = m_root;
+node* virtual_filesystem::find(std::string_view path) {
+    filesystem* current_fs    = nullptr;
+    node*       current_node  = nullptr;
+    node_type   expected_type = node_type::file;
+    size_t      path_ptr      = 0;
 
-    std::string_view path_view(path.data());
-
-    kernel::log::debug("vfs", "Finding %s\n", path_view.data());
-    if (path_view.find('/') == 0) { path_view = path_view.substr(1); }
-
-    while (path_view.find('/') != std::string::npos) {
-        size_t delim_pos    = path_view.find('/');
-        auto   before_delim = path_view.substr(0, delim_pos);
-
-        // This is a directory, which means its a child of the parent.
-        if (delim_pos == (path_view.size() - 1)) {
-            path_view = before_delim;
-            break;
-        }
-
-        // Check the prospective parents children to see if this directory is one of them.
-        auto child_dir_it = std::find_if(directory->children.begin(), directory->children.end(),
-                                         [before_delim](vfs_node* n) { return before_delim.compare(n->name()) == 0; });
-
-        if (child_dir_it == directory->children.end()) {
-            return nullptr;  // We did not find it...
-        }
-
-        directory = *child_dir_it;
-        path_view = path_view.substr(delim_pos + 1);
+    // Strip trailing slashes
+    if (path.rfind('/') == path.size() - 1 && path.size() != 1) {
+        path          = path.substr(0, path.size() - 1);
+        expected_type = node_type::directory;
     }
 
-    // Search all the children of directory
-    for (auto&& i : directory->children) {
-        if (path_view.compare(i->name()) == 0) {
-            if (flags & VFS_FIND_PARENT) { return i->parent; }
-            return i;
+    kernel::log::trace("vfs", "Finding node: %s\n", std::string(path).c_str());
+
+    while (path_ptr != path.size()) {
+    next_itr:
+        // First, obtain the names of what we're searching for
+        size_t           next_delim = path.find('/', path_ptr);
+        std::string_view current_name, search_path;
+        const bool       root_dir = next_delim == 0;
+        const bool       dir      = root_dir || next_delim != path.npos;
+
+        if (dir) {
+            // Directories
+            next_delim   = root_dir ? 1 : next_delim;  // Auto-advance the delimiter for the root directory only
+            current_name = path.substr(path_ptr, (next_delim - path_ptr));
+            search_path  = path.substr(0, next_delim);
+            path_ptr     = root_dir ? 1 : (next_delim + 1);
+
+        } else {
+            // File
+            current_name = path.substr(path_ptr, path.size());
+            search_path  = path;
+            path_ptr     = path.size();
         }
+
+        kernel::log::trace("vfs", "Looking for: %s (path is %s)\n", std::string(current_name).data(),
+                           std::string(search_path).data());
+
+        // Is there a mountpoint on this path? If so, swap to that.
+        auto* mp = get_mountpoint(search_path);
+        if (mp != nullptr) {
+            current_fs   = mp->m_fs;
+            current_node = mp->m_fs->get_root();
+            kernel::log::trace("vfs", "Swapping to filesystem %s\n", current_fs->name());
+
+            if (path.size() == path_ptr) { return current_node; }
+            continue;
+        }
+
+        // No mountpoint, that's fine. Check the current node to see if there are any files.
+        if (current_node != nullptr) {
+            auto children = current_fs->get_children(current_node);
+
+            for (auto&& i : children) {
+                if (current_name.compare((const char*)&i->m_name) != 0) { continue; }
+                current_node = i;
+                if (next_delim != path.npos) { goto next_itr; }
+
+                // We've reached the target
+                if (expected_type == node_type::directory) {
+                    return current_node->m_type == node_type::directory ? current_node : nullptr;
+                }
+                return current_node;
+            }
+        }
+
+        kernel::log::warn("vfs", "Unable to find: %s (path is %s)\n", std::string(current_name).data(),
+                          std::string(search_path).data());
+        break;
     }
 
-    // We didn't find it, return nullptr.
     return nullptr;
 }
 
-file_id_t virtual_filesystem::open_file(std::string_view path, int flags) {
-    task* current_task = scheduler::get_current_task();
-
-    auto* file = find(path);
-
-    if (flags & FILE_CREATE) {
-        if (file == nullptr) {
-            auto* parent = find(path, VFS_FIND_PARENT);
-            if (parent == nullptr) { return -1; }
-
-            if (flags & FILE_TEMPORARY) { file = new vfs_node(parent, nullptr, vfs_type::file, 0); }
-        }
+virtual_filesystem::mountpoint* virtual_filesystem::get_mountpoint(std::string_view path) {
+    for (auto&& i : m_mountpoints) {
+        if (path.compare(i.m_path.data()) == 0) { return &i; }
     }
-
-    if (file == nullptr) { return -1; }
-
-    file_descriptor* descriptor = new file_descriptor();
-    descriptor->flags           = flags;
-    descriptor->m_id            = next_descriptor_id++;
-    descriptor->m_node          = file;
-    open_files.push_back(descriptor);
-
-    // Now, in the current task, we'll open this file.
-    auto task_fd         = task_file_descriptor();
-    task_fd.m_descriptor = descriptor;
-    task_fd.m_local_id   = current_task->next_fd_id;
-    current_task->next_fd_id++;
-    current_task->m_file_descriptors.push_back(task_fd);
-    return task_fd.m_local_id;
+    return nullptr;
 }
 
-file_descriptor* virtual_filesystem::taskfd_to_fd(file_id_t id) {
+file_descriptor* virtual_filesystem::taskfd_to_fd(fd_id_t id) {
     task* current_task = scheduler::get_current_task();
 
     for (auto fd : current_task->m_file_descriptors) {
@@ -115,70 +122,17 @@ file_descriptor* virtual_filesystem::taskfd_to_fd(file_id_t id) {
     return nullptr;
 }
 
-size_t virtual_filesystem::read(file_id_t fdid, uint8_t* buf, size_t count) {
-    auto* fd = taskfd_to_fd(fdid);
-    if (fd == nullptr || fd->m_node == nullptr) { return -1; }
+fd_id_t virtual_filesystem::open_file(std::string_view path, int flags) {
+    node* n = find(path);
 
-    auto* node = fd->m_node;
-
-
-    if (count > node->size) { count = node->size; }
-    if (count == 0) { return 0; }
-
-    assert(buf != nullptr);
-    assert(node != nullptr);
-    assert(node->delegate != nullptr);
-
-    return node->delegate->read(node, 0, count, buf);
-}
-
-size_t virtual_filesystem::write(file_id_t fdid, uint8_t* buf, size_t count) {
-    auto* fd = taskfd_to_fd(fdid);
-    if (fd == nullptr || fd->m_node == nullptr) { return -1; }
-
-    auto* node = fd->m_node;
-
-    if (count == 0) { return 0; }
-    // We don't care about limits in devices
-    if (node->type != vfs_type::device) {
-        if (count > node->size) { count = node->size; }
+    if (n == nullptr) {
+        if ((flags & VFS_OPEN_FLAG_CREATE != 0)) {}
     }
 
-    if (buf == nullptr) { return -1; }
-
-    if (node->delegate == nullptr) { return -1; }
-    return node->delegate->write(node, 0, count, buf);
+    return -1;
 }
-
-file_stats virtual_filesystem::fstat(file_id_t fdid) {
-    auto* fd = taskfd_to_fd(fdid);
-    if (fd == nullptr || fd->m_node == nullptr) { return file_stats(); }
-
-    file_stats stats;
-    stats.size = fd->m_node->size;
-
-    return stats;
-}
-
-void virtual_filesystem::debug(vfs_node* node, int depth) {
-    if (depth > 40) { return; }
-
-    int padding = 11;
-
-    for (int i = 0; i < depth + padding; i++) { kernel::log::get().write(' '); }
-
-    const char* ftype = "dir";
-    switch (node->type) {
-        case vfs::vfs_type::file: ftype = "file"; break;
-        case vfs::vfs_type::directory: ftype = "dir"; break;
-        case vfs::vfs_type::device: ftype = "device"; break;
-        default: break;
-    }
-
-    printf("%s (%s, sz: %d)\n", node->name(), ftype, node->size);
-
-    for (auto&& i : node->children) { debug(i, depth + 1); }
-}
+size_t virtual_filesystem::read(fd_id_t fd, uint8_t* buf, size_t count) { return -1; }
+size_t virtual_filesystem::write(fd_id_t fd, uint8_t* buf, size_t count) { return -1; }
 
 }  // namespace vfs
 }  // namespace kernel

@@ -7,34 +7,23 @@ namespace std {
 
 class string {
    public:
-    string(const char* str) {
-        m_size           = strlen(str);
-        size_t buff_size = (m_size + 1) > min_size ? (m_size + 1) : min_size;
-        m_buffer         = new char[buff_size];
-        strncpy(m_buffer, str, m_size + 1);
+    string() : m_buffer(nullptr), m_size(0) {}
+    string(const char* str) : string(str, strlen(str)) {}
+    string(const string& s) : string(s.m_buffer, s.m_size) {}
+
+    string(const char* str, size_t sz) {
+        size_t orig_size = sz;
+        m_size           = get_buffer_size(orig_size);
+        m_buffer         = new char[m_size];
+
+        strncpy(m_buffer, str, orig_size);
+        m_buffer[orig_size] = 0;  // Null terminated, always.
     }
 
-    // Copy constructor
-    string(const string& s) {
-        m_size           = s.m_size;
-        size_t buff_size = (m_size + 1) > min_size ? (m_size + 1) : min_size;
-        m_buffer         = new char[buff_size];  // + 1 for the keeping the null character
-        strncpy(m_buffer, s.m_buffer, m_size + 1);
-    }
-
-    // Move constructor
-    string(string&& s) {
-        clean();
-        m_size     = s.m_size;
-        m_buffer   = s.m_buffer;
-        s.m_buffer = nullptr;
-    }
-
-    // Move assignment
     string& operator=(string&& s) {
         clean();
-        m_size     = s.m_size;
         m_buffer   = s.m_buffer;
+        m_size     = s.m_size;
         s.m_buffer = nullptr;
         return *this;
     }
@@ -49,7 +38,13 @@ class string {
         return *this;
     }
 
-    char& operator[](unsigned i) { return m_buffer[i]; }
+    char& at(size_t i) {
+        assert(m_buffer != nullptr);
+        assert(i < m_size);
+        return m_buffer[i];
+    }
+
+    char& operator[](size_t i) { return m_buffer[i]; }
 
     ~string() { clean(); }
 
@@ -70,11 +65,13 @@ class string {
     }
 
     // Data functions
-    size_t      size() const { return strlen(m_buffer); }
-    size_t      length() const { return strlen(m_buffer); }
+    size_t size() const { return strlen(m_buffer); }
+    size_t length() const { return strlen(m_buffer); }
 
     char const* data() { return m_buffer; }
     char const* data() const { return m_buffer; }
+
+    constexpr char const* c_str() { return m_buffer; }
 
     // Constants
     static const size_t npos     = -1;
@@ -84,10 +81,12 @@ class string {
     char*  m_buffer;
     size_t m_size;
 
+    size_t get_buffer_size(size_t sz) { return (sz - 1) > min_size ? (sz + 1) : min_size; }
+
     void clean() {
-        if (m_buffer == nullptr) { delete[] m_buffer; }
+        if (m_buffer != nullptr) { delete[] m_buffer; }
         m_size = 0;
     }
 };
 
-}  // namespace kernel
+}  // namespace std
