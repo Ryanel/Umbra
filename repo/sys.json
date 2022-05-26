@@ -14,9 +14,10 @@
             "package_steps": [
                 "make install"
             ],
-            "requirements": [
+            "dependencies": [
                 "sys/libk",
-                "tool/cross-binutils"
+                "tool/cross-binutils",
+                "boot/limine"
             ]
         },
         "sys/libk": {
@@ -32,7 +33,7 @@
             "package_steps": [
                 "make install"
             ],
-            "requirements": [
+            "dependencies": [
                 "tool/cross-gcc"
             ]
         }

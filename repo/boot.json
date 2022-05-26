@@ -2,6 +2,7 @@
     "packages": {
         "boot/limine": {
             "name": "limine",
+            "version": "dev",
             "is_tool": "True",
             "architecture": "x86_64",
             "acquisition": "git",

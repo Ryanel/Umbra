@@ -1,5 +1,6 @@
 build/
 build_old
+artifacts/
 
 .vscode/
 .gdbinit
@@ -8,3 +9,6 @@ __pycache__
 *.o
 *.a
 *.elf
+
+config.json
+state.json

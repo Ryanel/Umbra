@@ -40,7 +40,7 @@
       "package_steps": [
         "make install"
       ],
-      "requirements": [
+      "dependencies": [
         "lib/libc"
       ]
     }

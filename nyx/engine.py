@@ -1,105 +1,169 @@
-from posixpath import curdir, split
-from graphlib import TopologicalSorter
-import sys
-import json
 from nyx.package import *
-
-class BuildEngine:
-    """Manages the build process for the repository"""
-
-    def __init__(self, json, config: dict, args: dict):
-        self.json = json
-        self.config = config
+from nyx.globals import *
+import nyx.json;
+from graphlib import TopologicalSorter
+import docker
+from rich.panel import Panel
+from rich.live import Live
+from rich.pretty import Pretty
+class Engine:
+    """Contains the world, the collection of all packages"""
+    def __init__(self, build_env):
         self.packages = dict()
-        self.enviroment = dict()
-        self.args = args
+        self.environment = dict()
+        self.repo_json = {}
+        self.config = dict()
+        self.saved_state = dict()
+        self.saved_state["packages"] = dict()
+        self.load_environment()
+        self.build_env = build_env
 
-    def load_packages(self):
-        for x in self.json['packages']:
-            pkg_json = self.json['packages'][x]
+    def load_packages(self, repo_path: str):
+        """Loads data from the repository"""
+        nyx_log.debug("Loading data from the repository...");
+
+        self.repo_path = repo_path
+        self.repo_json = nyx.json.read_json(repo_path + "repo.json");
+
+        for x in self.repo_json['packages']:
+            pkg_json = self.repo_json['packages'][x]
             pkg = NyxPackage(x)
-            pkg.loadFromJson(pkg_json, self.config)
+            pkg.loadJson(pkg_json)
             self.packages[x] = pkg
-        for y in self.json['includes']:
-            with open(y) as repo_file:
-                dat = json.load(repo_file)
-                for x in dat['packages']:
-                    pkg_json = dat['packages'][x]
-                    pkg = NyxPackage(x)
-                    pkg.loadFromJson(pkg_json, self.config)
-                    self.packages[x] = pkg
+        for y in self.repo_json['includes']:
+            add_path = self.repo_path + y
+            dat = nyx.json.read_json(add_path)
+            for x in dat['packages']:
+                pkg_json = dat['packages'][x]
+                pkg = NyxPackage(x)
+                pkg.loadJson(pkg_json)
+                self.packages[x] = pkg
+        pass
 
-    def uncache(self, pkg_name):
-        for pkg in self.packages:
-            if pkg == pkg_name:
-                self.packages[pkg].cached = False
-                # Now, search for dependancies
-                for dpkg in self.packages:
-                    for dpkg_req in self.packages[dpkg].requirements:
-                        if dpkg_req == pkg_name:
-                            self.packages[dpkg].cached = False
-                            self.uncache(dpkg)
+    def load_state(self, state_path: str):
+        self.saved_state = nyx.json.read_json(state_path, self.saved_state);
+        for x in self.saved_state["packages"]:
+            self.packages[x].state = self.saved_state['packages'][x]
+
+    def save_state(self, state_path: str):
+        for x in self.packages:
+            self.saved_state["packages"][x] = self.packages[x].state
+        
+        nyx.json.write_json(state_path, self.saved_state)
+
+    def set_config(self, config: dict) -> None:
+        self.config = config
+
+    def load_environment(self):
+        triple="x86_64-umbra"
+        self.environment = dict()
+        self.environment['PATH'] = os.environ.get("PATH")
+        self.environment |= {
+            "CC": f"{triple}-gcc",
+            "CC": f"{triple}-gcc",
+            "CXX": f"{triple}-g++",
+            "AR": f"{triple}-ar",
+            "ASM": "nasm",
+            "ASMFLAGS": "-f elf64 -F dwarf -g",
+            "NYX_ARCH": "x86",
+            "NYX_TARGET": "x86_64",
+            "NYX_TARGET_TRIPLE": f"{triple}"
+        }
 
     def clean(self):
-        self.clean_build_root()
-        shutil.rmtree(os.path.abspath(self.config["sysroot"]), ignore_errors=False)
-        shutil.rmtree(os.path.abspath(self.config["package_root"]), ignore_errors=False)
+        """Cleans the build directory."""
+        pass
 
-    def clean_build_root(self):
-        shutil.rmtree(os.path.abspath(self.config["build_root"]), ignore_errors=False)
+    def prerequesites(self):
+        """Ensures prerequesites are setup correctly"""
+        pass
 
-    def run(self):
-        subprocess.run(['./nyx/scripts/x86_64-create-iso.sh'], shell=True, stdout=sys.stdout)
-        subprocess.run(self.json['general']['run_command'], shell=True, stdout=sys.stdout)
+    def get_dependencies(self, pkg: NyxPackage, shallow=False) -> set():
+        # Recursively get the dependencies...
+        dependencies = set()
+        for x in pkg.dependencies:
+            req_pkg = self.query_package(x, latest_if_no_version=True)
 
-    def debug(self):
-        subprocess.run(self.json['general']['debug_command'], shell=True, stdout=sys.stdout)
+            if len(req_pkg) == 1:
+                dependencies.add(req_pkg[0])
+                if not shallow:
+                    dependencies.update(self.get_dependencies(req_pkg[0]))
 
-    def build(self, step = ''):
+            elif len(req_pkg) == 0:
+                nyx_log.error(f"{pkg.name}'s dependency {x} matches no packages")
+            else:
+                nyx_log.error(f"{pkg.name}'s dependency {x} matches multiple packages")
+
+        return dependencies
+
+    def sort_install_order(self, packages: set) -> list:
         dep_graph = TopologicalSorter()
-        for x, y in self.packages.items():
-            dep_graph.add(x, *y.requirements)
+        for x in packages:
+            dep_graph.add(x, *self.get_dependencies(x, shallow=True)) # Does not handle versions...
 
         compile_order = [*dep_graph.static_order()]
+        return compile_order
 
-        packages_to_compile_in_order = []
-        for x in compile_order:
-            packages_to_compile_in_order.append(self.packages[x])
 
-        if step == 'reinstall':
-            for pkg in packages_to_compile_in_order:
-                if (not pkg.install(self.config)):
-                    print(f"Failed to install {pkg.name}!")
-                    return 1
-                print(f"[nyx]: Installing {pkg.name}-{pkg.version}")
-            return 0
+    def query_package(self, pkg_str: str, latest_if_no_version:bool = True) -> list:
+        """Searches the world for packages matching pkg_str."""
+        found_pkgs = list()
 
-        for pkg in packages_to_compile_in_order:
-            if (pkg.cached):
-                print(f"[nyx]: Using cached version of package {pkg.name}-{pkg.version}")
-                continue
-            print(f"[nyx]: Compiling {pkg.name}-{pkg.version}")
-            # Fetch
-            if (not pkg.fetch(self.config)):
-                print(f"Failed to fetch {pkg.name}!")
-                return 1
-            # Patch
-            if (not pkg.patch(self.config)):
-                print(f"Failed to patch {pkg.name}!")
-                return 1
-            # Configure
-            if (not pkg.configure(self.config, self.enviroment)):
-                print(f"Failed to configure {pkg.name}!")
-                return 1
-            # Build
-            if (not pkg.build(self.config, self.enviroment)):
-                print(f"Failed to build {pkg.name}!")
-                return 1
-            # Package
-            if (not pkg.package(self.config, self.enviroment)):
-                print(f"Failed to package {pkg.name}!")
-                return 1
-            if (not pkg.install(self.config)):
-                print(f"Failed to install {pkg.name}!")
-                return 1
-        return 0
+        # For now, do not care about versions, just look for pkg_str in packages
+        pkg = self.packages.get(pkg_str)
+        if (pkg != None):
+            found_pkgs.append(pkg)
+
+        return found_pkgs
+
+
+    def coordinator_build_package(self, config:dict, pkg: NyxPackage, rebuild:bool ):
+        if (self.build_env == "docker"):
+            client = docker.from_env()
+
+            real_src_path = os.path.abspath(config["host_env"]["source_path"])
+            real_artifact_path = os.path.abspath(config["host_env"]["artifact_path"])
+
+            nyx_log.info (f"Compiling {pkg.name}")
+
+            command = './nbuild.py --no-color '
+
+            if rebuild:
+                command = command + '--clean ' 
+            command = command + f'install {pkg.name}'
+            container = client.containers.run('umbra-buildenv', 
+                command, 
+                #'ls -la  /opt/umbra-buildenv/build/',
+                detach = True,
+                stderr = True,
+                stdout = True,
+                remove = True,
+                volumes={
+                    real_src_path: {'bind': '/opt/umbra-buildenv/src', 'mode': 'rw'},
+                    'umbra_build': {'bind': '/opt/umbra-buildenv/build', 'mode': 'rw'},
+                    real_artifact_path: {'bind': '/opt/umbra-buildenv/artifacts', 'mode': 'rw'}
+                }
+            )
+
+            log_output = []
+            list_size = os.get_terminal_size().lines - 10
+
+            if list_size < 5:
+                list_size = 5
+
+            if list_size > 15:
+                list_size = 15
+
+            log_panel = Panel("", title="Log")
+            with Live(log_panel, refresh_per_second=10, console=nyx_log.console) as live:
+                for line in container.logs(stream=True):
+                    log_output.append(line)
+
+                    toDisplay = log_output[-(list_size - 2):]
+                    text = ""
+
+                    for x in toDisplay:
+                        text = text + x.decode("utf-8")
+
+                    live.update(Panel(text, title="Log"))
+            container.wait()

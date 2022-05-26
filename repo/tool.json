@@ -23,7 +23,7 @@
             "package_steps": [
                 "cd ../cross-binutils-build && make install-binutils install-gas install-ld"
             ],
-            "requirements": [
+            "dependencies": [
                 "lib/libc-headers"
             ]
         },
@@ -49,7 +49,7 @@
             "package_steps": [
                 "cd ../cross-gcc-build && make install-gcc install-target-libgcc"
             ],
-            "requirements": [
+            "dependencies": [
                 "lib/libc-headers",
                 "tool/cross-binutils"
             ]

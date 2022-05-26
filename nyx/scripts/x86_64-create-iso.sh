@@ -1,16 +1,16 @@
 echo "[nyx]: Adding LiveCD files to system root..."
-cp -r ./media/x86/x86_64/* build/sysroot/
+cp -r ./media/x86/x86_64/* /opt/umbra-buildenv/artifacts/sysroot/
 
 echo "[nyx]: Creating initial ramdisk..."
-mkdir build/initrd/ -p
-cp -r ./media/initrd/* build/initrd/
-find build/initrd/ -printf "%P\n" -type f -o -type l -o -type d | tar -cf build/sysroot/boot/initrd.tar --format=ustar --no-recursion -C build/initrd/ -T -
+mkdir /opt/umbra-buildenv/artifacts/initrd/ -p
+cp -r ./media/initrd/* /opt/umbra-buildenv/artifacts/initrd/
+find /opt/umbra-buildenv/artifacts/initrd -printf "%P\n" -type f -o -type l -o -type d | tar -cf /opt/umbra-buildenv/artifacts/sysroot/boot/initrd.tar --format=ustar --no-recursion -C /opt/umbra-buildenv/artifacts/initrd/ -T -
 
 echo "[nyx]: Generating LiveCD ISO..."
 
-cd build/temp/build/boot/limine-dev/
-cp limine.sys limine-cd.bin limine-eltorito-efi.bin ../../../../sysroot/
-cd ../../../../
+cd /opt/umbra-buildenv/build/src/boot/limine-dev/
+cp limine.sys limine-cd.bin limine-eltorito-efi.bin /opt/umbra-buildenv/artifacts/sysroot/
+cd /opt/umbra-buildenv/artifacts/
 
 xorriso -as mkisofs -b limine-cd.bin \
         -no-emul-boot -boot-load-size 4 -boot-info-table \

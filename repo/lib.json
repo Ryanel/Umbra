@@ -13,7 +13,7 @@
             "package_steps": [
                 "make install"
             ],
-            "requirements": [
+            "dependencies": [
                 "lib/libc-headers",
                 "tool/cross-gcc"
             ]
@@ -24,7 +24,7 @@
             "version": "dev",
             "src_path": "/lib/libc",
             "install_root": "/",
-            "acquisition": "local_copy",
+            "acquisition": "local",
             "package_steps": [
                 "make install-headers"
             ]

@@ -42,14 +42,14 @@ ${BUILD_DIR}/kernel.elf: ${ALL_OBJECTS}
 	@$(CXX) -T ${KERNEL_LINKER_FILE} -MMD -MP -o $@ ${CXXFLAGS} ${ALL_OBJECTS} ${LIBRARIES} ${LDFLAGS}
 
 symbols:
-	@mkdir -p ${INSTALL_DIR}
+	@mkdir -p ${INSTALL_DIR}/sys/
 	@echo "Generating Symbol Table (${BUILD_DIR} to ${INSTALL_DIR}"
 	@nm ${BUILD_DIR}/kernel.elf | grep " T " > ${BUILD_DIR}/kernel.sym
 	@python3 create-symbols.py ${BUILD_DIR}
-	@cp ${BUILD_DIR}/syms.bin ${INSTALL_DIR}/syms.bin
+	@cp ${BUILD_DIR}/syms.bin ${INSTALL_DIR}/sys/syms.bin
 
 install:
-	@cp ${BUILD_DIR}/kernel.elf ${INSTALL_DIR}
+	@cp ${BUILD_DIR}/kernel.elf ${INSTALL_DIR}/sys/
 
 ${BUILD_DIR}/%.o: %.s
 	@echo "[ ASM ]: $<"
