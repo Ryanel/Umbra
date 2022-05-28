@@ -23,6 +23,26 @@ void serial_text_console::init() {
 
 void serial_text_console::clear(unsigned char bg) {}
 void serial_text_console::write(char c, unsigned char fore, unsigned char back) {
+    switch(fore) {
+        case 0x0: fore = 0x0; break;
+        case 0x1: fore = 0x4; break;
+        case 0x2: fore = 0x2; break;
+        case 0x3: fore = 0x6; break;
+        case 0x4: fore = 0x1; break;
+        case 0x5: fore = 0x5; break;
+        case 0x6: fore = 0x3; break;
+        case 0x7: fore = 0x7; break;
+        case 0x8: fore = 0x0 + 0x08; break;
+        case 0x9: fore = 0x4 + 0x08; break;
+        case 0xA: fore = 0x2 + 0x08; break;
+        case 0xB: fore = 0x6 + 0x08; break;
+        case 0xC: fore = 0x1 + 0x08; break;
+        case 0xD: fore = 0x5 + 0x08; break;
+        case 0xE: fore = 0x3 + 0x08; break;
+        case 0xF: fore = 0x7 + 0x08; break;
+        default:  fore = 0x0; break;
+    }
+
     if (fore != last_fore) {
         write_char(0x1B);
         write_char('[');
