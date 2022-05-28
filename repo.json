@@ -27,6 +27,14 @@
     "repo/boot.json"
   ],
   "packages": {
+    "base": {
+        "name":"base",
+        "meta_package": "true",
+        "dependencies": [
+            "lib/libc",
+            "sys/kernel"
+        ]
+    },
     "apps/test_program": {
       "name": "test_program",
       "src_path": "/apps/test_program",

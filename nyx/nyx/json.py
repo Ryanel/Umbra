@@ -1,5 +1,6 @@
 import json
-def read_json(path: str, default: any = {}) -> any:
+
+def nyx_read_json(path: str, default: any = {}) -> any:
     """Reads a JSON file in as a native python object"""
     try:
         with open(path, 'r', encoding='utf-8') as jdata:
@@ -7,7 +8,7 @@ def read_json(path: str, default: any = {}) -> any:
     except:
         return default
 
-def write_json(path: str, data: any = {}) -> any:
+def nyx_write_json(path: str, data: any = {}) -> any:
     """Writes a JSON file in as a native python object"""
     try:
         with open(path, 'w', encoding='utf-8') as jdata:

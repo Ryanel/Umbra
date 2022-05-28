@@ -7,8 +7,8 @@ import sys
 import argparse
 from nyx.globals import *
 from nyx.engine import Engine
-import nyx.json
 from nyx.package import NyxPackage;
+from nyx.json import nyx_read_json
 
 current_config = {}
 current_state = {}
@@ -33,7 +33,7 @@ def main() -> int:
     nyx_log.set_log_file(args.log)
 
     # Read the current config and setup the world
-    current_config = nyx.json.read_json(args.config + "config.json");
+    current_config = nyx_read_json(args.config + "config.json");
 
     engine = Engine("local")
     engine.load_packages(args.repo);

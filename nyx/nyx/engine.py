@@ -1,6 +1,9 @@
+from concurrent.futures import process
 from nyx.package import *
 from nyx.globals import *
-import nyx.json;
+from .json import nyx_write_json
+from .json import nyx_read_json
+
 from graphlib import TopologicalSorter
 import docker
 from rich.panel import Panel
@@ -20,10 +23,10 @@ class Engine:
 
     def load_packages(self, repo_path: str):
         """Loads data from the repository"""
-        nyx_log.debug("Loading data from the repository...");
+        #nyx_log.debug("Loading data from the repository...");
 
         self.repo_path = repo_path
-        self.repo_json = nyx.json.read_json(repo_path + "repo.json");
+        self.repo_json = nyx_read_json(repo_path + "repo.json");
 
         for x in self.repo_json['packages']:
             pkg_json = self.repo_json['packages'][x]
@@ -32,7 +35,7 @@ class Engine:
             self.packages[x] = pkg
         for y in self.repo_json['includes']:
             add_path = self.repo_path + y
-            dat = nyx.json.read_json(add_path)
+            dat = nyx_read_json(add_path)
             for x in dat['packages']:
                 pkg_json = dat['packages'][x]
                 pkg = NyxPackage(x)
@@ -41,7 +44,7 @@ class Engine:
         pass
 
     def load_state(self, state_path: str):
-        self.saved_state = nyx.json.read_json(state_path, self.saved_state);
+        self.saved_state = nyx_read_json(state_path, self.saved_state);
         for x in self.saved_state["packages"]:
             self.packages[x].state = self.saved_state['packages'][x]
 
@@ -49,7 +52,7 @@ class Engine:
         for x in self.packages:
             self.saved_state["packages"][x] = self.packages[x].state
         
-        nyx.json.write_json(state_path, self.saved_state)
+        nyx_write_json(state_path, self.saved_state)
 
     def set_config(self, config: dict) -> None:
         self.config = config
@@ -77,6 +80,14 @@ class Engine:
     def prerequesites(self):
         """Ensures prerequesites are setup correctly"""
         pass
+
+    def run(self, config:dict):
+        self.coordinator_run_command(config, "bash -c 'cd /opt/umbra-buildenv/src/ && ./nyx/files/scripts/x86_64-create-iso.sh'")
+        try:
+            subprocess.run(['qemu-system-x86_64' ,'-cdrom', 'artifacts/livecd.iso', '-serial', 'stdio'])
+        except KeyboardInterrupt:
+            nyx_log.info("QEMU closed")
+        
 
     def get_dependencies(self, pkg: NyxPackage, shallow=False) -> set():
         # Recursively get the dependencies...
@@ -117,23 +128,13 @@ class Engine:
         return found_pkgs
 
 
-    def coordinator_build_package(self, config:dict, pkg: NyxPackage, rebuild:bool ):
+    def coordinator_run_command(self, config:dict, command:str):
         if (self.build_env == "docker"):
             client = docker.from_env()
-
             real_src_path = os.path.abspath(config["host_env"]["source_path"])
             real_artifact_path = os.path.abspath(config["host_env"]["artifact_path"])
-
-            nyx_log.info (f"Compiling {pkg.name}")
-
-            command = './nbuild.py --no-color '
-
-            if rebuild:
-                command = command + '--clean ' 
-            command = command + f'install {pkg.name}'
             container = client.containers.run('umbra-buildenv', 
                 command, 
-                #'ls -la  /opt/umbra-buildenv/build/',
                 detach = True,
                 stderr = True,
                 stdout = True,
@@ -167,3 +168,15 @@ class Engine:
 
                     live.update(Panel(text, title="Log"))
             container.wait()
+
+
+    def coordinator_build_package(self, config:dict, pkg: NyxPackage, rebuild:bool ):
+        nyx_log.info (f"Compiling {pkg.name}")
+        if (self.build_env == "docker"):
+            command = './nyx/nbuild.py --no-color '
+            if rebuild: 
+                command = command + '--clean ' 
+            command = command + f'install {pkg.name}'
+            nyx_log.info (f"Compiling {command}")
+            self.coordinator_run_command(config, command)
+            

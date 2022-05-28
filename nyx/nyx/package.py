@@ -230,7 +230,7 @@ class NyxPackage:
     def clean(self, config, env):
         """Cleans all compiled traces of this package"""
         final_env = self.compute_environment(config, env)
-
+        self.state["installed"] = False
         if self.state["has_package"]:
             self.state["has_package"] = False
             os.remove(self.pkg_path(config))
