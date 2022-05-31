@@ -8,7 +8,7 @@ find /opt/umbra-buildenv/artifacts/initrd -printf "%P\n" -type f -o -type l -o -
 
 echo "[nyx]: Generating LiveCD ISO..."
 
-cd /opt/umbra-buildenv/build/src/boot/limine-dev/
+cd /opt/umbra-buildenv/build/tools/limine/
 cp limine.sys limine-cd.bin limine-eltorito-efi.bin /opt/umbra-buildenv/artifacts/sysroot/
 cd /opt/umbra-buildenv/artifacts/
 

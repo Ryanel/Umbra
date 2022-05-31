@@ -1,0 +1,25 @@
+{
+    "nyx_api": 1,
+    "name": "libk",
+    "description": "The Umbra Kernel integrated C(++) Library",
+    "homepage": "https://github.com/Ryanel/Umbra/",
+
+    "acquisition": "local_copy",
+    "src_uri": "src/sys/klibc/",
+
+    "architectures": ["*"],
+    "flags": [],
+
+    "depends_on": [],
+
+    "install_type": "local",
+    "install_root": "/",
+
+    "build_steps": [
+        "make"
+    ],
+    "package_steps": [
+        "make install"
+    ]
+
+}

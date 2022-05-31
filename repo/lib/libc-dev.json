@@ -1,0 +1,24 @@
+{
+    "nyx_api": 1,
+    "name": "libc",
+    "description": "The C Standard Library",
+    "homepage": "https://github.com/Ryanel/Umbra/",
+
+    "acquisition": "local_copy",
+    "src_uri": "src/lib/libc/",
+
+    "architectures": ["*"],
+    "flags": [],
+
+    "depends_on": [],
+
+    "install_type": "local",
+    "installroot": "/",
+    "build_steps": [
+        "make"
+    ],
+    "package_steps": [
+        "make install"
+    ]
+
+}

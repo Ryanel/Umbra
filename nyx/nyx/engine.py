@@ -1,4 +1,5 @@
 from concurrent.futures import process
+import functools
 from nyx.package import *
 from nyx.globals import *
 from .json import nyx_write_json
@@ -8,7 +9,9 @@ from graphlib import TopologicalSorter
 import docker
 from rich.panel import Panel
 from rich.live import Live
-from rich.pretty import Pretty
+from rich.pretty import Pretty  
+from rich import print
+
 class Engine:
     """Contains the world, the collection of all packages"""
     def __init__(self, build_env):
@@ -23,30 +26,40 @@ class Engine:
 
     def load_packages(self, repo_path: str):
         """Loads data from the repository"""
-        #nyx_log.debug("Loading data from the repository...");
+        nyx_log.debug("Loading data from the repository...");
 
         self.repo_path = repo_path
-        self.repo_json = nyx_read_json(repo_path + "repo.json");
+        self.repo_json = nyx_read_json(repo_path + "meta.json");
 
-        for x in self.repo_json['packages']:
-            pkg_json = self.repo_json['packages'][x]
-            pkg = NyxPackage(x)
-            pkg.loadJson(pkg_json)
-            self.packages[x] = pkg
-        for y in self.repo_json['includes']:
-            add_path = self.repo_path + y
-            dat = nyx_read_json(add_path)
-            for x in dat['packages']:
-                pkg_json = dat['packages'][x]
-                pkg = NyxPackage(x)
-                pkg.loadJson(pkg_json)
-                self.packages[x] = pkg
-        pass
+        for category in os.listdir(self.repo_path):
+            category_dir = os.path.join(self.repo_path, category)
+            if not os.path.isdir(category_dir):
+                continue
+            self.load_package_dir(category, category_dir)
+            
+
+    def load_package_dir(self, cat: str, pkg_dir: str):
+        for cat_pkgs in os.listdir(pkg_dir):
+            full_path = os.path.join(pkg_dir, cat_pkgs)
+            if not os.path.isdir(full_path):
+                split = os.path.splitext(cat_pkgs)
+                full_name = split[0]
+
+                if (split[1] == ".json"):
+                    # Actually add the package
+                    pkg_json = nyx_read_json(full_path)
+                    pkg = NyxPackage(full_name, pkg_dir)
+                    pkg.loadJson(pkg_json)
+                    self.packages[full_name] = pkg
+            else:
+                self.load_package_dir(cat, full_path)
+
 
     def load_state(self, state_path: str):
         self.saved_state = nyx_read_json(state_path, self.saved_state);
         for x in self.saved_state["packages"]:
             self.packages[x].state = self.saved_state['packages'][x]
+
 
     def save_state(self, state_path: str):
         for x in self.packages:
@@ -54,8 +67,10 @@ class Engine:
         
         nyx_write_json(state_path, self.saved_state)
 
+
     def set_config(self, config: dict) -> None:
         self.config = config
+
 
     def load_environment(self):
         triple="x86_64-umbra"
@@ -73,13 +88,16 @@ class Engine:
             "NYX_TARGET_TRIPLE": f"{triple}"
         }
 
+
     def clean(self):
         """Cleans the build directory."""
         pass
 
+
     def prerequesites(self):
         """Ensures prerequesites are setup correctly"""
         pass
+
 
     def run(self, config:dict):
         self.coordinator_run_command(config, "bash -c 'cd /opt/umbra-buildenv/src/ && ./nyx/files/scripts/x86_64-create-iso.sh'")
@@ -107,6 +125,7 @@ class Engine:
 
         return dependencies
 
+
     def sort_install_order(self, packages: set) -> list:
         dep_graph = TopologicalSorter()
         for x in packages:
@@ -120,10 +139,39 @@ class Engine:
         """Searches the world for packages matching pkg_str."""
         found_pkgs = list()
 
-        # For now, do not care about versions, just look for pkg_str in packages
-        pkg = self.packages.get(pkg_str)
-        if (pkg != None):
-            found_pkgs.append(pkg)
+        search_name = NyxPackage.pkgstr_name(pkg_str)
+        search_ver  = NyxPackage.pkgstr_version(pkg_str)
+
+        for candidate in self.packages:
+            add_this_package = False
+            candidate_name = NyxPackage.pkgstr_name(candidate)
+            candidate_ver = NyxPackage.pkgstr_version(candidate)
+
+            # print(f"pstr {pkg_str} ({search_name}-{search_ver}) candidate: ({candidate_name}-{candidate_ver})")
+
+            if candidate_name != search_name:
+                if candidate_name != (f"{search_name}-{search_ver}"):
+                    continue
+                else:
+                    # Handle the case where there's multiple - in a name...
+                    search_ver = None
+
+            # Is there an exact version?
+            if search_ver != None:
+                # No, compare versions
+                if candidate_ver == search_ver:
+                    add_this_package = True
+            elif latest_if_no_version:
+                add_this_package = True
+
+            if add_this_package:
+                found_pkgs.append(self.packages.get(candidate))
+
+        if latest_if_no_version and search_ver == None:
+            if len(found_pkgs) <= 1:
+                return found_pkgs
+            sorted_version = sorted(found_pkgs, key=functools.cmp_to_key(NyxPackage.compareVersions))
+            return [sorted_version[-1]]
 
         return found_pkgs
 
@@ -155,18 +203,23 @@ class Engine:
             if list_size > 15:
                 list_size = 15
 
-            log_panel = Panel("", title="Log")
-            with Live(log_panel, refresh_per_second=10, console=nyx_log.console) as live:
-                for line in container.logs(stream=True):
-                    log_output.append(line)
+            # log_panel = Panel("", title="Log")
+            # with Live(log_panel, refresh_per_second=10, console=nyx_log.console) as live:
+            #     for line in container.logs(stream=True):
+            #         log_output.append(line)
 
-                    toDisplay = log_output[-(list_size - 2):]
-                    text = ""
+            #         toDisplay = log_output[-(list_size - 2):]
+            #         text = ""
 
-                    for x in toDisplay:
-                        text = text + x.decode("utf-8")
+            #         for x in toDisplay:
+            #             text = text + x.decode("utf-8")
 
-                    live.update(Panel(text, title="Log"))
+            #         live.update(Panel(text, title="Log"))
+
+
+            for line in container.logs(stream=True):
+                print(line.decode("utf-8").strip())
+
             container.wait()
 
 
@@ -176,7 +229,7 @@ class Engine:
             command = './nyx/nbuild.py --no-color '
             if rebuild: 
                 command = command + '--clean ' 
-            command = command + f'install {pkg.name}'
+            command = command + f'install {pkg.name}-{pkg.version}'
             nyx_log.info (f"Compiling {command}")
             self.coordinator_run_command(config, command)
             

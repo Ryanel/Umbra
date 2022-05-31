@@ -19,7 +19,6 @@ def main() -> int:
     parser.add_argument("packages", help="The packages to build", nargs="*")
     parser.add_argument("--temp", help="Where temporary files are stored", default="/build/build/")
     parser.add_argument("--config", help="Path to a repo configuration (config.json)", default="./")
-    parser.add_argument("--repo", help="Path to a repo.json file", default="./")
     parser.add_argument("--only", help="Force only binary/source packages", default="")
     parser.add_argument("--prefer", help="Prefer either binary or source packages", default="source")
     parser.add_argument('--verbose', '-v', action='count', default=0, help="How verbose output will be.")
@@ -31,10 +30,11 @@ def main() -> int:
 
     # Read the current config
     current_config = nyx_read_json("config.json")
+    repo_location = "./repo/" if current_config["repo_location"] is None else current_config["repo_location"]
 
     # Start the build engine...
     engine = Engine("docker")
-    engine.load_packages(args.repo)
+    engine.load_packages(repo_location)
     engine.load_state(args.config + "state.json")
     engine.load_environment()
 

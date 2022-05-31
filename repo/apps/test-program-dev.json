@@ -1,0 +1,19 @@
+{
+    "nyx_api": 1,
+    "name": "test-program",
+    "description": "Test Program",
+    "homepage": "https://github.com/Ryanel/Umbra/",
+
+    "acquisition": "local_copy",
+    "src_uri": "./src/apps/test_program",
+
+    "architectures": ["*"],
+    "flags": [],
+
+    "depends_on": ["libc"],
+
+    "install_type": "initrd",
+    "install_root": "/apps/",
+    "build_steps": [ "make" ],
+    "package_steps": [ "make install" ]
+}

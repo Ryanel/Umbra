@@ -1,0 +1,27 @@
+{
+    "nyx_api": 1,
+    "name": "kernel",
+    "description": "The Umbra Kernel",
+    "homepage": "https://github.com/Ryanel/Umbra/",
+
+    "acquisition": "local",
+    "src_uri": "src/sys/kernel/",
+
+    "architectures": ["*"],
+    "flags": [],
+
+    "depends_on": [
+        "limine",
+        "libk"
+    ],
+
+    "install_type": "local",
+    "installroot": "/sys/",
+    "build_steps": [
+        "make",
+        "make symbols"
+    ],
+    "package_steps": [
+        "make install"
+    ]
+}

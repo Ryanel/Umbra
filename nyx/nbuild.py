@@ -23,7 +23,6 @@ def main() -> int:
     parser.add_argument("--dest", "--destination", help="The destination to store the package", default="out.npa")
     parser.add_argument("--temp", help="Where temporary files are stored", default="/build/build/")
     parser.add_argument("--config", help="Path to a repo configuration (config.json)", default="./")
-    parser.add_argument("--repo", help="Path to a repo.json file", default="./")
     parser.add_argument("--log", help="Sets a file for log output to be directed to", default="")
     parser.add_argument("--no-color", help="Disables color printing", action="store_true")
     parser.add_argument("--clean", help="Cleans the package before running the command", action="store_true")
@@ -34,9 +33,10 @@ def main() -> int:
 
     # Read the current config and setup the world
     current_config = nyx_read_json(args.config + "config.json");
+    repo_location = "./repo/" if current_config["repo_location"] is None else current_config["repo_location"]
 
     engine = Engine("local")
-    engine.load_packages(args.repo);
+    engine.load_packages(repo_location);
     engine.load_state(args.config + "state.json")
     engine.load_environment()
 

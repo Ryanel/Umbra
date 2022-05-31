@@ -1,0 +1,20 @@
+{
+    "nyx_api": 1,
+    "name": "libc-headers",
+    "description": "Headers for the libc",
+    "homepage": "https://github.com/Ryanel/Umbra/",
+
+    "acquisition": "local",
+    "src_uri": "src/lib/libc/",
+
+    "architectures": ["*"],
+    "flags": [],
+
+    "depends_on": [],
+
+    "install_type": "local",
+    "installroot": "/",
+    "build_steps": [
+        "make install-headers"
+    ]
+}
