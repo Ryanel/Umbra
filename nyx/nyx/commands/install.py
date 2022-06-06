@@ -52,7 +52,7 @@ class CommandInstall:
                 if not x.state["installed"] or x.name in self.args.packages and self.args.rebuild or x.state["installed"] and self.args.rebuild_deps and not x.installType == "tool":
                     rb = x.name in self.args.packages and self.args.rebuild or x.state[
                         "installed"] and self.args.rebuild_deps and not x.installType == "tool"
-                    self.engine.coordinator_build_package(self.config, x, rb)
+                    self.engine.coordinator_build_package(self.config, self.args, x, rb)
 
             if (self.args.run_iso):
                 self.engine.run(self.config)

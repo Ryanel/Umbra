@@ -12,6 +12,7 @@ from nyx.json import nyx_read_json
 # Commands
 from nyx.commands.view import CommandView
 from nyx.commands.install import CommandInstall
+from nyx.commands.watch import CommandWatch
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog='npkg')
@@ -20,12 +21,13 @@ def main() -> int:
     parser.add_argument("--temp", help="Where temporary files are stored", default="/build/build/")
     parser.add_argument("--config", help="Path to a repo configuration (config.json)", default="./")
     parser.add_argument("--only", help="Force only binary/source packages", default="")
-    parser.add_argument("--prefer", help="Prefer either binary or source packages", default="source")
+    parser.add_argument("--prefer", help="Prefer either binary or source packages", default="binary")
     parser.add_argument('--verbose', '-v', action='count', default=0, help="How verbose output will be.")
     parser.add_argument("--rebuild", help="Rebuilds the selected packages", action="store_true")
     parser.add_argument("--rebuild-deps", help="Rebuilds the depedencies of the selected packages", action="store_true")
     parser.add_argument("--run-iso", help="Builds and runs an iso after the build command", action="store_true")
     parser.add_argument("--yes", help="Always agrees", action="store_true")
+    parser.add_argument("--no-clean", help="Do not clean on rebuild", action="store_true")
     args = parser.parse_args()
 
     # Read the current config
@@ -40,13 +42,13 @@ def main() -> int:
 
     # Run the needed command.
     if (args.module == "view"):
-        cmd = CommandView(args, engine, current_config)
-        cmd.run()
+        CommandView(args, engine, current_config).run()
     elif (args.module == "run"):
         engine.run(current_config)
+    elif (args.module == "watch"):
+        CommandWatch(args, engine, current_config).run()
     elif (args.module == "install"):
-        cmd = CommandInstall(args, engine, current_config)
-        cmd.run()
+        CommandInstall(args, engine, current_config).run()
     else:
         nyx_log.error(f"No module named {args.module} found.")
 

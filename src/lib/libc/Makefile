@@ -23,3 +23,7 @@ install:
 install-headers:
 	@mkdir -p ${INSTALL_DIR}/usr/include
 	@cp -R include/* ${INSTALL_DIR}/usr/include/
+
+clean:
+	@rm libc.a
+	rm ${COMPILE_OBJS}

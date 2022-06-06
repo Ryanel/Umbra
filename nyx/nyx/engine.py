@@ -194,41 +194,23 @@ class Engine:
                 }
             )
 
-            log_output = []
-            list_size = os.get_terminal_size().lines - 10
-
-            if list_size < 5:
-                list_size = 5
-
-            if list_size > 15:
-                list_size = 15
-
-            # log_panel = Panel("", title="Log")
-            # with Live(log_panel, refresh_per_second=10, console=nyx_log.console) as live:
-            #     for line in container.logs(stream=True):
-            #         log_output.append(line)
-
-            #         toDisplay = log_output[-(list_size - 2):]
-            #         text = ""
-
-            #         for x in toDisplay:
-            #             text = text + x.decode("utf-8")
-
-            #         live.update(Panel(text, title="Log"))
-
-
             for line in container.logs(stream=True):
-                print(line.decode("utf-8").strip())
+                nyx_log.info(line.decode("utf-8").strip())
 
             container.wait()
 
 
-    def coordinator_build_package(self, config:dict, pkg: NyxPackage, rebuild:bool ):
+    def coordinator_build_package(self, config:dict, args, pkg: NyxPackage, rebuild:bool ):
         nyx_log.info (f"Compiling {pkg.name}")
         if (self.build_env == "docker"):
             command = './nyx/nbuild.py --no-color '
-            if rebuild: 
-                command = command + '--clean ' 
+            if rebuild:
+                command = command + '--rebuild ' 
+            
+            if args.no_clean:
+                command = command + '--no-clean ' 
+            elif args.no_clean:
+                command = command + '--clean '
             command = command + f'install {pkg.name}-{pkg.version}'
             nyx_log.info (f"Compiling {command}")
             self.coordinator_run_command(config, command)

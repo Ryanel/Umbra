@@ -26,6 +26,9 @@ def main() -> int:
     parser.add_argument("--log", help="Sets a file for log output to be directed to", default="")
     parser.add_argument("--no-color", help="Disables color printing", action="store_true")
     parser.add_argument("--clean", help="Cleans the package before running the command", action="store_true")
+    parser.add_argument("--no-clean", help="Does not clean the package after installation", action="store_true")
+    parser.add_argument("--rebuild", help="Forcibly rebuilds the package", action="store_true")
+    
     args = parser.parse_args()
 
     nyx_log.set_no_color()
@@ -56,12 +59,18 @@ def main() -> int:
     if (args.clean):
         the_package.clean(current_config, engine.environment)
 
+    # Force building, installing, and packaging...
+    if (args.rebuild):
+        the_package.state["built"] = False
+        the_package.state["installed"] = False
+        the_package.state["has_package"] = False
+
     if (args.command == "build"):
         with nyx_log.process(f"Building {args.package}"):
-            the_package.build(current_config, engine.environment, shouldInstall=False)
+            the_package.build(current_config, args, engine.environment, shouldInstall=False)
     elif (args.command == "install"):
          with nyx_log.process(f"Building + Installing {args.package}"):
-            the_package.build(current_config, engine.environment, shouldInstall=True)
+            the_package.build(current_config, args, engine.environment, shouldInstall=True)
     elif (args.command == "clean"):
         the_package.clean(current_config, engine.environment)
     else:

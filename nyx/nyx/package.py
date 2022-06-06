@@ -5,7 +5,7 @@ import subprocess
 import tarfile
 from string import Template
 from pkg_resources import parse_version
-
+from nyx.globals import *
 
 class NyxPackage:
     """A packaged application, potentially from source"""
@@ -51,7 +51,6 @@ class NyxPackage:
             return 1
         return 0
 
-
     def loadJson(self, pkg_json:any):
         self.name                    = pkg_json["name"] or self.name
         self.architectures           = pkg_json.get("architecture", ["*"])
@@ -71,15 +70,15 @@ class NyxPackage:
         pass
 
     def print_info(self):
-        print(f"Package {self.name}-{self.version} for {self.state['architecture']}")
-        print(f"Install Type: {self.installType}")
-        print(f"install root: {self.install_root}")
-        print(f"supports: {self.supported_arch}")
-        print(f"depends on: {self.dependencies}")
-        print(f"patches: {len(self.patches)}")
-        print(f"steps: {self.steps}")
-        print(f"source: {self.source}")
-        print(f"environment: {self.buildEnvironment}")        
+        nyx_log.info(f"Package {self.name}-{self.version} for {self.state['architecture']}")
+        nyx_log.info(f"Install Type: {self.installType}")
+        nyx_log.info(f"install root: {self.install_root}")
+        nyx_log.info(f"supports: {self.supported_arch}")
+        nyx_log.info(f"depends on: {self.dependencies}")
+        nyx_log.info(f"patches: {len(self.patches)}")
+        nyx_log.info(f"steps: {self.steps}")
+        nyx_log.info(f"source: {self.source}")
+        nyx_log.info(f"environment: {self.buildEnvironment}")        
 
 
     def pkgstr_version(s: str) -> str or None:
@@ -89,9 +88,10 @@ class NyxPackage:
 
     def pkgstr_name(s: str) -> str: return s.rpartition('-')[0] or s
 
+
     def execute_commands(self, steps, cwd, config, env) -> bool:
         final_env = self.compute_environment(config, env)
-        #print(f"Execute: {cwd}, {steps}, env {final_env}")
+        #nyx_log.info(f"Execute: {cwd}, {steps}, env {final_env}")
 
         for x in steps:
             temp_obj = Template(x)
@@ -104,10 +104,12 @@ class NyxPackage:
                 return False
         return True
 
+
     def get_source_dir(self, config) -> str:
         if (self.source["type"] == "local"):
             return config["build_env"]["source_path"] + self.source["path"] 
         return f"{config['build_env']['build_path']}src/{self.name}-{self.version}";
+
 
     def compute_environment(self, config, global_environment):
         env = dict()
@@ -131,46 +133,65 @@ class NyxPackage:
         env |= self.buildEnvironment["env"]
         return env
 
-    def build(self, config, env, shouldInstall=True):
+
+    def build(self, config, args, env, shouldInstall=True):
         self.state["built_from_source"] = True
+
+
+
         if (not self.state["have_source"]): 
+            nyx_log.debug(f"Obtaining Source for {self.name}")
             if self.get_source(config, env):
                 self.state["have_source"] = True
             else:
-                print(f"Failed in obtaining source files for {self.name}!")
+                nyx_log.info(f"Failed in obtaining source files for {self.name}!")
                 return False;
 
-        if (not self.state["patched"]): 
+        if (not self.state["patched"] and len(self.patches) > 0): 
+            nyx_log.debug(f"Patching {self.name}...")
             if self.patch(config, env):
                 self.state["patched"] = True
             else:
-                print(f"Failed in patching source files for {self.name}!")
+                nyx_log.info(f"Failed in patching source files for {self.name}!")
                 return False;
 
-        if (not self.state["built"]): 
+        if (not self.state["built"] and (len(self.steps['configure']) > 0 or len(self.steps['build']) > 0)): 
+            nyx_log.debug(f"Building {self.name}...")
             if not self.configure(config, env):
-                print(f"Failed in configuration for {self.name}!")
+                nyx_log.info(f"Failed in configuration for {self.name}!")
                 return False;
             if not self.compile(config, env):
-                print(f"Encountered a compiliaton error for {self.name}!")
+                nyx_log.info(f"Encountered a compiliaton error for {self.name}!")
                 return False;
             self.state["built"] = True
-            
+
         if (not self.state["has_package"]): 
+            nyx_log.debug(f"Packaging {self.name}...")
             if self.package(config, env):
                 self.state["has_package"] = True
             else:
-                print(f"Failed in packaging files for {self.name}!")
+                nyx_log.info(f"Failed in packaging files for {self.name}!")
                 return False;
+        
         if (not self.state["installed"] and shouldInstall):
+            nyx_log.debug(f"Installing {self.name}")
             if self.install(config, env):
                 self.state["installed"] = True
             else:
-                print(f"Failed in installing file to system root for {self.name}!")
-                return False; 
+                nyx_log.info(f"Failed in installing file to system root for {self.name}!")
+                return False;
 
-        print(f"Packaging succeeded for {self.name}!")
+        # Clean up
+
+        if not args.no_clean:
+            nyx_log.info(f"nbuild: {self.name} cleaning up")
+            from nyx.actions.package_clean import CleanAction
+            CleanAction(config, self.compute_environment(config, env), self).execute()
+        # We've packaged it!
+        nyx_log.info(f"nbuild: {self.name} packaged successfully.")
+
         return True;
+
 
     def get_source(self, config, env):
         dest_dir = self.get_source_dir(config)
@@ -193,23 +214,27 @@ class NyxPackage:
             return False    
         return True
 
+
     def patch(self, config, env) -> bool:
         tmp_dir = self.get_source_dir(config)
         if len(self.patches) > 0:
             for patch_path in self.patches:
                 patch = os.path.join(self.pkg_file_path, patch_path)
-                print(f"[nyx]: Applying patch {patch} to {tmp_dir}")
+                nyx_log.debug(f"[nyx]: Applying patch {patch} to {tmp_dir}")
                 with open(os.path.abspath(patch), "rb") as f:
                     patch_data = f.read()
                 process = subprocess.Popen(['patch', '-ruN', '-p1', '-d', '.'], shell=False, cwd=tmp_dir, stdin=subprocess.PIPE)
                 process.communicate(input=patch_data)
         return True
 
+
     def configure(self, config, env):
         return self.execute_commands(self.steps["configure"], self.get_source_dir(config), config, env)
 
+
     def compile(self, config, env):
         return self.execute_commands(self.steps["build"], self.get_source_dir(config), config, env)
+
 
     def package(self, config, env) -> bool:
         pkg_path = os.path.abspath(config["build_env"]["package_cache"])
@@ -231,22 +256,12 @@ class NyxPackage:
             zip_ref.add(install_dir, arcname='', recursive=True)
         return True
 
+
     def install(self, config, env):
         """Installs the package into the system root"""
-        final_env = self.compute_environment(config, env)
-        sysroot_dir = ""
+        from nyx.actions.package_install import InstallAction
+        return InstallAction(config, self.compute_environment(config, env), self).execute()
 
-        if (self.installType == 'tool'):
-            sysroot_dir = os.path.abspath(f"{config['build_env']['tool_path']}/{self.install_root}")
-        elif (self.installType == 'initrd'):
-            sysroot_dir = os.path.abspath(f"{config['build_env']['initrd_root']}/{self.install_root}")
-        else:
-            sysroot_dir = final_env["SYSROOT"]
-        
-        self.util_createpath(sysroot_dir)
-        with tarfile.open(self.pkg_path(config), mode="r") as zip_ref:
-            zip_ref.extractall(sysroot_dir)
-        return True
 
     def clean(self, config, env):
         """Cleans all compiled traces of this package"""
@@ -255,19 +270,14 @@ class NyxPackage:
         if self.state["has_package"]:
             self.state["has_package"] = False
             os.remove(self.pkg_path(config))
-        if self.state["built_from_source"]:
-            self.state["built_from_source"] = False
-            self.state["built"] = False
-            self.state["patched"] = False
-            self.state["have_source"] = False
-            shutil.rmtree(os.path.abspath(config["build_env"]["build_path"] + f"tmp/install/{self.name}/"))
-            shutil.rmtree(final_env['BUILD_DIR'])
-            if self.source["type"] != "local":
-                shutil.rmtree(os.path.abspath(self.get_source_dir(config)))
+        from nyx.actions.package_clean import CleanAction
+        return CleanAction(config, self.compute_environment(config, env), self).execute()
+
 
     def util_createpath(self, path):
         if not os.path.isdir(os.path.abspath(path)):
             os.makedirs(os.path.abspath(path))
+
 
     def pkg_path(self, config):
         return f'{os.path.abspath(config["build_env"]["package_cache"])}/{self.name}-{self.version}.tar.gz'
