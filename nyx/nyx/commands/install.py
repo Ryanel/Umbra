@@ -1,7 +1,6 @@
 from nyx.globals import *
 from rich.table import Table
 
-
 class CommandInstall:
     def __init__(self, args, engine, config) -> None:
         self.args = args
@@ -49,11 +48,32 @@ class CommandInstall:
                     return
 
             for x in deps_in_install_order:
-                if not x.state["installed"] or x.name in self.args.packages and self.args.rebuild or x.state["installed"] and self.args.rebuild_deps and not x.installType == "tool":
-                    rb = x.name in self.args.packages and self.args.rebuild or x.state[
-                        "installed"] and self.args.rebuild_deps and not x.installType == "tool"
-                    self.engine.coordinator_build_package(self.config, self.args, x, rb)
+                hasBinary = x.has_package(self.config)
+                installed = x.state["installed"]
+                rebuildInstallList = self.args.rebuild and not x.installType == "tool"
+                rebuildDeps = self.args.rebuild_deps and not x.installType == "tool"
+                isInstallList = x.name in self.args.packages
 
+                if installed and isInstallList and not rebuildInstallList:
+                    continue
+                elif installed and not isInstallList and not rebuildDeps:   
+                    continue
+
+                # Determine if we want binary or source building. Override for rebuilds
+                typePreferred = 'binary' if self.args.prefer=='binary' else 'source'
+                if rebuildInstallList and isInstallList:
+                    typePreferred = 'source'
+                if rebuildDeps and not isInstallList:
+                    typePreferred = 'source'
+
+                # Are we potentially rebuilding?
+                if hasBinary and typePreferred == 'binary':
+                    self.engine.coordinator_run_command(self.config, f'./nyx/nbuild.py --no-color install-pkg {x.name}-{x.version}')
+                else:
+                    self.engine.coordinator_build_package(self.config, self.args, x, rebuildInstallList if isInstallList else rebuildDeps)
+
+            if (self.args.build_iso or self.args.run_iso):
+                self.engine.build_iso(self.config)
             if (self.args.run_iso):
                 self.engine.run(self.config)
 

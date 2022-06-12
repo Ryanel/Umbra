@@ -4,7 +4,9 @@
 # Assumes a package has been prepared by nyx. Only handles actually building the package, nothing more.
 # This is intended to be run in a container at the direction of Nyx, but it can be run on it's own. It loads the current configuration from Nyx
 import sys
+import os
 import argparse
+
 from nyx.globals import *
 from nyx.engine import Engine
 from nyx.package import NyxPackage;
@@ -35,7 +37,8 @@ def main() -> int:
     nyx_log.set_log_file(args.log)
 
     # Read the current config and setup the world
-    current_config = nyx_read_json(args.config + "config.json");
+    current_config = nyx_read_json(args.config + "config.json")
+    current_config['host_type'] = 'build'
     repo_location = "./repo/" if current_config["repo_location"] is None else current_config["repo_location"]
 
     engine = Engine("local")
@@ -63,7 +66,8 @@ def main() -> int:
     if (args.rebuild):
         the_package.state["built"] = False
         the_package.state["installed"] = False
-        the_package.state["has_package"] = False
+        if the_package.has_package(current_config):
+            os.remove(the_package.pkg_path(current_config))
 
     if (args.command == "build"):
         with nyx_log.process(f"Building {args.package}"):
@@ -71,6 +75,16 @@ def main() -> int:
     elif (args.command == "install"):
          with nyx_log.process(f"Building + Installing {args.package}"):
             the_package.build(current_config, args, engine.environment, shouldInstall=True)
+    elif (args.command == "install-pkg"):
+
+         with nyx_log.process(f"Installing {args.package}"):
+            if the_package.has_package(current_config):
+                nyx_log.info(f"Installing {args.package}...")
+                the_package.install(current_config, engine.environment)
+            else:
+                nyx_log.error(f"No package file found for {args.package}")
+
+            #the_package.build(current_config, args, engine.environment, shouldInstall=True)
     elif (args.command == "clean"):
         the_package.clean(current_config, engine.environment)
     else:

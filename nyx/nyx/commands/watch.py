@@ -69,7 +69,6 @@ class CommandWatch:
                 with CleanExit():
                     while observer.is_alive():
                         observer.join(1)
-
                 if not was_processing:
                     should_exit = True
                     nyx_log.info("Exiting...")

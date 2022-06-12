@@ -18,7 +18,6 @@ class NyxPackage:
             "patched": False,
             "built": False,
             "built_from_source": False,
-            "has_package": False,
             "installed": False,
             "architecture": "x86_64"
         }
@@ -137,8 +136,6 @@ class NyxPackage:
     def build(self, config, args, env, shouldInstall=True):
         self.state["built_from_source"] = True
 
-
-
         if (not self.state["have_source"]): 
             nyx_log.debug(f"Obtaining Source for {self.name}")
             if self.get_source(config, env):
@@ -165,11 +162,9 @@ class NyxPackage:
                 return False;
             self.state["built"] = True
 
-        if (not self.state["has_package"]): 
+        if (not self.has_package(config)): 
             nyx_log.debug(f"Packaging {self.name}...")
-            if self.package(config, env):
-                self.state["has_package"] = True
-            else:
+            if not self.package(config, env):
                 nyx_log.info(f"Failed in packaging files for {self.name}!")
                 return False;
         
@@ -182,7 +177,6 @@ class NyxPackage:
                 return False;
 
         # Clean up
-
         if not args.no_clean:
             nyx_log.info(f"nbuild: {self.name} cleaning up")
             from nyx.actions.package_clean import CleanAction
@@ -213,6 +207,10 @@ class NyxPackage:
         else:
             return False    
         return True
+
+
+    def has_package(self, config):
+        return os.path.exists(self.pkg_path(config))
 
 
     def patch(self, config, env) -> bool:
@@ -251,7 +249,6 @@ class NyxPackage:
             return False
 
         # Package into a NPA...
-        self.util_createpath(f"{pkg_path}/{self.name.split('/')[0]}")
         with tarfile.open(self.pkg_path(config), "w:gz") as zip_ref:
             zip_ref.add(install_dir, arcname='', recursive=True)
         return True
@@ -267,8 +264,7 @@ class NyxPackage:
         """Cleans all compiled traces of this package"""
         final_env = self.compute_environment(config, env)
         self.state["installed"] = False
-        if self.state["has_package"]:
-            self.state["has_package"] = False
+        if self.has_package(config):
             os.remove(self.pkg_path(config))
         from nyx.actions.package_clean import CleanAction
         return CleanAction(config, self.compute_environment(config, env), self).execute()
@@ -280,4 +276,5 @@ class NyxPackage:
 
 
     def pkg_path(self, config):
-        return f'{os.path.abspath(config["build_env"]["package_cache"])}/{self.name}-{self.version}.tar.gz'
+        type = config['host_type']
+        return f'{os.path.abspath(config[f"{type}_env"]["package_cache"])}/{self.name}-{self.version}.tar.gz'

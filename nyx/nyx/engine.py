@@ -26,7 +26,6 @@ class Engine:
 
     def load_packages(self, repo_path: str):
         """Loads data from the repository"""
-        nyx_log.debug("Loading data from the repository...");
 
         self.repo_path = repo_path
         self.repo_json = nyx_read_json(repo_path + "meta.json");
@@ -64,7 +63,6 @@ class Engine:
     def save_state(self, state_path: str):
         for x in self.packages:
             self.saved_state["packages"][x] = self.packages[x].state
-        
         nyx_write_json(state_path, self.saved_state)
 
 
@@ -98,9 +96,10 @@ class Engine:
         """Ensures prerequesites are setup correctly"""
         pass
 
+    def build_iso(self, config:dict):
+        self.coordinator_run_command(config, "bash -c 'cd /opt/umbra-buildenv/src/ && ./nyx/files/scripts/x86_64-create-iso.sh'")
 
     def run(self, config:dict):
-        self.coordinator_run_command(config, "bash -c 'cd /opt/umbra-buildenv/src/ && ./nyx/files/scripts/x86_64-create-iso.sh'")
         try:
             subprocess.run(['qemu-system-x86_64' ,'-cdrom', 'artifacts/livecd.iso', '-serial', 'stdio'])
         except KeyboardInterrupt:
@@ -180,7 +179,7 @@ class Engine:
         if (self.build_env == "docker"):
             client = docker.from_env()
             real_src_path = os.path.abspath(config["host_env"]["source_path"])
-            real_artifact_path = os.path.abspath(config["host_env"]["artifact_path"])
+            real_artifact_path = os.path.abspath(config["host_env"]["artifacts_path"])
             container = client.containers.run('umbra-buildenv', 
                 command, 
                 detach = True,

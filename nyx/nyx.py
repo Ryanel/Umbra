@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument('--verbose', '-v', action='count', default=0, help="How verbose output will be.")
     parser.add_argument("--rebuild", help="Rebuilds the selected packages", action="store_true")
     parser.add_argument("--rebuild-deps", help="Rebuilds the depedencies of the selected packages", action="store_true")
+    parser.add_argument("--build-iso", help="Builds and runs an iso after the build command", action="store_true")
     parser.add_argument("--run-iso", help="Builds and runs an iso after the build command", action="store_true")
     parser.add_argument("--yes", help="Always agrees", action="store_true")
     parser.add_argument("--no-clean", help="Do not clean on rebuild", action="store_true")
@@ -32,6 +33,7 @@ def main() -> int:
 
     # Read the current config
     current_config = nyx_read_json("config.json")
+    current_config['host_type']='host'
     repo_location = "./repo/" if current_config["repo_location"] is None else current_config["repo_location"]
 
     # Start the build engine...
