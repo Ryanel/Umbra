@@ -20,15 +20,23 @@ void kernel::tasks::elf_loader::load_elf(const char* fpath) {
     auto fd = g_vfs.open_file(fpath, 0);
 
     if (fd == -1) {
-        log::error("test_thread", "Unable to find %s\n", fpath);
+        log::error("elf_loader", "Unable to find %s\n", fpath);
         scheduler::terminate(nullptr);
+        return;
     }
 
     // auto  size = g_vfs.fstat(fd).size;
     auto  size = 16384;
     auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
                                                                     // not make unnessisary slabs.
-    vfs::g_vfs.read(fd, buf, size);
+    size_t bytes_read = vfs::g_vfs.read(fd, buf, size);
+
+    // If it's not as big as a header, abort
+    if (bytes_read < sizeof(elf64_header) || bytes_read == -1) {
+        log::error("elf_loader", "Failed to read %s, only read %d bytes\n", fpath, bytes_read);
+        scheduler::terminate(nullptr);
+        return;
+    }
 
     // Parse as an ELF
     auto test_exe = elf64_file(buf);

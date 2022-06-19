@@ -123,16 +123,29 @@ file_descriptor* virtual_filesystem::taskfd_to_fd(fd_id_t id) {
 }
 
 fd_id_t virtual_filesystem::open_file(std::string_view path, int flags) {
-    node* n = find(path);
+    node* n            = find(path);
+    task* current_task = scheduler::get_current_task();
+    if (n) {
+        // Create the kernel file descriptor
+        auto* fd   = new file_descriptor();
+        fd->flags  = flags;
+        fd->m_node = n;
+        fd->m_id   = this->next_descriptor_id++;
+        this->open_files.push_back(fd);
 
-    if (n == nullptr) {
-        if ((flags & VFS_OPEN_FLAG_CREATE != 0)) {}
+        task_file_descriptor tfd;
+        tfd.m_descriptor = fd;
+        tfd.m_local_id   = current_task->next_fd_id++;
+        current_task->m_file_descriptors.push_back(tfd);
+        return tfd.m_local_id;
+    } else {
+        if ((flags & VFS_OPEN_FLAG_CREATE != 0)) { assert(false && "flags & VFS_OPEN_FLAG_CREATE: Implement this"); }
     }
 
     return -1;
 }
-size_t virtual_filesystem::read(fd_id_t fd, uint8_t* buf, size_t count) { return -1; }
-size_t virtual_filesystem::write(fd_id_t fd, uint8_t* buf, size_t count) { return -1; }
+size_t virtual_filesystem::read(fd_id_t fd, uint8_t* buf, size_t count) { return 0; }
+size_t virtual_filesystem::write(fd_id_t fd, uint8_t* buf, size_t count) { return 0; }
 
 }  // namespace vfs
 }  // namespace kernel
