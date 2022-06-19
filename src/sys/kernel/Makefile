@@ -43,7 +43,6 @@ ${BUILD_DIR}/kernel.elf: ${ALL_OBJECTS}
 
 symbols:
 	@mkdir -p ${INSTALL_DIR}/sys/
-	@echo "Generating Symbol Table (${BUILD_DIR} to ${INSTALL_DIR}"
 	@nm ${BUILD_DIR}/kernel.elf | grep " T " > ${BUILD_DIR}/kernel.sym
 	@python3 create-symbols.py ${BUILD_DIR}
 	@cp ${BUILD_DIR}/syms.bin ${INSTALL_DIR}/sys/syms.bin

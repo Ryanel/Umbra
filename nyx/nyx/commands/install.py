@@ -7,7 +7,33 @@ class CommandInstall:
         self.engine = engine
         self.config = config
 
+    def display_and_ask(self, deps_in_install_order: list, skip = False) -> bool:
+        if skip: 
+            return True
+        # Display table and ask for permission
+        table = Table(title="Install order")
+        table.add_column("Name", justify="left", style="green")
+        table.add_column("Version", justify="right", style="magenta")
+        table.add_column("Action", justify="right", style="white")
+
+        reversed_list = deps_in_install_order[::-1]
+
+        for x in reversed_list:
+            if not x.state["installed"]:
+                table.add_row(x.name, x.version, "Build")
+            elif x.name in self.args.packages and self.args.rebuild:
+                table.add_row(x.name, x.version, "Rebuild")
+            elif x.state["installed"] and self.args.rebuild_deps and not x.installType == "tool":
+                table.add_row(x.name, x.version, "Rebuild Dependency")
+        nyx_log.console.print(table)
+
+        if (not self.args.yes):
+            input = nyx_log.input("Proceed? (y/n): ")
+            if input != "y":
+                return
+
     def run(self):
+        result = 0
         if (len(self.args.packages) > 0):
             nyx_log.debug(f"Calculating dependencies for {self.args.packages}")
             total_deps = set()
@@ -25,27 +51,7 @@ class CommandInstall:
 
             deps_in_install_order = self.engine.sort_install_order(total_deps)
 
-            table = Table(title="Install order")
-            table.add_column("Name", justify="left", style="green")
-            table.add_column("Version", justify="right", style="magenta")
-            table.add_column("Action", justify="right", style="white")
-
-            reversed_list = deps_in_install_order[::-1]
-
-            for x in reversed_list:
-                if not x.state["installed"]:
-                    table.add_row(x.name, x.version, "Build")
-                elif x.name in self.args.packages and self.args.rebuild:
-                    table.add_row(x.name, x.version, "Rebuild")
-                elif x.state["installed"] and self.args.rebuild_deps and not x.installType == "tool":
-                    table.add_row(x.name, x.version, "Rebuild Dependency")
-
-            nyx_log.console.print(table)
-
-            if (not self.args.yes):
-                input = nyx_log.input("Proceed? (y/n): ")
-                if input == "n":
-                    return
+            self.display_and_ask(deps_in_install_order, self.args.module == 'watch' or self.args.yes)
 
             for x in deps_in_install_order:
                 hasBinary = x.has_package(self.config)
@@ -68,14 +74,14 @@ class CommandInstall:
 
                 # Are we potentially rebuilding?
                 if hasBinary and typePreferred == 'binary':
-                    self.engine.coordinator_run_command(self.config, f'./nyx/nbuild.py --no-color install-pkg {x.name}-{x.version}')
+                    result = self.engine.coordinator_run_command(self.config, f'./nyx/nbuild.py --no-color install-pkg {x.name}-{x.version}')
                 else:
-                    self.engine.coordinator_build_package(self.config, self.args, x, rebuildInstallList if isInstallList else rebuildDeps)
+                    result = self.engine.coordinator_build_package(self.config, self.args, x, rebuildInstallList if isInstallList else rebuildDeps)
 
-            if (self.args.build_iso or self.args.run_iso):
-                self.engine.build_iso(self.config)
-            if (self.args.run_iso):
-                self.engine.run(self.config)
-
+            if result == 0:
+                if (self.args.build_iso or self.args.run_iso):
+                    self.engine.build_iso(self.config)
+                if (self.args.run_iso):
+                    self.engine.run(self.config)
         else:
             nyx_log.error(f"No package specified, unable to build.")

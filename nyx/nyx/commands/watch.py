@@ -33,14 +33,13 @@ class FSEventHandler(FileSystemEventHandler):
             was_processing = True
         else:
             if not was_processing:
-                nyx_log.debug(f"Ignoring: {event}")
-            return
+                return
 
-        nyx_log.debug(f"Event: {event}")
-
+        nyx_log.info("File change detected. Starting incremental compilation...")
         CommandInstall(self.args, self.engine, self.config).run()
         self.timeout = time() + self.timeoutPeriod
         was_processing = False
+        nyx_log.info("Compilation complete. Watching for file changes")
         pass
 
 
@@ -50,14 +49,9 @@ class CommandWatch:
         self.args = args
         self.engine = engine
         self.config = config
-
         self.args.yes = True
 
-    def event_handler():
-        nyx_log.debug("event")
-
     def run(self):
-
         should_exit = False
 
         while not should_exit:

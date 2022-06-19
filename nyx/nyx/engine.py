@@ -175,7 +175,7 @@ class Engine:
         return found_pkgs
 
 
-    def coordinator_run_command(self, config:dict, command:str):
+    def coordinator_run_command(self, config:dict, command:str) -> int:
         if (self.build_env == "docker"):
             client = docker.from_env()
             real_src_path = os.path.abspath(config["host_env"]["source_path"])
@@ -196,7 +196,8 @@ class Engine:
             for line in container.logs(stream=True):
                 nyx_log.info(line.decode("utf-8").strip())
 
-            container.wait()
+            results = container.wait()
+            return results["StatusCode"]
 
 
     def coordinator_build_package(self, config:dict, args, pkg: NyxPackage, rebuild:bool ):
@@ -211,6 +212,6 @@ class Engine:
             elif args.no_clean:
                 command = command + '--clean '
             command = command + f'install {pkg.name}-{pkg.version}'
-            nyx_log.info (f"Compiling {command}")
-            self.coordinator_run_command(config, command)
+            nyx_log.debug (f"Compiling {command}")
+            return self.coordinator_run_command(config, command)
             

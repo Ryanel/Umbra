@@ -69,27 +69,30 @@ def main() -> int:
         if the_package.has_package(current_config):
             os.remove(the_package.pkg_path(current_config))
 
+    result = True
+
     if (args.command == "build"):
         with nyx_log.process(f"Building {args.package}"):
-            the_package.build(current_config, args, engine.environment, shouldInstall=False)
+            result = the_package.build(current_config, args, engine.environment, shouldInstall=False)
     elif (args.command == "install"):
          with nyx_log.process(f"Building + Installing {args.package}"):
-            the_package.build(current_config, args, engine.environment, shouldInstall=True)
+            result = the_package.build(current_config, args, engine.environment, shouldInstall=True)
     elif (args.command == "install-pkg"):
-
          with nyx_log.process(f"Installing {args.package}"):
             if the_package.has_package(current_config):
                 nyx_log.info(f"Installing {args.package}...")
-                the_package.install(current_config, engine.environment)
+                result = the_package.install(current_config, engine.environment)
             else:
                 nyx_log.error(f"No package file found for {args.package}")
-
-            #the_package.build(current_config, args, engine.environment, shouldInstall=True)
+                result = False
     elif (args.command == "clean"):
         the_package.clean(current_config, engine.environment)
     else:
         nyx_log.error(f"No command {args.command}")
+        result = False
     engine.save_state(args.config + "state.json")
+
+    return 0 if result == True else 1
 
 # Make this file executable... 
 if __name__ == '__main__':
