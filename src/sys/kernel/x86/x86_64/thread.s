@@ -9,7 +9,7 @@ TCB_TASK_OFF   EQU 40
 TCB_STATUS_OFF EQU 48
 TASK_VAS_OFF   EQU 24
 
-global thread_switch
+global thread_switch:function (thread_switch.end - thread_switch)
 extern swap_vas
 
 ; void thread_switch(thread* next)
@@ -40,14 +40,15 @@ thread_switch:
     ; Restore registers (Sys-V ABI)
     rframe_load
     ret
+.end:
 
-global set_page_table
+global set_page_table:function (set_page_table.end - set_page_table)
 set_page_table:
     mov cr3, rdi
     ret
+.end:
 
-
-global enter_usermode
+global enter_usermode:function (enter_usermode.end - enter_usermode)
 enter_usermode:
     push 0x23
     push rsi
@@ -55,3 +56,4 @@ enter_usermode:
     push 0x1B
     push rdi
     iretq
+.end:

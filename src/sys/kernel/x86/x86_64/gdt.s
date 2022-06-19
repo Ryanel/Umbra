@@ -1,5 +1,5 @@
 global after_gdt
-global setupGDT
+global setupGDT:function (gdt_setup_end - setupGDT)
 
 setupGDT:
     lgdt    [rdi]
@@ -23,3 +23,4 @@ setupGDT:
 after_gdt:
     pop rax
     ret
+gdt_setup_end:

@@ -1,9 +1,9 @@
 # Umbra
 
-Umbra is a operating system for x86 and ARMv8 (64-bit). It is under active development.
+Umbra is a operating system for x86_64 and ARMv8 (64-bit). It is under active development.
 It takes cues from UNIX systems but is not UNIX compliant.
 
-The build system is CMake with helper scripts. It uses (by default) Ninja for compilation. Documentation can be generated with doxygen in the main root directory.
+This is the monorepo for the Umbra Operating System. 
 
 ## Major Components
 
@@ -13,25 +13,16 @@ The build system is CMake with helper scripts. It uses (by default) Ninja for co
 
 ## Building
 
-Requirements:
+Umbra uses the Nyx build system, which is custom made for Umbra. It is a build coordinator and package manager, rolled into one. 
+It is responsible for installing and compiling packages into the system root and creating the operating system image (iso).
 
-- A cross compiler for the platform of choice, including binutils.
-  - i686-elf-gcc or compatible for x86
-  - aarch64-elf or compatibile for ARMv8 based platforms
-  - Clang, though this is not well tested.
-- CMake
-- Python, for the build tool
-- (optional) Doxygen for documentation.
+It also handles creations of the Toolchain.
+
+### Host requirements
+* Docker
+* Git
+* Python 3.10
 
 
-To build:
-
-1. Configure the nyx build system with `./nyx.py configure`
-    * `--target` sets the target, all available targets are in nyx/targets/. Required to configure.
-    * `--build_directory` sets the build directory. Default is build.
-    * `--sysroot` sets the system root directory within the build directory. Default is sysroot.
-    * `-r` runs the system after compilation
-2. `./nyx.py build` builds the system.
-2. `./nyx.py run` runs the system.
-
-Nyx keeps track of all options within it's build directory. Other then target, you can change options by passing them to nyx without a command.
+### Build Instructions
+TODO

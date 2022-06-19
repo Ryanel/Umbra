@@ -4,29 +4,34 @@ extern k_exception_handler
 extern k_irq_handler
 
 %macro isr_handler 2
-global %1
+global %1:function (%1.end - %1)
 %1:
     push 0x0                    ; Error Code
     push %2                     ; Int Number
     jmp isr_common
+.end:
 %endmacro
 
 %macro isr_handler_error 2
-global %1
+global %1:function (%1.end - %1)
 %1:
                                 ; Error Pushed By CPU already
     push %2                     ; Int Number
     jmp isr_common
+.end:
 %endmacro
 
 %macro irq_handler 2
-global %1
+global %1:function (%1.end - %1)
 %1:
     push 0                      ; Error Code
     push %2                     ; Int Number
     jmp irq_common
+.end:
 %endmacro
 
+
+global isr_common:function (isr_common.end - isr_common)
 isr_common:
     rframe_save
     mov rdi, rsp                ; First argument is the register file
@@ -36,7 +41,9 @@ isr_common:
     rframe_load
     add rsp, 16                 ; Error Code + IRQ number cleanup
     iretq                       ; Return
+.end:
 
+global irq_common:function (irq_common.end - irq_common)
 irq_common:
     rframe_save
     mov rdi, rsp                ; First argument is the register file
@@ -46,6 +53,7 @@ irq_common:
     rframe_load
     add rsp, 16                 ; Error Code + IRQ number cleanup
     iretq                       ; Return
+.end:
 
 isr_handler         interrupt_isr0,  0
 isr_handler         interrupt_isr1,  1
