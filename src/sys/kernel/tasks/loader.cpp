@@ -19,14 +19,14 @@ void kernel::tasks::elf_loader::load_elf(const char* fpath) {
     // Load file
     auto fd = g_vfs.open_file(fpath, 0);
 
-    if (fd == -1) {
+    if (!fd) {
         log::error("elf_loader", "Unable to find %s\n", fpath);
         scheduler::terminate(nullptr);
         return;
     }
 
     // auto  size = g_vfs.fstat(fd).size;
-    auto  size = 16384;
+    auto  size = fd->as<file_descriptor>()->m_node->m_size;
     auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
                                                                     // not make unnessisary slabs.
     size_t bytes_read = vfs::g_vfs.read(fd, buf, size);

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <kernel/vfs/filesystem.h>
-
 #include <list>
 namespace kernel {
 

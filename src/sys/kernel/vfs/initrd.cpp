@@ -71,6 +71,7 @@ void initrd_fs::init() {
         new_node->m_delegate = nullptr;
         new_node->m_size     = sz;
         new_node->m_user_ptr = (void*)dat;
+        new_node->m_delegate = this;
         // Set the type
         switch (header->type) {
             case '\0':
@@ -117,7 +118,29 @@ node* initrd_fs::get_node(uint64_t inode) {
 node*  initrd_fs::get_root() { return m_root; }
 node*  initrd_fs::create(node* parent, std::string name) { return nullptr; }
 bool   initrd_fs::remove(node* n) { return false; }
-size_t initrd_fs::read(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { return -1; }
+size_t initrd_fs::read(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { 
+    if (n == nullptr) { return -1;}
+    if (n->m_delegate != this) { return -1; }
+    if (buffer == nullptr) { return -1; }
+    if (n->m_type != node_type::file) { return -1; }
+    if (cursor_pos > n->m_size) { return -1; }
+
+    size_t bytes_to_read = num_bytes > n->m_size ? n->m_size :  num_bytes;
+    
+    if ((cursor_pos + num_bytes) > n->m_size) { 
+        bytes_to_read = n->m_size - cursor_pos;
+    }
+
+
+
+    fdata*   dat       = (fdata*)n->m_user_ptr;
+    uint8_t* file_data = (uint8_t*)(dat->location);
+
+    uint8_t * buf = (uint8_t*)buffer;
+
+    for (size_t i = 0; i < bytes_to_read; i++) { buf[i] = file_data[cursor_pos + i]; }
+    return bytes_to_read;
+}
 size_t initrd_fs::write(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { return -1; }
 
 }  // namespace vfs

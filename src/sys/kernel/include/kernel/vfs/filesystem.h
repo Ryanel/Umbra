@@ -4,13 +4,14 @@
 
 #include <list>
 #include <string>
+#include <kernel/vfs/delegate.h>
 
 namespace kernel {
 namespace vfs {
 
 struct node;
 
-class filesystem {
+class filesystem : public delegate {
    public:
     virtual std::list<node*> get_children(node* node)                                          = 0;
     virtual node*            get_node(uint64_t inode)                                          = 0;

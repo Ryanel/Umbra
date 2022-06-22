@@ -12,15 +12,6 @@ namespace kernel {
 
 class vas;
 
-namespace vfs {
-struct file_descriptor;
-}
-
-struct task_file_descriptor {
-    uint32_t              m_local_id;
-    vfs::file_descriptor* m_descriptor;
-};
-
 namespace tasks {
 
 /// A task is a collection of resources, including at minimum a virtual address space.
@@ -30,10 +21,8 @@ class task : public object {
     uint32_t        m_task_id;        // ID of this task.
     const char*     m_task_name;      // Name of this task
     vas*            m_directory;      // The directory
-    handle_registry m_local_handles;  // All of this tasks handles
-
-    std::list<task_file_descriptor> m_file_descriptors;
-    uint32_t                        next_fd_id = 0;
+    handle_registry m_local_handles;  // All of this tasks handles.
+    uint32_t        m_next_unix_fileid = 0;
 
     KOBJECT_CLASS_ID(1, "task");
 

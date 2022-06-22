@@ -24,6 +24,7 @@
 #include <kernel/x86/serial_text_console.h>
 #include <kernel/x86/vas.h>
 #include <kernel/x86/vga_text_console.h>
+#include <kernel/hal/terminal.h>
 
 using namespace kernel;
 
@@ -77,6 +78,7 @@ void* stivale2_get_tag(struct stivale2_struct* stivale2_struct, uint64_t id) {
 
 void kernel_print_version() { kernel::log::info("kernel", "Umbra v. %s on x86_64\n", KERNEL_VERSION); }
 
+
 void boot_init_log(struct stivale2_struct* svs) {
     auto& log = kernel::log::get();
     log.init(&con_serial);
@@ -95,6 +97,9 @@ void boot_init_log(struct stivale2_struct* svs) {
                                             fb_info_tag->framebuffer_pitch, fb_format::bgr);
         log.init(&con_fb);
 
+#ifdef LOG_ON_GRAPHICAL_CONSOLE
+        log.m_terminal->set_output(&con_fb);
+#endif
         kernel::log::debug("display", "Framebuffer: %dx%dx%d @ 0x%p from %s\n", fb_info_tag->framebuffer_width,
                            fb_info_tag->framebuffer_height, fb_info_tag->framebuffer_bpp, fb_info_tag->framebuffer_addr,
                            &svs->bootloader_brand);
@@ -256,6 +261,7 @@ extern "C" void _start(struct stivale2_struct* stivale2_struct) {
     boot_init_memory(stivale2_struct);
     kernel::interrupts::handler_register(14, new kernel::x86_pager());  // Handle paging
 
+    // Allow kernel_main to have access to symbols
     kernel::debug::g_symbol_server.init();
 
     // We're done, just hang...

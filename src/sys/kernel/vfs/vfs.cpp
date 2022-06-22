@@ -4,6 +4,7 @@
 #include <kernel/vfs/filesystem.h>
 #include <kernel/vfs/node.h>
 #include <kernel/vfs/vfs.h>
+#include <kernel/vfs/delegate.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -59,7 +60,6 @@ node* virtual_filesystem::find(std::string_view path) {
             current_name = path.substr(path_ptr, (next_delim - path_ptr));
             search_path  = path.substr(0, next_delim);
             path_ptr     = root_dir ? 1 : (next_delim + 1);
-
         } else {
             // File
             current_name = path.substr(path_ptr, path.size());
@@ -113,39 +113,34 @@ virtual_filesystem::mountpoint* virtual_filesystem::get_mountpoint(std::string_v
     return nullptr;
 }
 
-file_descriptor* virtual_filesystem::taskfd_to_fd(fd_id_t id) {
-    task* current_task = scheduler::get_current_task();
-
-    for (auto fd : current_task->m_file_descriptors) {
-        if (fd.m_local_id == id) { return fd.m_descriptor; }
-    }
-    return nullptr;
-}
-
-fd_id_t virtual_filesystem::open_file(std::string_view path, int flags) {
+handle* virtual_filesystem::open_file(std::string_view path, int flags) {
     node* n            = find(path);
     task* current_task = scheduler::get_current_task();
     if (n) {
-        // Create the kernel file descriptor
-        auto* fd   = new file_descriptor();
-        fd->flags  = flags;
-        fd->m_node = n;
-        fd->m_id   = this->next_descriptor_id++;
-        this->open_files.push_back(fd);
-
-        task_file_descriptor tfd;
-        tfd.m_descriptor = fd;
-        tfd.m_local_id   = current_task->next_fd_id++;
-        current_task->m_file_descriptors.push_back(tfd);
-        return tfd.m_local_id;
+        // Create the kernel file descriptor handle
+        auto * khnd = this->m_open_files.create(make_ref(new file_descriptor(n, current_task->m_next_unix_fileid++)), 0, 0xFFFFFFFF, 0);
+        // Now, duplicate it and transfer to the task.
+        return this->m_open_files.duplicate_and_transfer(khnd, &current_task->m_local_handles, current_task->m_task_id);
     } else {
         if ((flags & VFS_OPEN_FLAG_CREATE != 0)) { assert(false && "flags & VFS_OPEN_FLAG_CREATE: Implement this"); }
     }
 
-    return -1;
+    return nullptr;
 }
-size_t virtual_filesystem::read(fd_id_t fd, uint8_t* buf, size_t count) { return 0; }
-size_t virtual_filesystem::write(fd_id_t fd, uint8_t* buf, size_t count) { return 0; }
+size_t virtual_filesystem::read(handle *hnd, uint8_t* buf, size_t count) {
+    if (hnd == nullptr || !hnd->is<file_descriptor>()) { return 0; }
+    auto fd = hnd->as<file_descriptor>();
+
+    kernel::log::debug("vfs", "Reading %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
+
+    if (fd->m_node->m_delegate == nullptr) {
+        kernel::log::error("vfs", "Error reading file %s, delegate is null\n", fd->m_node->name());
+        return 0;
+    }
+
+    return fd->m_node->m_delegate->read(fd->m_node, buf, 0, count);
+}
+size_t virtual_filesystem::write(handle *hnd, uint8_t* buf, size_t count) { return 0; }
 
 }  // namespace vfs
 }  // namespace kernel

@@ -9,6 +9,8 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wredundant-decls -Winline -Wno-long-long \
             -Wconversion
 
+OPT_FLAGS ?=
+
 ALL_SOURCES := ${ROOT_SOURCES} ${ARCH_SOURCES} ${SUBARCH_SOURCES}
 
 ALL_OBJECTS := $(patsubst %.cpp, %.o, $(ALL_SOURCES))
@@ -23,10 +25,9 @@ LIBRARIES := ${SYSROOT}/sys/lib_kernel.a
 CFLAGS ?= -Og -ggdb3 -fno-omit-frame-pointer
 CXXFLAGS ?= ${CFLAGS}
 LDFLAGS ?= -z max-page-size=0x1000
-CXXFLAGS := ${CXXFLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-builtin \
+CXXFLAGS := ${CXXFLAGS} ${OPT_FLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-builtin \
 			-fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib -fstack-protector-strong \
  			-DARCH_${NYX_TARGET} -std=c++17 -I ./include -I ./include/stl/ -I ../klibc/include/ -ffreestanding -nostdlib -lgcc
-
 ASMFLAGS ?= -g -f elf64
 
 MKDIR_P := mkdir -p

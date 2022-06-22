@@ -13,13 +13,14 @@ bool syscall_handler::handle_interrupt(register_frame_t* regs) {
     if (int_no == 0x00) {  // _exit(int status)
         scheduler::terminate(nullptr);
     } else if (int_no == 0x01) {  // _write
-        vfs::g_vfs.write(regs->rsi, (uint8_t*)regs->rdx, regs->rcx);
+        handle* hnd = scheduler::get_current_task()->m_local_handles.get((uint32_t)regs->rsi);
+        regs->rax = vfs::g_vfs.write(hnd, (uint8_t*)regs->rdx, regs->rcx);
     } else if (int_no == 0x02) {  // _open
         std::string_view sv((const char*)regs->rsi);
-        auto             id = vfs::g_vfs.open_file(sv, regs->rdx);
+        //auto             id = vfs::g_vfs.open_file(sv, regs->rdx);
 
-        log::trace("open", "%s opened with local fid: %d\n", sv.data(), id);
-        regs->rax = id;
+        //log::trace("open", "%s opened with local fid: %d\n", sv.data(), id);
+        //regs->rax = id;
     } else {
         log::error("syscall", "Unknown system call 0x%x", int_no);
     }
