@@ -95,12 +95,12 @@ struct handle {
             kernel::log::error("handle", "Attempted to reference an invalid handle\n");
             kernel::log::error("handle", "Tried to convert %s into %s.\n", m_obj->object_name(), U::object_name_str);
             kernel::log::error("handle", "Handle ID: %d, Rights: 0x%08x, owner %d\n", m_id, m_rights, m_owner);
-            panic("Attempted to reference an invalid handle");
+            assert("Attempted to reference an invalid handle");
         } else if (m_obj->object_type() != U::object_type_id) {
             kernel::log::error("handle", "Invalid type conversion within handle!\n");
             kernel::log::error("handle", "Tried to convert %s into %s.\n", m_obj->object_name(), U::object_name_str);
             kernel::log::error("handle", "Handle ID: %d, Rights: 0x%08x, owner %d\n", m_id, m_rights, m_owner);
-            panic("Invalid handle created");
+            assert("Invalid handle created");
         }
 
         return ref<U>::downcast(m_obj);
@@ -154,6 +154,19 @@ class handle_registry {
         m_handles.erase(std::find(m_handles.begin(), m_handles.end(), hnd));
         hnd->m_id = 0;
         return r->recieve_transfer(hnd);
+    }
+
+    void debug() {
+        for (auto &&i : m_handles)
+        {
+            const char* obj_type = "?????";
+
+            if (i->m_obj != nullptr) {
+                obj_type = i->m_obj->object_name();
+            }
+
+            log::trace("hnd", "%2d: %s\n", i->m_id, obj_type);
+        }
     }
 
    private:

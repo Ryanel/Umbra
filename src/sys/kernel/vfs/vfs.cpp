@@ -22,13 +22,14 @@ void virtual_filesystem::init() {}
 
 bool virtual_filesystem::mount(std::string_view path, filesystem* fs) {
     for (auto&& i : m_mountpoints) {
-        if (path.compare(i.m_path.data()) == 0) { return false; }
+        if (path.compare(i->m_path.data()) == 0 && path.size() == i->m_path.size()) { return false; }
     }
 
-    mountpoint mp;
-    mp.m_fs   = fs;
-    mp.m_path = std::string(path);
+    mountpoint* mp = new mountpoint();
+    mp->m_fs   = fs;
+    mp->m_path = std::string(path);
     m_mountpoints.push_back(mp);
+    kernel::log::info("vfs", "Mounted %s to %s\n", fs->name(), mp->m_path.c_str());
     return true;
 }
 
@@ -44,7 +45,7 @@ node* virtual_filesystem::find(std::string_view path) {
         expected_type = node_type::directory;
     }
 
-    kernel::log::trace("vfs", "Finding node: %s\n", std::string(path).c_str());
+    //kernel::log::trace("vfs", "Finding node: %s\n", std::string(path).c_str());
 
     while (path_ptr != path.size()) {
     next_itr:
@@ -66,16 +67,16 @@ node* virtual_filesystem::find(std::string_view path) {
             search_path  = path;
             path_ptr     = path.size();
         }
-
+/*
         kernel::log::trace("vfs", "Looking for: %s (path is %s)\n", std::string(current_name).data(),
                            std::string(search_path).data());
-
+*/
         // Is there a mountpoint on this path? If so, swap to that.
         auto* mp = get_mountpoint(search_path);
         if (mp != nullptr) {
             current_fs   = mp->m_fs;
             current_node = mp->m_fs->get_root();
-            kernel::log::trace("vfs", "Swapping to filesystem %s\n", current_fs->name());
+           // kernel::log::trace("vfs", "Swapping to filesystem %s at mountpoint %s\n", current_fs->name(), mp->m_path.c_str());
 
             if (path.size() == path_ptr) { return current_node; }
             continue;
@@ -108,7 +109,7 @@ node* virtual_filesystem::find(std::string_view path) {
 
 virtual_filesystem::mountpoint* virtual_filesystem::get_mountpoint(std::string_view path) {
     for (auto&& i : m_mountpoints) {
-        if (path.compare(i.m_path.data()) == 0) { return &i; }
+        if (path.size() == i->m_path.size() && path.compare(i->m_path.data()) == 0) { return i; }
     }
     return nullptr;
 }
@@ -122,25 +123,59 @@ handle* virtual_filesystem::open_file(std::string_view path, int flags) {
         // Now, duplicate it and transfer to the task.
         return this->m_open_files.duplicate_and_transfer(khnd, &current_task->m_local_handles, current_task->m_task_id);
     } else {
-        if ((flags & VFS_OPEN_FLAG_CREATE != 0)) { assert(false && "flags & VFS_OPEN_FLAG_CREATE: Implement this"); }
+        if ((flags & VFS_OPEN_FLAG_CREATE_DIRECTORY != 0)) { 
+            assert(false && "flags & VFS_OPEN_FLAG_CREATE_DIRECTORY: Implement this");
+        }
     }
 
     return nullptr;
 }
+
+handle* virtual_filesystem::create_device(std::string_view path, std::string_view name, delegate* delegate, node_type type) {
+    node* parent = find(path);
+
+    if (parent != nullptr) {
+        auto* fs = parent->m_fs;
+
+        // OK, create the device and add it as a child.
+        node* n = fs->create(parent, name);
+
+        if (n != nullptr) {
+            n->m_delegate = delegate;
+            n->m_type = type;
+        }
+        
+    }
+    return nullptr;
+}
+
 size_t virtual_filesystem::read(handle *hnd, uint8_t* buf, size_t count) {
-    if (hnd == nullptr || !hnd->is<file_descriptor>()) { return 0; }
+    if (hnd == nullptr || !hnd->is<file_descriptor>()) { return -1; }
     auto fd = hnd->as<file_descriptor>();
 
-    kernel::log::debug("vfs", "Reading %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
+    //kernel::log::debug("vfs", "Reading %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
 
     if (fd->m_node->m_delegate == nullptr) {
         kernel::log::error("vfs", "Error reading file %s, delegate is null\n", fd->m_node->name());
-        return 0;
+        return -1;
     }
 
     return fd->m_node->m_delegate->read(fd->m_node, buf, 0, count);
 }
-size_t virtual_filesystem::write(handle *hnd, uint8_t* buf, size_t count) { return 0; }
+
+size_t virtual_filesystem::write(handle *hnd, uint8_t* buf, size_t count) {
+    if (hnd == nullptr || !hnd->is<file_descriptor>()) { return -1; }
+    auto fd = hnd->as<file_descriptor>();
+
+    //kernel::log::debug("vfs", "Writing %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
+
+    if (fd->m_node->m_delegate == nullptr) {
+        kernel::log::error("vfs", "Error reading file %s, delegate is null\n", fd->m_node->name());
+        return -1;
+    }
+
+    return fd->m_node->m_delegate->write(fd->m_node, buf, 0, count);
+}
 
 }  // namespace vfs
 }  // namespace kernel

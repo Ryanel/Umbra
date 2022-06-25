@@ -14,9 +14,11 @@ intptr_t _do_syscall(unsigned long long id, unsigned long long p1, unsigned long
 
 #define _SYSCALL(x)     _do_syscall(x, 0, 0, 0)
 #define _SYSCALL2(x, y) _do_syscall(x, y, 0, 0)
+#define _SYSCALL3(x, y, z) _do_syscall(x, y, z, 0)
+#define _SYSCALL4(x, y, z, w) _do_syscall(x, y, z, w)
 
 void     _exit(int status);
-intptr_t _write(int fd, const void* buf, size_t count);
+intptr_t _write(uint64_t hnd, const void* buf, size_t count);
 long long _open(const char* path, uint64_t flags);
 
 #endif

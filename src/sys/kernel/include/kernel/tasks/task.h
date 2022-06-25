@@ -35,12 +35,11 @@ class task : public object {
     const char* name() { return m_task_name != nullptr ? m_task_name : "<unnamed task>"; }
 
     handle* spawn_local_thread(std::optional<const char*> name, void* bootstrap) {
-        return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, name)), m_task_id, 0xFFFFFFFF, 1);
+        return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, name)), m_task_id, 0xFFFFFFFF, 0);
     }
 
     handle* spawn_local_thread(std::optional<const char*> name, void* bootstrap, uintptr_t arg0) {
-        return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, arg0, name)), m_task_id, 0xFFFFFFFF,
-                                      1);
+        return m_local_handles.create(make_ref<thread>(new thread(this, bootstrap, arg0, name)), m_task_id, 0xFFFFFFFF, 0);
     }
 };
 

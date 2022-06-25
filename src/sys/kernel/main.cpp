@@ -14,6 +14,7 @@
 #include <kernel/tasks/thread.h>
 #include <kernel/time.h>
 #include <kernel/vfs/initrd.h>
+#include <kernel/vfs/tmpfs.h>
 #include <kernel/vfs/vfs.h>
 #include <kernel/x86/ps2keyboard.h>
 #include <stdio.h>
@@ -60,10 +61,16 @@ void kernel_main() {
 
     // Create the console
     auto* testterm = new hal::terminal(80, 25, 4000);
-    testterm->set_output(kernel::log::get().console[0]);
+    testterm->set_output(kernel::log::get().console[1]);
 
-    auto* dev_dir = g_vfs.find("/dev/");
-    // auto* term    = new vfs_node(dev_dir, testterm, vfs_type::device, 0, "console");
+    // Mount the /dev/ filesystem
+    auto* fs_dev = new vfs::tmp_fs();
+    fs_dev->init();
+    vfs::g_vfs.mount("/dev", fs_dev);
+
+    vfs::g_vfs.create_device("/dev", "console", testterm, vfs::node_type::device);
+    
+    // auto* term    = new vfs::node(dev_dir, testterm, vfs::node_type::, 0, "console");
     // auto* kbd     = new vfs_node(dev_dir, new driver::ps2keyboard(), vfs_type::device, 0, "keyboard");
 
     kernel::log::info("main", "Reached end of kernel_main()\n");

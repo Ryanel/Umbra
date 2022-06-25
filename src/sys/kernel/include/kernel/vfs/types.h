@@ -8,7 +8,7 @@ namespace vfs {
 
 struct node;
 
-enum class node_type : uint8_t { file, directory, mountpoint };
+enum class node_type : uint8_t { file, device, directory, mountpoint };
 
 typedef uint32_t fd_id_t;
 

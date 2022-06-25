@@ -26,26 +26,20 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
     interrupt_stack_ptr = regs->rbp;
 
 #ifdef ARCH_X86
-
-    kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code,
-                       regs->eflags);
-    kernel::log::error("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x\n", regs->cs, regs->ds, regs->es, regs->fs,
-                       regs->gs);
+    kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
+    kernel::log::error("error", "cs:%02x ds:%02x es:0x%02x fs:%02x gs:%02x\n", regs->cs, regs->ds, regs->es, regs->fs, regs->gs);
     kernel::log::error("error", "eax:%08x ebx:%08x ecx:%08x edx:%08x\n", regs->eax, regs->ebx, regs->ecx, regs->edx);
     kernel::log::error("error", "ebp:%08x esp:%08x esi:%08x edi:%08x\n", regs->edi, regs->esi, regs->esp, regs->ebp);
-
 #else
-    kernel::log::error("error", "rip: 0x%016p int:%02x err:%08x rflags:%08x\n", regs->rip, regs->int_no, regs->err_code,
-                       regs->eflags);
-    kernel::log::error("error", "rax:%016p rbx:%016p rcx:%016p rdx:%016p\n", regs->rax, regs->rbx, regs->rcx,
-                       regs->rdx);
-    kernel::log::error("error", "r8:%016p r9:%016p r10:%016p r11:%016p\n", regs->r8, regs->r9, regs->r10);
-    kernel::log::error("error", "r12:%016p r13:%016p r14:%016p r15:%016p\n", regs->r8, regs->r9, regs->r10);
-
-    kernel::log::error("error", "rdi:%016p rsi:%016p rbp:%016p\n", regs->rdi, regs->rsi, regs->rbp);
+    kernel::log::error("error", "rip %016p (int %02x, %04x) flags %08x\n", regs->rip, regs->int_no, regs->err_code, regs->eflags);
+    kernel::log::error("error", "r(a,b,c,d)x   : %016p %016p %016p %016p\n", regs->rax, regs->rbx, regs->rcx, regs->rdx);
+    kernel::log::error("error", "r(8,9,10,11)  : %016p %016p %016p %016p\n", regs->r8, regs->r9, regs->r10, regs->r11);
+    kernel::log::error("error", "r(12,13,14,15): %016p %016p %016p %016p\n", regs->r12, regs->r13, regs->r14, regs->r15);
+    kernel::log::error("error", "r(di,si,bp)   : %016p %016p %016p\n", regs->rdi, regs->rsi, regs->rbp);
 #endif
     panic("Unhandled exception");
 }
+
 extern "C" void k_irq_handler(register_frame_t* regs) {
     kernel::interrupts::dispatch(regs->int_no, regs);
     if (regs->int_no >= 40) { outb(0xA0, 0x20); }
@@ -57,7 +51,7 @@ void x86_idt::init() {
     idtptr.base  = (uintptr_t)&idt[0];
 
     constexpr int descriptor = 0x08;
-    interrupt_stack_ptr = 0;
+    interrupt_stack_ptr      = 0;
 
     memset(&idt, 0, sizeof(idt_entry_t) * 256);
     set_gate(0, (uintptr_t)interrupt_isr0, descriptor, 0x8E);

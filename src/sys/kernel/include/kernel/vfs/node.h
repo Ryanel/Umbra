@@ -27,11 +27,13 @@ struct node {
     node_type   m_type;
 
     const char* name() const { return (const char*)&m_name; }
-    void        set_name(std::string_view& name) { copy_name(name); }
-    void        set_name(std::string_view name) { copy_name(name); }
-
-   private:
-    void copy_name(std::string_view& view);
+    void        set_name(std::string_view name) { 
+        for (size_t i = 0; i < name.size(); i++)
+        {
+            m_name[i] = name.at(i);
+        }
+        
+    }
 };
 
 }  // namespace vfs

@@ -116,7 +116,7 @@ node* initrd_fs::get_node(uint64_t inode) {
 }
 
 node*  initrd_fs::get_root() { return m_root; }
-node*  initrd_fs::create(node* parent, std::string name) { return nullptr; }
+node*  initrd_fs::create(node* parent, std::string_view name) { return nullptr; }
 bool   initrd_fs::remove(node* n) { return false; }
 size_t initrd_fs::read(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) { 
     if (n == nullptr) { return -1;}

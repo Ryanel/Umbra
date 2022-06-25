@@ -1,17 +1,14 @@
 #pragma once
 
 #include <kernel/vfs/filesystem.h>
+
 #include <list>
+
 namespace kernel {
-
-// Prototypes
-namespace boot {
-struct boot_file;
-}
-
 namespace vfs {
 
-class initrd_fs : public filesystem {
+/// An in-memory filesystem.
+class tmp_fs : public filesystem {
    public:
     void init();
 
@@ -23,16 +20,17 @@ class initrd_fs : public filesystem {
     virtual size_t           read(node* n, void* buffer, size_t cursor_pos, size_t num_bytes);
     virtual size_t           write(node* n, void* buffer, size_t cursor_pos, size_t num_bytes);
 
-    char const* name() { return "initrd"; }
+    char const* name() { return "tmpfs"; }
 
    private:
-    boot::boot_file* initrd_data;
     std::list<node*> m_nodes;
     node*            m_root;
+    size_t           m_next_inode = 2;
+
     struct fdata {
-        uintptr_t        location;
+        uint8_t*         memory;
+        size_t           size;
         std::list<node*> m_children;
-        fdata(uintptr_t loc) : location(loc) {}
     };
 };
 

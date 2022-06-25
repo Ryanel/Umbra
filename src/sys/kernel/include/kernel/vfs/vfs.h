@@ -8,7 +8,8 @@
 #include <string>
 #include <string_view>
 
-#define VFS_OPEN_FLAG_CREATE 1
+#define VFS_OPEN_FLAG_CREATE_DIRECTORY 1
+#define VFS_OPEN_FLAG_CREATE_FILE 2
 
 namespace kernel {
 namespace vfs {
@@ -28,6 +29,7 @@ class virtual_filesystem {
     bool  mount(std::string_view path, filesystem* fs);
 
     handle* open_file(std::string_view path, int flags);
+    handle* create_device(std::string_view path, std::string_view name, delegate* delegate, node_type type);
     size_t  read(handle* hnd, uint8_t* buf, size_t count);
     size_t  write(handle* hnd, uint8_t* buf, size_t count);
     // file_stats fstat(fd_id_t fd);
@@ -38,7 +40,7 @@ class virtual_filesystem {
         filesystem* m_fs;
     };
 
-    std::list<mountpoint> m_mountpoints;
+    std::list<mountpoint*> m_mountpoints;
     handle_registry       m_open_files;
     mountpoint*           get_mountpoint(std::string_view path);
 };
