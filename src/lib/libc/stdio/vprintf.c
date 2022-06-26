@@ -32,7 +32,7 @@ int vprintf(const char* fmt, va_list arg) {
     uint32_t arg_int;
     uint64_t arg_int64;
     char*    arg_str;
-    char*    opt_nonformat_str   = fmt;
+    const char*    opt_nonformat_str   = fmt;
     size_t   opt_nonformat_sz    = 0;
     bool     opt_nonformat_first = true;
 
@@ -47,7 +47,7 @@ int vprintf(const char* fmt, va_list arg) {
             opt_nonformat_sz++;
             continue;
         } else {
-            vprintf_print_helper_string_sz(opt_nonformat_str, opt_nonformat_sz);
+            vprintf_print_helper_string_sz((char*)opt_nonformat_str, opt_nonformat_sz);
             opt_nonformat_sz    = 0;
             opt_nonformat_first = true;
         }
@@ -174,6 +174,6 @@ int vprintf(const char* fmt, va_list arg) {
         }
     }
 
-    if (opt_nonformat_sz > 0) { vprintf_print_helper_string_sz(opt_nonformat_str, opt_nonformat_sz); }
+    if (opt_nonformat_sz > 0) { vprintf_print_helper_string_sz((char*)opt_nonformat_str, opt_nonformat_sz); }
     return 0;
 }

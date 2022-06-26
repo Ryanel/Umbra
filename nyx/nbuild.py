@@ -70,15 +70,19 @@ def main() -> int:
             os.remove(the_package.pkg_path(current_config))
 
     result = True
+    cleanOnError = False
 
     if (args.command == "build"):
+        cleanOnError = True
         with nyx_log.process(f"Building {args.package}"):
             result = the_package.build(current_config, args, engine.environment, shouldInstall=False)
     elif (args.command == "install"):
-         with nyx_log.process(f"Building + Installing {args.package}"):
+        cleanOnError = True
+        with nyx_log.process(f"Building + Installing {args.package}"):
             result = the_package.build(current_config, args, engine.environment, shouldInstall=True)
     elif (args.command == "install-pkg"):
-         with nyx_log.process(f"Installing {args.package}"):
+        cleanOnError = True
+        with nyx_log.process(f"Installing {args.package}"):
             if the_package.has_package(current_config):
                 nyx_log.info(f"Installing {args.package}...")
                 result = the_package.install(current_config, engine.environment)
@@ -87,9 +91,14 @@ def main() -> int:
                 result = False
     elif (args.command == "clean"):
         the_package.clean(current_config, engine.environment)
+        result = True
     else:
         nyx_log.error(f"No command {args.command}")
         result = False
+
+    if result == False and cleanOnError:
+         the_package.clean(current_config, engine.environment)
+
     engine.save_state(args.config + "state.json")
 
     return 0 if result == True else 1
