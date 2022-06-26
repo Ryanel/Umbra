@@ -69,9 +69,7 @@ void kernel_main() {
     vfs::g_vfs.mount("/dev", fs_dev);
 
     vfs::g_vfs.create_device("/dev", "console", testterm, vfs::node_type::device);
-    
-    // auto* term    = new vfs::node(dev_dir, testterm, vfs::node_type::, 0, "console");
-    // auto* kbd     = new vfs_node(dev_dir, new driver::ps2keyboard(), vfs_type::device, 0, "keyboard");
+    vfs::g_vfs.create_device("/dev", "keyboard", new driver::ps2keyboard(), vfs::node_type::device);
 
     kernel::log::info("main", "Reached end of kernel_main()\n");
 
