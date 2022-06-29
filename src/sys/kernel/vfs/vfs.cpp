@@ -1,10 +1,11 @@
 #include <kernel/log.h>
 #include <kernel/mm/heap.h>
 #include <kernel/tasks/scheduler.h>
+#include <kernel/util/result.h>
+#include <kernel/vfs/delegate.h>
 #include <kernel/vfs/filesystem.h>
 #include <kernel/vfs/node.h>
 #include <kernel/vfs/vfs.h>
-#include <kernel/vfs/delegate.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -26,8 +27,8 @@ bool virtual_filesystem::mount(std::string_view path, filesystem* fs) {
     }
 
     mountpoint* mp = new mountpoint();
-    mp->m_fs   = fs;
-    mp->m_path = std::string(path);
+    mp->m_fs       = fs;
+    mp->m_path     = std::string(path);
     m_mountpoints.push_back(mp);
     kernel::log::info("vfs", "Mounted %s to %s\n", fs->name(), mp->m_path.c_str());
     return true;
@@ -45,7 +46,7 @@ node* virtual_filesystem::find(std::string_view path) {
         expected_type = node_type::directory;
     }
 
-    //kernel::log::trace("vfs", "Finding node: %s\n", std::string(path).c_str());
+    // kernel::log::trace("vfs", "Finding node: %s\n", std::string(path).c_str());
 
     while (path_ptr != path.size()) {
     next_itr:
@@ -67,16 +68,16 @@ node* virtual_filesystem::find(std::string_view path) {
             search_path  = path;
             path_ptr     = path.size();
         }
-/*
-        kernel::log::trace("vfs", "Looking for: %s (path is %s)\n", std::string(current_name).data(),
-                           std::string(search_path).data());
-*/
+        /*
+                kernel::log::trace("vfs", "Looking for: %s (path is %s)\n", std::string(current_name).data(),
+                                   std::string(search_path).data());
+        */
         // Is there a mountpoint on this path? If so, swap to that.
         auto* mp = get_mountpoint(search_path);
         if (mp != nullptr) {
             current_fs   = mp->m_fs;
             current_node = mp->m_fs->get_root();
-           // kernel::log::trace("vfs", "Swapping to filesystem %s at mountpoint %s\n", current_fs->name(), mp->m_path.c_str());
+            // kernel::log::trace("vfs", "Swapping to filesystem %s at mountpoint %s\n", current_fs->name(), mp->m_path.c_str());
 
             if (path.size() == path_ptr) { return current_node; }
             continue;
@@ -92,15 +93,12 @@ node* virtual_filesystem::find(std::string_view path) {
                 if (next_delim != path.npos) { goto next_itr; }
 
                 // We've reached the target
-                if (expected_type == node_type::directory) {
-                    return current_node->m_type == node_type::directory ? current_node : nullptr;
-                }
+                if (expected_type == node_type::directory) { return current_node->m_type == node_type::directory ? current_node : nullptr; }
                 return current_node;
             }
         }
 
-        kernel::log::warn("vfs", "Unable to find: %s (path is %s)\n", std::string(current_name).data(),
-                          std::string(search_path).data());
+        kernel::log::warn("vfs", "Unable to find: %s (path is %s)\n", std::string(current_name).data(), std::string(search_path).data());
         break;
     }
 
@@ -119,13 +117,11 @@ handle* virtual_filesystem::open_file(std::string_view path, int flags) {
     task* current_task = scheduler::get_current_task();
     if (n) {
         // Create the kernel file descriptor handle
-        auto * khnd = this->m_open_files.create(make_ref(new file_descriptor(n, current_task->m_next_unix_fileid++)), 0, 0xFFFFFFFF, 0);
+        auto* khnd = this->m_open_files.create(make_ref(new file_descriptor(n, current_task->m_next_unix_fileid++)), 0, 0xFFFFFFFF, 0);
         // Now, duplicate it and transfer to the task.
         return this->m_open_files.duplicate_and_transfer(khnd, &current_task->m_local_handles, current_task->m_task_id);
     } else {
-        if ((flags & VFS_OPEN_FLAG_CREATE_DIRECTORY != 0)) { 
-            assert(false && "flags & VFS_OPEN_FLAG_CREATE_DIRECTORY: Implement this");
-        }
+        if ((flags & VFS_OPEN_FLAG_CREATE_DIRECTORY != 0)) { assert(false && "flags & VFS_OPEN_FLAG_CREATE_DIRECTORY: Implement this"); }
     }
 
     return nullptr;
@@ -142,39 +138,41 @@ handle* virtual_filesystem::create_device(std::string_view path, std::string_vie
 
         if (n != nullptr) {
             n->m_delegate = delegate;
-            n->m_type = type;
+            n->m_type     = type;
         }
-        
     }
     return nullptr;
 }
 
-size_t virtual_filesystem::read(handle *hnd, uint8_t* buf, size_t count) {
-    if (hnd == nullptr || !hnd->is<file_descriptor>()) { return -1; }
+result_t virtual_filesystem::read(handle* hnd, uint8_t* buf, size_t count) {
+    if (hnd == nullptr) { return RESULT_HANDLE_INVALID; }
+    if (!hnd->is<file_descriptor>()) { return RESULT_WRONG_TYPE; }
     auto fd = hnd->as<file_descriptor>();
 
-    //kernel::log::debug("vfs", "Reading %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
+    // kernel::log::debug("vfs", "Reading %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
 
     if (fd->m_node->m_delegate == nullptr) {
         kernel::log::error("vfs", "Error reading file %s, delegate is null\n", fd->m_node->name());
-        return -1;
+        return RESULT_INVALID_OPERATION;
     }
 
-    return fd->m_node->m_delegate->read(fd->m_node, buf, 0, count);
+    return (result_t)fd->m_node->m_delegate->read(fd->m_node, buf, 0, count);
 }
 
-size_t virtual_filesystem::write(handle *hnd, uint8_t* buf, size_t count) {
-    if (hnd == nullptr || !hnd->is<file_descriptor>()) { return -1; }
+result_t virtual_filesystem::write(handle* hnd, uint8_t* buf, size_t count) {
+    if (hnd == nullptr) { return RESULT_HANDLE_INVALID; }
+    if (!hnd->is<file_descriptor>()) { return RESULT_WRONG_TYPE; }
+
     auto fd = hnd->as<file_descriptor>();
 
-    //kernel::log::debug("vfs", "Writing %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
+    // kernel::log::debug("vfs", "Writing %d bytes of %s into buf 0x%016p\n", count, fd->m_node->name(), buf);
 
     if (fd->m_node->m_delegate == nullptr) {
         kernel::log::error("vfs", "Error reading file %s, delegate is null\n", fd->m_node->name());
-        return -1;
+        return RESULT_INVALID_OPERATION;
     }
 
-    return fd->m_node->m_delegate->write(fd->m_node, buf, 0, count);
+    return (result_t)fd->m_node->m_delegate->write(fd->m_node, buf, 0, count);
 }
 
 }  // namespace vfs

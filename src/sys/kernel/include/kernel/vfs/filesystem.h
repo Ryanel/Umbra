@@ -22,9 +22,6 @@ class filesystem : public delegate {
     virtual size_t           write(node* n, void* buffer, size_t cursor_pos, size_t num_bytes) = 0;
     virtual const char*      name()                                                            = 0;
     virtual ~filesystem() {}
-
-    const size_t unsupported_operation = -1;
-    const size_t error                 = -2;
 };
 
 }  // namespace vfs

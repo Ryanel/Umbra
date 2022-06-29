@@ -179,6 +179,6 @@ bool slab::free(uintptr_t address) {
 }
 
 void slab::debug() {
-    log::debug("slab", "0x%016p: sz:%-4d bytes; %3d/%-3d used; %d pages\n", m_start, m_size, m_entries, m_maxEntries,
+    log::debug("slab", " - %08x: sz:%-4d %d/%d; pg:%d\n", m_start & 0x00000000FFFFFFFF, m_size, m_entries, m_maxEntries,
                m_pages);
 }

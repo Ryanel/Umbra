@@ -2,6 +2,7 @@
 
 #include <kernel/config.h>
 #include <kernel/util/ref.h>
+#include <kernel/util/result.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -51,10 +52,10 @@ class object : public ref_counted {
 
 /// A handle to a kernel object. Holds a reference to the object.
 struct handle {
-    ref<object> m_obj;  ///< Reference to the held object. This will always be valid unless ID is KERNEL_HANDLE_INVALID
-    uint32_t m_owner;   ///< The owner ID of this handle. This is a task id. Task ID = 0 means kernel owns this handle.
-    uint32_t m_rights;  ///< The rights mask for this handle
-    uint32_t m_id;      ///< The local handle ID
+    ref<object> m_obj;     ///< Reference to the held object. This will always be valid unless ID is KERNEL_HANDLE_INVALID
+    uint32_t    m_owner;   ///< The owner ID of this handle. This is a task id. Task ID = 0 means kernel owns this handle.
+    uint32_t    m_rights;  ///< The rights mask for this handle
+    uint32_t    m_id;      ///< The local handle ID
 
     /// An empty handle is invalid, but these should normally not be created.
     handle() {
@@ -72,15 +73,12 @@ struct handle {
     }
 
     /// Create a handle to the kernel object
-    handle(ref<object> obj, uint32_t owner, uint32_t rights, uint32_t id)
-        : m_obj(obj), m_owner(owner), m_rights(rights), m_id(id) {}
+    handle(ref<object> obj, uint32_t owner, uint32_t rights, uint32_t id) : m_obj(obj), m_owner(owner), m_rights(rights), m_id(id) {}
 
     /// Handles can have rights revoked. Accepts a bitmask of the rights to revoke.
     /// Rights cannot be re-added to a handle.
     /// Pending operations may or may not stop. This function simply modifies the rights of this handle.
-    void revoke_rights(uint32_t mask) {
-        m_rights = m_rights & (~mask);
-    }
+    void revoke_rights(uint32_t mask) { m_rights = m_rights & (~mask); }
 
     template <typename U>
     bool is() {
@@ -126,20 +124,22 @@ class handle_registry {
     /// Duplicates a handle. The new handle has the same owner and rights, but a different ID.
     handle* duplicate(handle* to_duplicate, uint32_t owner = -1) {
         uint32_t new_owner = owner == -1 ? to_duplicate->m_owner : owner;
-        auto* r = new handle(to_duplicate->m_obj, new_owner, to_duplicate->m_rights, next_id++);
+        auto*    r         = new handle(to_duplicate->m_obj, new_owner, to_duplicate->m_rights, next_id++);
         m_handles.push_back(r);
         return r;
     }
 
     handle* duplicate_and_transfer(handle* to_duplicate, handle_registry* newRegistry, uint32_t owner = -1) {
         uint32_t new_owner = owner == -1 ? to_duplicate->m_owner : owner;
-        handle* newhnd = newRegistry->create(to_duplicate->m_obj, new_owner, to_duplicate->m_rights);
+        handle*  newhnd    = newRegistry->create(to_duplicate->m_obj, new_owner, to_duplicate->m_rights);
         return newhnd;
-    }    
+    }
 
-    void remove(handle* hnd) {
+    result_t remove(handle* hnd) {
+        if (hnd == nullptr) { return RESULT_NULL_ARGUMENT; }
         m_handles.erase(std::find(m_handles.begin(), m_handles.end(), hnd));
         delete hnd;
+        return RESULT_OK;
     }
 
     handle* get(uint32_t hid) {
@@ -157,13 +157,10 @@ class handle_registry {
     }
 
     void debug() {
-        for (auto &&i : m_handles)
-        {
+        for (auto&& i : m_handles) {
             const char* obj_type = "?????";
 
-            if (i->m_obj != nullptr) {
-                obj_type = i->m_obj->object_name();
-            }
+            if (i->m_obj != nullptr) { obj_type = i->m_obj->object_name(); }
 
             log::trace("hnd", "%2d: %s\n", i->m_id, obj_type);
         }

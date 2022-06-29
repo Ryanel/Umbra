@@ -73,6 +73,8 @@ void kernel_main() {
 
     kernel::log::info("main", "Reached end of kernel_main()\n");
 
+    g_heap.debug();
+
     scheduler::unlock();  // Start scheduling processes
     while (true) { asm("hlt"); }
 }

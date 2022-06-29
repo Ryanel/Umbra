@@ -7,13 +7,16 @@ OBJS = $(patsubst %.c, %.o, $(SRC)) # list of object files
 all: libc.a
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) -I include -Wall -o $@ $<
+	@echo "[  C  ]: $<"
+	@$(CC) -c $(CFLAGS) -I include -Wall -o $@ $<
 
 %.o: %.s
-	$(CC) -c $(CFLAGS) -I include -Wall -o $@ $<
+	@echo "[ ASM ]: $<"
+	@$(CC) -c $(CFLAGS) -I include -Wall -o $@ $<
 
 libc.a: $(COMPILE_OBJS) 
-	${AR} rcs -o libc.a ${OBJS}
+	@echo "[ AR  ]: libc.a"
+	@${AR} rcs -o libc.a ${OBJS}
 
 install:
 	@mkdir -p ${INSTALL_DIR}/lib/

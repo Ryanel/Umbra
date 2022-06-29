@@ -9,7 +9,7 @@
 #include <string_view>
 
 #define VFS_OPEN_FLAG_CREATE_DIRECTORY 1
-#define VFS_OPEN_FLAG_CREATE_FILE 2
+#define VFS_OPEN_FLAG_CREATE_FILE      2
 
 namespace kernel {
 namespace vfs {
@@ -21,18 +21,19 @@ class virtual_filesystem {
    public:
     void init();
 
-    /// Finds the node at the specified path.
-    /// The path is always assumed to be in the root
-    /// Paths should take the form of /path/name/here/targetname . Does not handle relative paths (.. , . , ~).
-    /// Userspace must convert relative paths to absolute paths.
-    node* find(std::string_view path);
     bool  mount(std::string_view path, filesystem* fs);
 
-    handle* open_file(std::string_view path, int flags);
-    handle* create_device(std::string_view path, std::string_view name, delegate* delegate, node_type type);
-    size_t  read(handle* hnd, uint8_t* buf, size_t count);
-    size_t  write(handle* hnd, uint8_t* buf, size_t count);
+    handle*  open_file(std::string_view path, int flags);
+    handle*  create_device(std::string_view path, std::string_view name, delegate* delegate, node_type type);
+    result_t read(handle* hnd, uint8_t* buf, size_t count);
+    result_t write(handle* hnd, uint8_t* buf, size_t count);
     // file_stats fstat(fd_id_t fd);
+
+   protected:
+    /// Finds the node at the specified path.
+    /// The path is always assumed to be root-relative and absolute.
+    /// Returns the node if found, or nullptr if not.
+    node* find(std::string_view path);
 
    private:
     struct mountpoint {
@@ -41,8 +42,8 @@ class virtual_filesystem {
     };
 
     std::list<mountpoint*> m_mountpoints;
-    handle_registry       m_open_files;
-    mountpoint*           get_mountpoint(std::string_view path);
+    handle_registry        m_open_files;
+    mountpoint*            get_mountpoint(std::string_view path);
 };
 
 extern kernel::vfs::virtual_filesystem g_vfs;
