@@ -369,4 +369,6 @@ struct stivale2_struct_tag_hhdm {
 
 #undef _stivale2_split64
 
+void* stivale2_get_tag(struct stivale2_struct* stivale2_struct, uint64_t id);
+
 #endif
