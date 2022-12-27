@@ -7,6 +7,7 @@
 #include <kernel/panic.h>
 #include <kernel/x86/vas.h>
 #include <string.h>
+#include <kernel/config.h>
 
 // Physical memory is mapped to 0xffff000000000000 and beyond.
 // Kernel Memory is mapped to 0xffffffff80000000, and the heap is located in this 2GB region
@@ -52,13 +53,13 @@ page_t vas::get_page(uintptr_t virt) {
 bool vas::has_table(uintptr_t virt) { return false; }
 vas* vas::clone() {
     // Allocate the page directory metadata structure from the heap
-    auto pd_meta = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
+    auto pd_meta = g_heap.alloc(PAGE_SIZE, KHEAP_PAGEALIGN);
     vas* dir     = (vas*)pd_meta;
 
     // Now, allocate the actual page directory read by the CPU
     phys_addr_t pd_phys;
-    auto        pd_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
-    memset((void*)pd_virt, 0, 0x1000);
+    auto        pd_virt = g_heap.alloc(PAGE_SIZE, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
+    memset((void*)pd_virt, 0, PAGE_SIZE);
 
     // Setup the meta directory
     dir->directory      = (pml_t*)pd_virt;

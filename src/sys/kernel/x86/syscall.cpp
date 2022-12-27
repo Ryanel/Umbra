@@ -8,7 +8,7 @@ using namespace kernel::tasks;
 
 bool syscall_handler::handle_interrupt(register_frame_t* regs) {
     int int_no = regs->rdi;
-    //log::trace("syscall", "System call 0x%x\n", int_no);
+    // log::trace("syscall", "System call 0x%x\n", int_no);
 
     if (int_no == 0x00) {  // _exit(int status)
         scheduler::terminate(nullptr);
@@ -27,6 +27,10 @@ bool syscall_handler::handle_interrupt(register_frame_t* regs) {
             regs->rax = (uint64_t)-1;
             log::warn("open", "%s failed\n", sv.data());
         }
+    } else if (int_no == 0x03) {  // _read
+        //log::trace("read", "Reading from handle %d\n", regs->rsi);
+        handle* hnd = scheduler::get_current_task()->m_local_handles.get((uint32_t)regs->rsi);
+        regs->rax   = vfs::g_vfs.read(hnd, (uint8_t*)regs->rdx, regs->rcx);
     } else {
         log::error("syscall", "Unknown system call 0x%x", int_no);
     }

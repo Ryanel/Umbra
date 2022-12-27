@@ -5,6 +5,7 @@
 #define SYS_SYSCALL_EXIT  0
 #define SYS_SYSCALL_WRITE 1
 #define SYS_SYSCALL_OPEN 2
+#define SYS_SYSCALL_READ 3
 #endif
 
 #include <stddef.h>
@@ -19,6 +20,7 @@ intptr_t _do_syscall(unsigned long long id, unsigned long long p1, unsigned long
 
 void     _exit(int status);
 intptr_t _write(uint64_t hnd, const void* buf, size_t count);
+intptr_t _read(uint64_t hnd, const void* buf, size_t count);
 long long _open(const char* path, uint64_t flags);
 
 #endif

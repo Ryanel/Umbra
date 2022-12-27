@@ -1,5 +1,6 @@
 #include <kernel/log.h>
 #include <kernel/mm/pmm.h>
+#include <kernel/config.h>
 
 kernel::mm::pmm kernel::g_pmm;
 
@@ -24,7 +25,7 @@ void pmm::update_statistics() {
         auto search_start = r.m_start;
         auto search_end   = r.m_end;
 
-        for (phys_addr_t search = search_start; search < search_end; search += 0x1000) {
+        for (phys_addr_t search = search_start; search < search_end; search += PAGE_SIZE) {
             if (bitmap.used(search)) { ram_pages_used++; }
             ram_pages_max++;
         }
@@ -76,12 +77,12 @@ phys_addr_t pmm::alloc_single(int flags) {
             if (search_start < r.m_start) { search_start = r.m_start; }
         }
 
-        for (phys_addr_t search = search_start; search < search_end; search += 0x1000) {
+        for (phys_addr_t search = search_start; search < search_end; search += PAGE_SIZE) {
             if (bitmap.mark_if_clear(search)) {
                 // Optimization to improve future searches. Start on the next page, as we know all
                 // pages up to this page are allocated. In the linear case, this almost eliminates
                 // searching with no freeing.
-                opt_firstFreeAddr = search + 0x1000;
+                opt_firstFreeAddr = search + PAGE_SIZE;
                 ram_pages_used++;
                 return search;
             }

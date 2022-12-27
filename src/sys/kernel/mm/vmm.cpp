@@ -4,6 +4,7 @@
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
 #include <kernel/tasks/critical_section.h>
+#include <kernel/config.h>
 
 using namespace kernel;
 using namespace tasks;
@@ -23,7 +24,7 @@ virt_addr_t* virt_mm::mmap(virt_addr_t virt, size_t length, int protection, int 
         flags |= VMM_FLAG_POPULATE;
     }
 
-    for (size_t i = 0; i < length; i += 0x1000) {
+    for (size_t i = 0; i < length; i += PAGE_SIZE) {
         phys_addr_t paddr = 0x0;
 
         if (flags & VMM_FLAG_POPULATE) { paddr = kernel::g_pmm.alloc_single(PMM_REGION_RAM); }
@@ -57,7 +58,7 @@ void virt_mm::munmap(virt_addr_t virt, size_t length) {
 
     vas* current = current_vas();
     virt         = virt & 0xFFFFFFFFFFFFF000;
-    for (size_t i = 0; i < length; i += 0x1000) { current->unmap(virt + i); }
+    for (size_t i = 0; i < length; i += PAGE_SIZE) { current->unmap(virt + i); }
 }
 
 virt_addr_t virt_mm::get_virt_addr(virt_addr_t addr, int flags) {
@@ -66,7 +67,7 @@ virt_addr_t virt_mm::get_virt_addr(virt_addr_t addr, int flags) {
             assert(false && "Fix get_virt_addr");
             addr = 0xD0000000;
         }
-        while (current_vas()->get_page(addr) != 0) { addr += 0x1000; }
+        while (current_vas()->get_page(addr) != 0) { addr += PAGE_SIZE; }
     }
     return addr;
 }

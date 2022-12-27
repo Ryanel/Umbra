@@ -4,6 +4,7 @@
 #include <kernel/mm/pmm.h>
 #include <kernel/mm/vmm.h>
 #include <kernel/panic.h>
+#include <kernel/config.h>
 
 kheap g_heap;
 
@@ -25,7 +26,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
         // Align if requested
         if (((flags & KHEAP_PAGEALIGN) != 0) && ((early_placement & 0xFFFFFFFFFFFFF000) != early_placement)) {
             early_placement &= 0xFFFFFFFFFFFFF000;
-            early_placement += 0x1000;
+            early_placement += PAGE_SIZE;
         }
 
         auto newAddr = early_placement;
@@ -36,7 +37,7 @@ virt_addr_t kheap::alloc(size_t sz, int flags, phys_addr_t* paddr) {
         // okay, we need to make sure this is mapped...
         if (!kernel::g_pmm.used(phys)) {
             // It's not, map it...
-            for (uintptr_t i = 0; i < sz; i += 0x1000) {
+            for (uintptr_t i = 0; i < sz; i += PAGE_SIZE) {
                 kernel::log::trace("kheap", "grew a page @ 0x%016p\n", phys + i);
                 kernel::g_vmm.mmap_direct(early_placement + i, phys + i, VMM_PROT_WRITE, VMM_FLAG_POPULATE);
             }
@@ -62,13 +63,13 @@ void kheap::init(bool full, uintptr_t placement_addr) {
     this->m_full = full;
     if (full) {
         early_placement &= 0xFFFFFFFFFFFFF000;
-        early_placement += 0x1000;
+        early_placement += PAGE_SIZE;
         slab_alloc.init(early_placement, 0x200000);  // TODO: Define a max heap size!
     } else {
         early_placement = placement_addr;
         if (early_placement & 0xFFFFFFFFFFFFF000) {
             early_placement &= 0xFFFFFFFFFFFFF000;
-            early_placement += 0x1000;
+            early_placement += PAGE_SIZE;
         }
     }
 }

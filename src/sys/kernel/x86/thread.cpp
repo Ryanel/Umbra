@@ -19,7 +19,7 @@ void thread_setup_function(void (*fn)(uintptr_t arg0), uintptr_t arg0) {
 }
 
 void thread::setup(void* bootstrap_fn, uintptr_t arg0) {
-    m_k_stack_top     = g_heap.alloc(0x1000, 0);
+    m_k_stack_top     = g_heap.alloc(PAGE_SIZE, 0);
     m_k_stack_current = m_k_stack_top;
     m_id              = ++next_thread_id;
 

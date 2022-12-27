@@ -10,6 +10,10 @@ long long _write(uint64_t hnd, const void* buf, size_t count) {
     return _do_syscall(SYS_SYSCALL_WRITE, hnd, (uint64_t)buf, count);
 }
 
+long long _read(uint64_t hnd, const void* buf, size_t count) {
+    return _do_syscall(SYS_SYSCALL_READ, hnd, (uint64_t)buf, count);
+}
+
 long long _open(const char* path, uint64_t flags) {
     return _do_syscall(SYS_SYSCALL_OPEN, (uint64_t)path, flags, 0);
 }

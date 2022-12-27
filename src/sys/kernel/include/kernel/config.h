@@ -9,3 +9,5 @@
 
 #define BOOTFILE_MAX          10
 #define KERNEL_PMM_MAXREGIONS 64
+
+#define PAGE_SIZE 0x1000

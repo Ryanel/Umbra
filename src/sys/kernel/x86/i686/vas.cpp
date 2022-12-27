@@ -18,8 +18,8 @@ bool vas::map(phys_addr_t phys, virt_addr_t virt, uint32_t proto, int flags) {
     if (pd_ent->present != 1) {
         phys_addr_t new_page_table_phys;
 
-        auto new_pt_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &new_page_table_phys);
-        memset((void*)new_pt_virt, 0, 0x1000);
+        auto new_pt_virt = g_heap.alloc(PAGE_SIZE, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &new_page_table_phys);
+        memset((void*)new_pt_virt, 0, PAGE_SIZE);
 
         kernel::log::debug("map", "No page table, allocated a new one at %x\n", new_pt_virt);
         // if (new_pt_virt == -1) { return false; }
@@ -83,13 +83,13 @@ bool vas::has_table(uintptr_t virt) {
 
 vas* vas::clone() {
     // Allocate the page directory metadata structure from the heap
-    auto pd_meta = g_heap.alloc(0x1000, KHEAP_PAGEALIGN);
+    auto pd_meta = g_heap.alloc(PAGE_SIZE, KHEAP_PAGEALIGN);
     vas* dir     = (vas*)pd_meta;
 
     // Now, allocate the actual page directory read by the CPU
     phys_addr_t pd_phys;
-    auto        pd_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
-    memset((void*)pd_virt, 0, 0x1000);
+    auto        pd_virt = g_heap.alloc(PAGE_SIZE, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &pd_phys);
+    memset((void*)pd_virt, 0, PAGE_SIZE);
 
     // Setup the meta directory
     dir->directory      = (page_directory_raw_t*)pd_virt;
@@ -117,7 +117,7 @@ vas* vas::clone() {
         if (link) {
             dir->directory->entries[i] = this->directory->entries[i];
             dir->pt_virt[i]            = this->pt_virt[i];
-            kernel::log::trace("pg", "Link %d (p:0x%08x)\n", i, this->directory->entries[i].address * 0x1000);
+            kernel::log::trace("pg", "Link %d (p:0x%08x)\n", i, this->directory->entries[i].address * PAGE_SIZE);
         } else {
             panic("Todo, write copying for page tables");
         }
@@ -136,8 +136,8 @@ bool vas::create_table(uintptr_t vaddr) {
         kernel::log::debug("create", "0x%08x\n", vaddr);
         phys_addr_t new_page_table_phys;
 
-        auto new_pt_virt = g_heap.alloc(0x1000, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &new_page_table_phys);
-        memset((void*)new_pt_virt, 0, 0x1000);
+        auto new_pt_virt = g_heap.alloc(PAGE_SIZE, KHEAP_PAGEALIGN | KHEAP_PHYSADDR, &new_page_table_phys);
+        memset((void*)new_pt_virt, 0, PAGE_SIZE);
 
         kernel::log::debug("map", "No page table, allocated a new one at %x\n", new_pt_virt);
         // if (new_pt_virt == -1) { return false; }

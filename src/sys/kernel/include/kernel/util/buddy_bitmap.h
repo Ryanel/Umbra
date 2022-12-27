@@ -6,7 +6,7 @@
 class buddy_bitmap {
    public:
     int    granularity = 0;
-    size_t size() const { return (granularity + 1) * 0x1000; }
+    size_t size() const { return (granularity + 1) * PAGE_SIZE; }
     bitmap backing;
 
     void init(uintptr_t max_address) {

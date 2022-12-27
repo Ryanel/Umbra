@@ -14,22 +14,21 @@ void vga_text_console::init() {
     outb(0x3D4, 0x0B);
     outb(0x3D5, (inb(0x3D5) & 0xE0) | 15);
     clear(current_background);
+    m_buffer = util::buffer<unsigned char>((unsigned char*)buffer_address, width() * height() * 2);
 }
 
 void vga_text_console::clear(unsigned char bg) {
-    char* buffer       = (char*)(buffer_address);
     current_background = bg;
 
     uint8_t attribute = (uint8_t)((bg & 0xF) << 4) | 0xF;
 
     for (int i = 0; i < width() * height(); i++) {
-        buffer[i * 2 + 0] = 0;
-        buffer[i * 2 + 1] = attribute;
+        m_buffer[i * 2 + 0] = 0;
+        m_buffer[i * 2 + 1] = attribute;
     }
 }
 
 void vga_text_console::write(char c, unsigned char fore, unsigned char back) {
-    char*        buffer = (char*)(buffer_address);
     unsigned int offset = index(m_x, m_y) * 2;
 
     uint8_t attribute = (uint8_t)((back & 0xF) << 4) | (fore & 0xF);
@@ -46,11 +45,11 @@ void vga_text_console::write(char c, unsigned char fore, unsigned char back) {
             m_x--;
             if (m_x < 0) { m_x = 0; }
             offset         = index(m_x, m_y) * 2;
-            buffer[offset] = ' ';
+            m_buffer[offset] = ' ';
             break;
         default:
-            buffer[offset]     = c;
-            buffer[offset + 1] = attribute;
+            m_buffer[offset]     = c;
+            m_buffer[offset + 1] = attribute;
             m_x++;
             break;
     }
@@ -64,16 +63,15 @@ void vga_text_console::write(char c, unsigned char fore, unsigned char back) {
 }
 
 void vga_text_console::scroll_up() {
-    char*     buffer = (char*)(buffer_address);
     const int sz     = width() * 2;
     if (m_y >= height()) {
-        for (size_t i = 1; i < (size_t)height(); i++) { memcpy(&buffer[sz * (i - 1)], &buffer[sz * i], sz); }
+        for (size_t i = 1; i < (size_t)height(); i++) { memcpy(&m_buffer[sz * (i - 1)], &m_buffer[sz * i], sz); }
 
         size_t start = width() * (height() - 1) * 2;
 
         for (int i = 0; i < width(); i++) {
-            buffer[start + (i * 2) + 0] = ' ';
-            buffer[start + (i * 2) + 1] = (char)(current_background << 4);
+            m_buffer[start + (i * 2) + 0] = ' ';
+            m_buffer[start + (i * 2) + 1] = (char)(current_background << 4);
         }
 
         m_y--;

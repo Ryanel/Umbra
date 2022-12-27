@@ -1,13 +1,13 @@
 #pragma once
 
 #include <kernel/types.h>
+#include <kernel/config.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #define SLAB_MIN_ENTRIES 16
 #define SLAB_MIN_OBJSIZE 16
 #define SLAB_MIN_PAGES   1
-#define PAGE_SIZE        0x1000
 
 uintptr_t power_ceil(uintptr_t x);
 
@@ -28,7 +28,7 @@ struct slab {
     bool alloc(uintptr_t sz, uintptr_t& out_address);
 
     static uint16_t get_pages(uintptr_t sz) {
-        uintptr_t pg = (sz * (SLAB_MIN_ENTRIES + 1)) / 0x1000;
+        uintptr_t pg = (sz * (SLAB_MIN_ENTRIES + 1)) / PAGE_SIZE;
         pg           = power_ceil(pg);
 
         if (pg < SLAB_MIN_PAGES) { pg = SLAB_MIN_PAGES; }

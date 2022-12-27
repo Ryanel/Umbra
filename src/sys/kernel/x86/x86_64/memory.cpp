@@ -79,7 +79,7 @@ void boot_init_memory(struct stivale2_struct* svs) {
     for (size_t i = 0; i < pmr_tag->entries; i++) {
         auto& pmr = pmr_tag->pmrs[i];
 
-        for (size_t p = 0; p < pmr.length; p += 0x1000) {
+        for (size_t p = 0; p < pmr.length; p += PAGE_SIZE) {
             uint64_t offset = p + pmr.base;
             uint64_t paddr  = kbas_tag->physical_base_address + (offset - kbas_tag->virtual_base_address);
 
@@ -96,7 +96,7 @@ void boot_init_memory(struct stivale2_struct* svs) {
     for (unsigned int i = 0; i < mmap_tag->entries; i++) {
         auto& map = mmap_tag->memmap[i];
         if (map.type == 0x1002) {
-            for (size_t i = 0; i < map.length; i += 0x1000) { kernel_vas.map(map.base + i, (virt_addr_t)(con_fb.framebuffer.m_buffer) + i, 0x03, 0); }
+            for (size_t i = 0; i < map.length; i += PAGE_SIZE) { kernel_vas.map(map.base + i, (virt_addr_t)(con_fb.framebuffer.m_buffer) + i, 0x03, 0); }
         }
 
         // Map Modules
@@ -115,7 +115,7 @@ void boot_init_memory(struct stivale2_struct* svs) {
                     file.vaddr = mod.begin;
                     kernel::boot::g_bootfiles.add(file);
 
-                    for (size_t k = 0; k < map.length; k += 0x1000) {
+                    for (size_t k = 0; k < map.length; k += PAGE_SIZE) {
                         kernel_vas.map(map.base + k, mod.begin + k, 0x03, 0);
                         last_kernel_vaddr = std::max(last_kernel_vaddr, mod.begin + k);
                     }

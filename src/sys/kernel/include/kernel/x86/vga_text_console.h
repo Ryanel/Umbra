@@ -2,6 +2,7 @@
 
 #include <kernel/text_console.h>
 #include <stdint.h>
+#include <kernel/util/buffer.h>
 
 namespace kernel {
 namespace device {
@@ -28,6 +29,7 @@ class vga_text_console : public text_console {
     int           m_x                = 0;
     int           m_y                = 0;
     unsigned char current_background = 0;
+    util::buffer<unsigned char>  m_buffer;
 
     // Helpers
     unsigned int index(int x, int y) { return ((width() * m_y) + m_x); }

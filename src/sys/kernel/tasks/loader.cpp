@@ -27,7 +27,7 @@ void kernel::tasks::elf_loader::load_elf(const char* fpath) {
 
     // auto  size = g_vfs.fstat(fd).size;
     auto  size = fd->as<file_descriptor>()->m_node->m_size;
-    auto* buf = new uint8_t[((size + 0x1000) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
+    auto* buf = new uint8_t[((size + PAGE_SIZE) & ~(PAGE_SIZE - 1))];  // Allocate a buffer that's page sized bytes long to
                                                                     // not make unnessisary slabs.
     size_t bytes_read = vfs::g_vfs.read(fd, buf, size);
 
