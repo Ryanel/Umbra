@@ -1,6 +1,6 @@
 ROOT_SOURCES := $(wildcard *.cpp) $(wildcard debug/*.cpp) $(wildcard hal/*.cpp) $(wildcard log/*.cpp) $(wildcard mm/*.cpp) $(wildcard tasks/*.cpp) $(wildcard vfs/*.cpp) 
-ARCH_SOURCES := $(wildcard ${NYX_ARCH}/*.cpp) $(wildcard ${NYX_ARCH}/drivers/*.cpp)
-SUBARCH_SOURCES := $(wildcard ${NYX_ARCH}/${NYX_TARGET}/*.cpp) $(wildcard ${NYX_ARCH}/${NYX_TARGET}/*.s)
+ARCH_SOURCES := $(wildcard ${ARCH}/*.cpp) $(wildcard ${ARCH}/drivers/*.cpp)
+SUBARCH_SOURCES := $(wildcard ${ARCH}/${ARCH_BOARD}/*.cpp) $(wildcard ${ARCH}/${ARCH_BOARD}/*.s)
 
 BUILD_DIR ?= build/kernel
 
@@ -18,7 +18,7 @@ ALL_OBJECTS :=  $(patsubst %.s, %.o, $(ALL_OBJECTS))
 ALL_OBJECTS := $(ALL_OBJECTS:%=$(BUILD_DIR)/%)
 DEPFILES    := $(patsubst %.o,%.d,$(ALL_OBJECTS))
 
-KERNEL_LINKER_FILE := ${NYX_ARCH}/${NYX_TARGET}/linker.ld
+KERNEL_LINKER_FILE := ${ARCH}/${ARCH_BOARD}/linker.ld
 
 LIBRARIES := ${SYSROOT}/sys/lib_kernel.a
 
@@ -27,7 +27,7 @@ CXXFLAGS ?= ${CFLAGS}
 LDFLAGS ?= -z max-page-size=0x1000
 CXXFLAGS := ${CXXFLAGS} ${OPT_FLAGS} -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -fno-builtin \
 			-fno-rtti -fno-exceptions -ffreestanding -fno-builtin -nostdlib -fstack-protector-strong \
- 			-DARCH_${NYX_TARGET} -std=c++17 -I ./include -I ./include/stl/ -I ../klibc/include/ -ffreestanding -nostdlib -lgcc
+ 			-DARCH_${ARCH_BOARD} -std=c++17 -I ./include -I ./include/stl/ -I ../klibc/include/ -ffreestanding -nostdlib -lgcc
 ASMFLAGS ?= -g -f elf64
 
 MKDIR_P := mkdir -p
@@ -43,13 +43,13 @@ ${BUILD_DIR}/kernel.elf: ${ALL_OBJECTS}
 	@$(CXX) -T ${KERNEL_LINKER_FILE} -MMD -MP -o $@ ${CXXFLAGS} ${ALL_OBJECTS} ${LIBRARIES} ${LDFLAGS}
 
 symbols:
-	@mkdir -p ${INSTALL_DIR}/sys/
+	@mkdir -p ${D}/sys/
 	@nm ${BUILD_DIR}/kernel.elf | grep " T " > ${BUILD_DIR}/kernel.sym
 	@python3 create-symbols.py ${BUILD_DIR}
-	@cp ${BUILD_DIR}/syms.bin ${INSTALL_DIR}/sys/syms.bin
+	@cp ${BUILD_DIR}/syms.bin ${D}/sys/syms.bin
 
 install:
-	@cp ${BUILD_DIR}/kernel.elf ${INSTALL_DIR}/sys/
+	@cp ${BUILD_DIR}/kernel.elf ${D}/sys/kernel.elf
 
 ${BUILD_DIR}/%.o: %.s
 	@echo "[ ASM ]: $<"

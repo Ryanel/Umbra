@@ -1,1 +1,0 @@
-docker build . -t umbra-buildenv --build-arg=USER=$(id -u)

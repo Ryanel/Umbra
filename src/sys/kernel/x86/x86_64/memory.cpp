@@ -19,10 +19,11 @@ using namespace kernel;
 
 #define MMAP_TYPE_RAM 0x1
 
-vas                                    kernel_vas;
 extern kernel::device::fb_text_console con_fb;
 
 extern "C" void set_page_table(uint64_t ptr);
+
+kernel::vas kernel_vas;
 
 
 /// Coordinates the initialization of all memory systems of the kernel

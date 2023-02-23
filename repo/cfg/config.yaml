@@ -1,0 +1,17 @@
+config:
+  system_root: ./build/sysroot
+  temp_path : ./build/tmp
+  arch: x86_64
+  arch_triple: x86_64-umbra-elf
+  cross_compile: True
+  toolchain_path: ./build/tools/
+  package_dir: ./build/packages
+  media_dir: ./media
+  source_dir: ./src/
+  world_set: ./build/sysroot/var/aurora/world
+  backend: 'docker'
+repos:
+ default:
+    path: './repo/default/'
+    priority: 0
+    sync: false

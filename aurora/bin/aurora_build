@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# Import funny from aurora
+
+""" The builder script for Aurora """
+
+import subprocess
+import os
+from clize import run
+
+from aurora.config import Config
+#from aurora.package import Package
+from aurora.universe import Universe
+from aurora.repository import Repository
+from aurora.builds.bundle import bundle_package
+from aurora.builds.env import get_build_env
+from aurora.builds.tmp import create_tmp_dir
+
+def main(package_str: str, *, config_path='', live_sources='', gmake_path='') -> None:
+    """ Builds a package
+
+    :param package_str: The package to build
+    :param config_path: The path to the config file. Defaults to value of AURORA_CONFIG, or /etc/aurora/config.yaml
+    :param live_sources: If set, the path to the live source directory. Some packages use this to build from edited sources. Used for development.
+    """
+
+    # Default to environment variable or /etc/aurora/config.yaml
+
+    # If config_path is not set, use the environment variable if it exists
+
+
+    if config_path == '' and 'AURORA_CONFIG' in os.environ:
+        config_path = os.environ['AURORA_CONFIG']
+    if config_path == '':
+        config_path = '/etc/aurora/config.yaml'
+
+    # Load configuration
+    aurora_config = Config(config_path, live_sources, gmake_path)
+    universe = aurora_config.load_universe()
+
+    # Find package
+    package_fullname = package_str
+    package = universe.search_exact_from_string(package_fullname)
+
+    if package is None:
+        print(f'Package {package_fullname} not found. An exact match must be found (including version).')
+        exit(1)
+
+    # Build configuration
+    config = aurora_config.config
+    config['repo_path'] = os.path.abspath(package.source.path)
+
+    # Build process for package
+    package_env = get_build_env(config, package_fullname, package)
+    create_tmp_dir(config, package_fullname)
+
+    if run_build_stage('pkg_get_source', package_env) is False:
+        print(f'Failed to get source for {package_fullname}')
+        exit(1)
+    if run_build_stage('pkg_configure', package_env) is False:
+        print(f'Failed to configure {package_fullname}')
+        exit(1)
+    if run_build_stage('pkg_build', package_env) is False:
+        print(f'Failed to build {package_fullname}')
+        exit(1)
+    if run_build_stage('pkg_install', package_env) is False:
+        print(f'Failed to create package for {package_fullname}')
+        exit(1)
+    bundle_package(package_fullname, config, package_env)
+    
+    exit(0)
+
+def run_build_stage(stage: str, package_env: dict) -> bool:
+    """ Run a build stage """
+    makefile_path = os.path.join(package_env['FILESDIR'], 'Makefile')
+    if not os.path.exists(makefile_path):
+        print(f'No Makefile found for {package_env["P"]}')
+        return False
+
+    result = subprocess.run([package_env['MAKE'], '-f', makefile_path, stage],
+        env=package_env,
+        check=True,
+        cwd=package_env['S']
+    )
+
+    return result.returncode == 0
+
+if __name__ == '__main__':
+    run(main)

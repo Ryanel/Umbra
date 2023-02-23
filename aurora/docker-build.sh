@@ -1,0 +1,1 @@
+docker build .  -t aurora-buildenv --build-arg=USER=$(id -u)

@@ -13,7 +13,7 @@ namespace vfs {
 
 class initrd_fs : public filesystem {
    public:
-    void init();
+    bool init();
 
     virtual std::list<node*> get_children(node* node);
     virtual node*            get_node(uint64_t inode);

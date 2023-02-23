@@ -1,0 +1,6 @@
+# Point Aurora to the repo config file
+export AURORA_CONFIG=./repo/cfg/config.yaml
+# Tell Aurora which gmake to use
+export GMAKE=$(which gmake)
+
+./aurora/bin/aur $@

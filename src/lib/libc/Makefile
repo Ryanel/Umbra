@@ -19,13 +19,13 @@ libc.a: $(COMPILE_OBJS)
 	@${AR} rcs -o libc.a ${OBJS}
 
 install:
-	@mkdir -p ${INSTALL_DIR}/lib/
-	@cp libc.a ${INSTALL_DIR}/lib/libc.a
-	@cp $(patsubst %.s, %.o, $(CRT)) ${INSTALL_DIR}/lib/
+	@mkdir -p ${D}/lib/
+	@cp libc.a ${D}/lib/libc.a
+	@cp $(patsubst %.s, %.o, $(CRT)) ${D}/lib/
 
 install-headers:
-	@mkdir -p ${INSTALL_DIR}/usr/include
-	@cp -R include/* ${INSTALL_DIR}/usr/include/
+	@mkdir -p ${D}/usr/include
+	@cp -R include/* ${D}/usr/include/
 
 clean:
 	@rm libc.a

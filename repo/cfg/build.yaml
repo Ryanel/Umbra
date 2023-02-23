@@ -1,0 +1,16 @@
+config:
+  system_root: /opt/aurora/image/
+  temp_path : /opt/aurora/tmp/
+  arch: x86_64
+  arch_triple: x86_64-umbra-elf
+  cross_compile: True
+  toolchain_path: /opt/aurora/tools/
+  package_dir:  /opt/aurora/packages/
+  media_dir: /opt/aurora/media/
+  source_dir: /opt/aurora/src
+  world_set: /opt/aurora/image/var/aurora/world
+repos:
+ default:
+    path: '/opt/aurora/repos/default'
+    priority: 0
+    sync: false

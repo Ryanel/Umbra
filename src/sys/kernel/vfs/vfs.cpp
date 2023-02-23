@@ -130,18 +130,15 @@ handle* virtual_filesystem::open_file(std::string_view path, int flags) {
 handle* virtual_filesystem::create_device(std::string_view path, std::string_view name, delegate* delegate, node_type type) {
     node* parent = find(path);
 
-    if (parent != nullptr) {
-        auto* fs = parent->m_fs;
+    if (!parent || !parent->m_fs) { return nullptr; }
+    
+    node* n = parent->m_fs->create(parent, name);
 
-        // OK, create the device and add it as a child.
-        node* n = fs->create(parent, name);
+    if (n == nullptr) { return nullptr; }
+    n->m_delegate = delegate;
+    n->m_type     = type;
 
-        if (n != nullptr) {
-            n->m_delegate = delegate;
-            n->m_type     = type;
-        }
-    }
-    return nullptr;
+    // TODO: Create a handle for this device and return it.
 }
 
 result_t virtual_filesystem::read(handle* hnd, uint8_t* buf, size_t count) {

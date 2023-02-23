@@ -22,7 +22,7 @@ It also handles creations of the Toolchain.
 * Docker
 * Git
 * Python 3.10
-
+* PIP
 
 ### Build Instructions
 TODO

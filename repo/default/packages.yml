@@ -1,0 +1,72 @@
+# Apps
+app/test-program-1.0:
+  licence: BSD
+  supports_live_sources: true
+  dependencies:
+    - '>= lib/libc-1.0'
+
+# Boot
+boot/limine-2.0:
+  licence: BSD
+  is_build_tool: true
+
+# Libraries
+
+lib/libc-headers-1.0:
+  licence: BSD
+  supports_live_sources: true
+  live_source_path: 'lib/libc'
+
+
+lib/libc-1.0:
+  licence: BSD
+  supports_live_sources: true
+  live_source_path: 'lib/libc'
+  dependencies:
+    - 'lib/libc-headers-1.0'
+
+# System
+sys/klibc-headers-1.0:
+  licence: BSD
+  supports_live_sources: true
+  live_source_path: 'sys/klibc'
+
+sys/klibc-1.0:
+  licence: BSD
+  supports_live_sources: true
+  live_source_path: 'sys/klibc'
+  dependencies:
+    - '>=sys/klibc-headers-1.0'
+
+sys/kernel-1.0:
+  licence: BSD
+  supports_live_sources: true
+  live_source_path: 'sys/kernel'
+  dependencies:
+    - '>=sys/klibc-1.0'
+    - '>=lib/libc-1.0'
+  
+# Development Packages
+sys-devel/gcc-11.1.0: 
+  licence: GPL
+  dependencies:
+    - '>=lib/libc-headers-1.0'
+    - 'sys-devel/binutils-2.35'
+  is_build_tool: true
+
+sys-devel/binutils-2.35:
+  licence: GPL
+  dependencies:
+    - '>=lib/libc-headers-1.0'
+  is_build_tool: true
+
+sys-devel/tools:
+  dependencies:
+    - 'sys-devel/binutils-2.35'
+    - 'sys-devel/gcc-11.1.0'
+
+sys/system:
+  licence: BSD
+  dependencies:
+    - 'sys-devel/gcc-11.0'
+    - 'sys-devel/gdb-11.0'

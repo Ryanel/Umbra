@@ -14,9 +14,9 @@ lib_kernel.a: $(OBJS)
 clean:
 
 install:
-	@mkdir -p ${INSTALL_DIR}/sys/
-	@cp lib_kernel.a ${INSTALL_DIR}/sys/lib_kernel.a
+	@mkdir -p ${D}/sys/
+	@cp lib_kernel.a ${D}/sys/lib_kernel.a
 
-install_headers:
-	@mkdir -p ${INSTALL_DIR}/sys/include
-	@cp -R include/* ${INSTALL_DIR}/sys/include/
+install-headers:
+	@mkdir -p ${D}/sys/include
+	@cp -R include/* ${D}/sys/include/

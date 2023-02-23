@@ -44,8 +44,9 @@ void kernel_main() {
     // Load initial ramdisk
     log::info("vfs", "Loading inital ramdisk from memory\n");
     auto* initrd = new vfs::initrd_fs();
-    initrd->init();
-    vfs::g_vfs.mount("/", initrd);
+    if (initrd->init()) {
+        vfs::g_vfs.mount("/", initrd);
+    }
 
     // Start some tasks
     log::info("debug", "Starting some test tasks\n");

@@ -34,7 +34,7 @@ struct ustar_header {
 namespace kernel {
 namespace vfs {
 
-void initrd_fs::init() {
+bool initrd_fs::init() {
     // First, get the initrd
     for (size_t i = 0; i < kernel::boot::g_bootfiles.numfiles; i++) {
         auto& file = kernel::boot::g_bootfiles.files[i];
@@ -43,6 +43,8 @@ void initrd_fs::init() {
         initrd_data = &kernel::boot::g_bootfiles.files[i];
         break;
     }
+
+    if (!initrd_data) { kernel::log::error("initrd", "No initrd found!\n");  return false;}
 
     // Now, comb through the USTAR formatted initrd.
     virt_addr_t ptr = initrd_data->vaddr;
@@ -103,6 +105,7 @@ void initrd_fs::init() {
 
         ptr += (((sz + 511) / 512) + 1) * 512;  // Skip to the next file metadata block
     }
+    return true;
 }
 
 std::list<vfs::node*> initrd_fs::get_children(node* n) { return ((fdata*)n->m_user_ptr)->m_children; }
