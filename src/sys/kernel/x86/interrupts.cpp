@@ -13,7 +13,7 @@ void interrupts_disable() { asm("cli"); }
 void interrupts_enable() { asm("sti"); }
 void interrupts_after_thread() { outb(0x20, 0x20); }
 
-uint64_t interrupt_stack_ptr = 0;
+kernel::stackframe interrupt_stackframe;
 
 extern "C" void k_exception_handler(register_frame_t* regs) {
     if (kernel::interrupts::dispatch(regs->int_no, regs)) {
@@ -23,7 +23,8 @@ extern "C" void k_exception_handler(register_frame_t* regs) {
         return;
     }
 
-    interrupt_stack_ptr = regs->rbp;
+    interrupt_stackframe.rbp = (kernel::stackframe*)regs->rbp;
+    interrupt_stackframe.pc  = regs->rip;
 
 #ifdef ARCH_X86
     kernel::log::error("error", "eip: 0x%08x int:%02x err:%08x eflags:%08x\n", regs->eip, regs->int_no, regs->err_code, regs->eflags);
@@ -51,8 +52,9 @@ void x86_idt::init() {
     idtptr.base  = (uintptr_t)&idt[0];
 
     constexpr int descriptor = 0x08;
-    interrupt_stack_ptr      = 0;
-
+    interrupt_stackframe.pc  = 0;
+    interrupt_stackframe.rbp = nullptr;
+    
     memset(&idt, 0, sizeof(idt_entry_t) * 256);
     set_gate(0, (uintptr_t)interrupt_isr0, descriptor, 0x8E);
     set_gate(1, (uintptr_t)interrupt_isr1, descriptor, 0x8E);

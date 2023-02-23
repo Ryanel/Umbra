@@ -12,4 +12,17 @@ struct cpu_data_t {
     // x86 specific
     uint32_t lapic_id;
 };
+
+struct stackframe {
+    struct stackframe* rbp;
+    uintptr_t          pc;
+};
+
+inline stackframe cpu_get_stackframe() {
+    stackframe frame;
+    asm volatile("mov %%rbp, %0" : "=r"(frame.rbp));
+    asm volatile("lea 0(%%rip), %0" : "=r"(frame.pc));
+    return frame;
+}
+
 }  // namespace kernel

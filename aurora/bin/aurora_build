@@ -76,7 +76,7 @@ def run_build_stage(stage: str, package_env: dict) -> bool:
         print(f'No Makefile found for {package_env["P"]}')
         return False
 
-    result = subprocess.run([package_env['MAKE'], '-f', makefile_path, stage],
+    result = subprocess.run([package_env['MAKE'], '-f', makefile_path, '--no-print-directory', stage],
         env=package_env,
         check=True,
         cwd=package_env['S']
