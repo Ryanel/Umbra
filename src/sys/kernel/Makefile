@@ -2,7 +2,7 @@ ROOT_SOURCES := $(wildcard *.cpp) $(wildcard debug/*.cpp) $(wildcard hal/*.cpp) 
 ARCH_SOURCES := $(wildcard ${ARCH}/*.cpp) $(wildcard ${ARCH}/drivers/*.cpp)
 SUBARCH_SOURCES := $(wildcard ${ARCH}/${ARCH_BOARD}/*.cpp) $(wildcard ${ARCH}/${ARCH_BOARD}/*.s)
 
-BUILD_DIR ?= build/kernel
+BUILD_DIR ?= $(TMPDIR)
 
 WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wwrite-strings -Wmissing-declarations \
